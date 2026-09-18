@@ -20,9 +20,11 @@ Les migrations SQL sont dans `supabase/migrations/` et les données de démonstr
 
 Le client navigateur est dans `lib/supabase.js`, avec les helpers d’authentification dans `lib/auth.js` et le schéma JSDoc dans `lib/database.js`. Comme le site reste sans build, le client officiel `@supabase/supabase-js` est chargé comme module ESM. Les valeurs publiques sont injectées par `window.__STOA_ENV__`; `dist/env.example.js` montre le format attendu.
 
+Google One Tap est initialisé par `dist/auth.js` pour les visiteurs sans session. Ajoutez `GOOGLE_CLIENT_ID` dans `dist/env.js`, autorisez l’origine du site dans Google Auth Platform et activez Google dans Supabase Auth avec le même Client ID et son Client Secret. Le navigateur ne reçoit jamais le Client Secret.
+
 ## Portée
 
-Prototype fonctionnel. Les modules contiennent des textes de démonstration à remplacer par les cours définitifs. Les offres sont présentées à 39 €/mois et 180 €/mois. Les boutons affichent une information sur la démonstration : aucun paiement, inscription réelle, authentification ou service de coaching n’est encore connecté à l’interface.
+Prototype fonctionnel. Les modules contiennent des textes de démonstration à remplacer par les cours définitifs. Les offres sont présentées à 39 €/mois et 180 €/mois. Google One Tap est prêt à être activé avec les identifiants OAuth ; aucun paiement ni service de coaching n’est encore connecté à l’interface.
 
 La progression et les notes utilisent localStorage sur l’appareil courant. Elles ne sont pas synchronisées entre appareils et peuvent être effacées par le navigateur. En cas de stockage indisponible, l’interface indique l’échec de sauvegarde. Ne pas utiliser les notes pour des informations médicales sensibles.
 
