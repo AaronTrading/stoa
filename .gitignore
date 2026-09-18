@@ -7,3 +7,4 @@ artwork/category-originals/
 !.env.example
 dist/env.js
 dist/assets/modules/
+.sites-runtime-*.tar
