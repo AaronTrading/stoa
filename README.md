@@ -8,15 +8,21 @@ Ouvrir `dist/index.html` directement, ou lancer `node serve.cjs` puis visiter ht
 
 - `dist/index.html` : landing, philosophie, programme, offres et FAQ.
 - `dist/academie.html` : programme filtrable et progression.
-- `dist/module.html` : lecteur des 23 modules, exercices et notes personnelles.
+- `dist/module.html` : lecteur des modules, exercices et notes personnelles.
 - `dist/styles.css` : styles partagés, palette et responsive.
 - `dist/app.js` : contenu, interactions et stockage local.
 
 Les fichiers du dossier `dist` sont les sources du site, directement modifiables et hébergeables. Aucun générateur ni dépendance JavaScript.
 
+## Backend Supabase
+
+Les migrations SQL sont dans `supabase/migrations/` et les données de démonstration dans `supabase/seed.sql`. Le seed crée 17 chapitres, 34 modules et 102 sous-chapitres. Toutes les tables applicatives utilisent RLS.
+
+Le client navigateur est dans `lib/supabase.js`, avec les helpers d’authentification dans `lib/auth.js` et le schéma JSDoc dans `lib/database.js`. Comme le site reste sans build, le client officiel `@supabase/supabase-js` est chargé comme module ESM. Les valeurs publiques sont injectées par `window.__STOA_ENV__`; `dist/env.example.js` montre le format attendu.
+
 ## Portée
 
-Prototype fonctionnel. Les modules contiennent des textes de démonstration à remplacer par les cours définitifs. Les offres sont présentées à 39 €/mois et 180 €/mois. Les boutons affichent une information sur la démonstration : aucun paiement, inscription réelle, authentification ou service de coaching n’est connecté.
+Prototype fonctionnel. Les modules contiennent des textes de démonstration à remplacer par les cours définitifs. Les offres sont présentées à 39 €/mois et 180 €/mois. Les boutons affichent une information sur la démonstration : aucun paiement, inscription réelle, authentification ou service de coaching n’est encore connecté à l’interface.
 
 La progression et les notes utilisent localStorage sur l’appareil courant. Elles ne sont pas synchronisées entre appareils et peuvent être effacées par le navigateur. En cas de stockage indisponible, l’interface indique l’échec de sauvegarde. Ne pas utiliser les notes pour des informations médicales sensibles.
 

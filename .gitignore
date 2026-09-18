@@ -1,2 +1,9 @@
 .sites-runtime/
 node_modules/
+artwork/originals/
+artwork/category-originals/
+.env
+.env.*
+!.env.example
+dist/env.js
+dist/assets/modules/
