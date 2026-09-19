@@ -100,7 +100,8 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('academie.html', location.href).href;
+const canonicalSiteUrl = runtimeEnv.SITE_URL || location.origin;
+const redirectTo = new URL('/academie.html', canonicalSiteUrl).href;
 
 const initializeAuth = async () => {
   if (!supabaseUrl || !supabaseKey) return;
