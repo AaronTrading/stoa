@@ -32,7 +32,7 @@ dialog.innerHTML = `
     </form>
     <div class="auth-separator"><span>ou</span></div>
     <button class="auth-provider" type="button" data-auth-action="magic-link"><span aria-hidden="true">✉</span> Recevoir un lien magique</button>
-    <button class="auth-provider discord" type="button" data-auth-action="discord"><span aria-hidden="true">◉</span> Continuer avec Discord</button>
+    <button class="auth-provider discord" type="button" data-auth-action="discord"><img src="assets/branding/discord.svg" alt="" aria-hidden="true"> Continuer avec Discord</button>
   </div>
   <div class="auth-member-view" hidden>
     <p>Vous êtes connecté avec <strong data-auth-email></strong>.</p>
