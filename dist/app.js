@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 
 const chapters = [
-  ['alimentation','Alimentation','◒','Comprendre ses besoins et construire une alimentation réaliste.',[['Les fondations de l’équilibre','Lire ses habitudes sans jugement',18],['Composer ses repas','Passer des principes à l’assiette',22]]],
+  ['alimentation','Alimentation','◒','Comprendre ses besoins et construire une alimentation réaliste.',[['Le Carburant Ancestral','Les fondements d’une alimentation dense et consciente',45],['Composer ses repas','Passer des principes à l’assiette',22]]],
   ['hydratation','Hydratation','≈','Observer et organiser son hydratation au quotidien.',[['Comprendre l’hydratation','Les repères essentiels',15],['Créer ses repères','Une organisation adaptée à sa journée',16]]],
   ['sport','Sport','⌁','Bouger avec méthode, plaisir et régularité.',[['Choisir sa pratique','Trouver le mouvement qui vous correspond',20],['Construire sa progression','Avancer avec des repères adaptés',24]]],
   ['sante','Santé','✚','Mieux comprendre son parcours de santé et ses interlocuteurs.',[['Cultiver sa littératie en santé','Comprendre une information avant de décider',20],['Préparer une consultation','Formuler ses questions et ses priorités',17]]],
@@ -75,7 +75,7 @@ const persistModuleProgress = async (localId, done) => {
 
 const categoryStrip = document.querySelector('#category-strip');
 if (categoryStrip) {
-  categoryStrip.insertAdjacentHTML('beforeend', chapters.slice(0,6).map((chapter,index)=>`<a href="#programme">${number(index+1)} <b>${chapter.name}</b></a>`).join(''));
+  categoryStrip.insertAdjacentHTML('beforeend', chapters.slice(0,6).map((chapter,index)=>`<a href="/academie?chapitre=${index+1}">${number(index+1)} <b>${chapter.name}</b></a>`).join(''));
 }
 
 const landingChapters = document.querySelector('#landing-chapters');
@@ -152,6 +152,30 @@ if (document.querySelector('#lesson-content')) {
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
+  const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const paragraphMarkup=(value)=>escapeContent(value).replace(/^([^:]{2,90})\s*:\s*/, '<strong>$1 :</strong> ');
+  const loadLessonContent=async()=>{
+    const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('order_index',chapterIndex).maybeSingle();
+    if(!dbChapter)return;
+    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes').eq('chapter_id',dbChapter.id).eq('order_index',moduleIndex).maybeSingle();
+    if(!dbModule)return;
+    const {data:sections}=await supabase.from('subchapters').select('id,title,content,order_index').eq('module_id',dbModule.id).order('order_index');
+    if(!sections?.length)return;
+    const {data:imageRows}=await supabase.from('subchapter_images').select('subchapter_id,image_url,alt_text,caption,position_index,order_index').in('subchapter_id',sections.map(section=>section.id)).order('order_index');
+    const images=imageRows||[];
+    document.title=`${dbModule.title} — STOA`; document.querySelector('#lesson-title').textContent=dbModule.title;
+    document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction">${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
+      const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
+      const sectionImages=images.filter(image=>image.subchapter_id===section.id);
+      const body=paragraphs.map((paragraph,index)=>{
+        const placed=sectionImages.filter(image=>image.position_index===index+1).map(image=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`).join('');
+        return `<p>${paragraphMarkup(paragraph)}</p>${placed}`;
+      }).join('');
+      const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(image=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy"></figure>`).join('');
+      return `<section class="lesson-subchapter"><span class="eyebrow">${number(sectionIndex+1)}</span><h2>${escapeContent(section.title)}</h2>${body}${remaining}</section>`;
+    }).join('');
+  };
+  loadLessonContent();
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
   const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
   notes.addEventListener('input',()=>{document.querySelector('#note-status').textContent=save(noteKey,notes.value)?'Notes enregistrées sur cet appareil.':'Le navigateur ne permet pas l’enregistrement.';});
