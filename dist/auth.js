@@ -70,7 +70,7 @@ const updateAuthUI = (session) => {
   const user = session?.user;
   const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
-  const firstName = fullName.trim().split(/\s+/)[0];
+  const firstName = user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
     link.href = user ? '/academie' : '#connexion';
@@ -89,6 +89,10 @@ const updateAuthUI = (session) => {
     avatar.href = user ? '/profil' : '#connexion';
     avatar.title = user ? fullName || user.email : 'Se connecter';
     avatar.setAttribute('aria-label', user ? 'Ouvrir mon profil' : 'Se connecter à STOA');
+  });
+
+  document.querySelectorAll('[data-user-first-name]').forEach((element) => {
+    element.textContent = firstName || 'membre';
   });
 
   guestView.hidden = Boolean(user);
@@ -152,6 +156,7 @@ const initializeAuth = async () => {
   dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {
     const data = new FormData(form);
     const fullName = String(data.get('fullName') || '').trim();
+    const [firstName, ...lastNameParts] = fullName.split(/\s+/);
     const email = String(data.get('email') || '').trim();
     const password = String(data.get('password') || '');
     if (!fullName || !email || password.length < 8) {
@@ -163,7 +168,10 @@ const initializeAuth = async () => {
     const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: redirectTo },
+      options: {
+        data: { full_name: fullName, first_name: firstName, last_name: lastNameParts.join(' ') || null },
+        emailRedirectTo: redirectTo,
+      },
     });
     setBusy(false);
     if (error) {

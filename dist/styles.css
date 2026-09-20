@@ -38,6 +38,9 @@
 .profile-form input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);outline:none}
 .profile-form input:focus{border-color:#727967;box-shadow:0 0 0 3px #343b2d0e}
 .profile-form input[readonly]{background:var(--marble);color:var(--muted)}
+.profile-name-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.profile-name-grid>div{display:grid;gap:9px}
+.field-help{font-size:10px;color:var(--muted);margin:0 2px 5px}
 .profile-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
 .profile-meta>div{padding:17px;border:1px solid var(--line);border-radius:9px;background:var(--ivory)}
 .profile-meta span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
@@ -51,7 +54,16 @@
 .account-card p{font-size:13px;color:var(--muted);margin:13px 0;line-height:1.7}
 .account-card #profile-provider{color:var(--ink);font-weight:500}
 .account-card .danger{margin-top:18px}
+.discord-link-card{display:flex;align-items:center;gap:12px;padding:14px;margin:20px 0;border-radius:10px;background:#5865f2;color:#fff}
+.discord-link-card img{width:24px;height:24px;flex:0 0 auto}
+.discord-link-card>div{display:flex;flex:1;min-width:0;flex-direction:column;line-height:1.3}
+.discord-link-card strong{font-size:13px;font-weight:600}
+.discord-link-card span{font-size:10px;color:#ffffffb8}
+.discord-link-button{padding:8px 11px;border-radius:6px;background:#fff;color:#4149a8;font-size:11px;font-weight:600}
+.discord-link-button.linked{background:#ffffff22;color:#fff;cursor:default}
+.discord-link-button:disabled{opacity:.85}
 @media(max-width:800px){.profile-main{padding:75px 6% 60px}.profile-heading{padding-top:15px}.profile-layout{grid-template-columns:1fr}.account-card{position:static}.profile-card{padding:26px}.profile-avatar-block{align-items:flex-start}.profile-avatar-preview{width:92px;height:92px}.profile-meta{grid-template-columns:1fr}}
+@media(max-width:600px){.profile-name-grid{grid-template-columns:1fr}}
 @media(max-width:480px){.profile-avatar-block{display:grid}.profile-avatar-preview{width:100px;height:100px}.profile-card{padding:22px}.profile-heading h1{font-size:3.2rem}}
 
 /* Avatar crop editor */

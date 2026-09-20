@@ -1,7 +1,9 @@
-import { supabase } from './supabase.js';
+import { siteUrl, supabase } from './supabase.js';
 
 const form = document.querySelector('#profile-form');
-const nameInput = document.querySelector('#profile-name');
+const firstNameInput = document.querySelector('#profile-first-name');
+const lastNameInput = document.querySelector('#profile-last-name');
+const usernameInput = document.querySelector('#profile-username');
 const emailInput = document.querySelector('#profile-email');
 const fileInput = document.querySelector('#profile-avatar-input');
 const avatarImage = document.querySelector('#profile-avatar-image');
@@ -14,6 +16,8 @@ const cropCanvas = document.querySelector('#avatar-crop-canvas');
 const cropContext = cropCanvas.getContext('2d');
 const cropZoom = document.querySelector('#avatar-crop-zoom');
 const cropApply = document.querySelector('#crop-apply');
+const discordLinkButton = document.querySelector('#discord-link-button');
+const discordLinkStatus = document.querySelector('#discord-link-status');
 
 let user;
 let profile;
@@ -47,6 +51,13 @@ const showAvatar = (url, fallback = 'S') => {
 
 const roleLabels = { member: 'Académie', coaching: 'Accompagnement', admin: 'Administration' };
 const cropSize = cropCanvas.width;
+
+const setDiscordLinkState = (linked) => {
+  discordLinkStatus.textContent = linked ? 'Compte associé' : 'Non associé';
+  discordLinkButton.textContent = linked ? 'Associé ✓' : 'Associer';
+  discordLinkButton.disabled = linked;
+  discordLinkButton.classList.toggle('linked', linked);
+};
 
 const cropMetrics = () => {
   const scale = cropBaseScale * Number(cropZoom.value);
@@ -120,11 +131,16 @@ const initializeProfile = async () => {
     return;
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('full_name, avatar_url, role, created_at')
-    .eq('id', user.id)
-    .single();
+  const [profileResult, identitiesResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, first_name, last_name, username, avatar_url, role, created_at')
+      .eq('id', user.id)
+      .single(),
+    supabase.auth.getUserIdentities(),
+  ]);
+
+  const { data, error } = profileResult;
 
   if (error) {
     setMessage('Votre profil ne peut pas être chargé pour le moment.', 'error');
@@ -133,14 +149,25 @@ const initializeProfile = async () => {
 
   profile = data;
   const fullName = profile.full_name || user.user_metadata?.full_name || user.user_metadata?.name || '';
+  const [fallbackFirstName = '', ...fallbackLastName] = fullName.trim().split(/\s+/).filter(Boolean);
+  const firstName = profile.first_name || user.user_metadata?.first_name || fallbackFirstName;
+  const lastName = profile.last_name || user.user_metadata?.last_name || fallbackLastName.join(' ');
+  const username = profile.username || user.user_metadata?.username || user.user_metadata?.user_name || user.user_metadata?.preferred_username || '';
   const avatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
-  nameInput.value = fullName;
+  firstNameInput.value = firstName;
+  lastNameInput.value = lastName;
+  usernameInput.value = username;
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   document.querySelector('#profile-created-at').textContent = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at));
   document.querySelector('#profile-provider').textContent = user.app_metadata?.provider === 'discord' ? 'Connecté avec Discord' : 'Connecté par email';
-  showAvatar(avatarUrl, fullName || user.email);
+  showAvatar(avatarUrl, firstName || user.email);
   removeButton.hidden = !avatarUrl;
+  document.querySelectorAll('[data-user-first-name]').forEach((element) => {
+    element.textContent = firstName || 'membre';
+  });
+  const identities = identitiesResult.data?.identities || user.identities || [];
+  setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
 };
 
 fileInput.addEventListener('change', () => {
@@ -211,7 +238,7 @@ cropApply.addEventListener('click', () => {
     pendingAvatar = new File([blob], 'avatar.webp', { type: 'image/webp', lastModified: Date.now() });
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(blob);
-    showAvatar(previewUrl, nameInput.value || user?.email);
+    showAvatar(previewUrl, firstNameInput.value || user?.email);
     removeButton.hidden = false;
     fileInput.value = '';
     cropDialog.close();
@@ -234,9 +261,16 @@ cropDialog.addEventListener('click', (event) => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const fullName = nameInput.value.trim();
-  if (!fullName) {
-    setMessage('Renseignez votre nom complet.', 'error');
+  const firstName = firstNameInput.value.trim();
+  const lastName = lastNameInput.value.trim();
+  const username = usernameInput.value.trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+  if (!firstName || !lastName) {
+    setMessage('Renseignez votre prénom et votre nom.', 'error');
+    return;
+  }
+  if (username.length < 3 || username.length > 30) {
+    setMessage('Le pseudo doit contenir entre 3 et 30 caractères.', 'error');
     return;
   }
 
@@ -262,32 +296,41 @@ form.addEventListener('submit', async (event) => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
     setBusy(false);
+    if (profileError.code === '23505') {
+      setMessage('Ce pseudo est déjà utilisé. Choisissez-en un autre.', 'error');
+      return;
+    }
     setMessage(`Le profil n’a pas pu être enregistré : ${profileError.message}`, 'error');
     return;
   }
 
-  const { error: userError } = await supabase.auth.updateUser({ data: { full_name: fullName, avatar_url: avatarUrl } });
+  const { error: userError } = await supabase.auth.updateUser({
+    data: { full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl },
+  });
   setBusy(false);
   if (userError) {
     setMessage('Le profil est enregistré, mais l’avatar du menu sera actualisé à la prochaine connexion.', 'error');
     return;
   }
 
-  profile = { ...profile, full_name: fullName, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
-  showAvatar(avatarUrl, fullName);
+  showAvatar(avatarUrl, firstName);
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = undefined;
   document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
-    element.textContent = avatarUrl ? '' : fullName.charAt(0).toUpperCase();
+    element.textContent = avatarUrl ? '' : firstName.charAt(0).toUpperCase();
     element.style.backgroundImage = avatarUrl ? `url("${avatarUrl}")` : '';
     element.classList.toggle('has-image', Boolean(avatarUrl));
+  });
+  document.querySelectorAll('[data-user-first-name]').forEach((element) => {
+    element.textContent = firstName;
   });
   setMessage('Votre profil a bien été mis à jour.', 'success');
 });
@@ -312,16 +355,31 @@ removeButton.addEventListener('click', async () => {
   profile = { ...profile, avatar_url: null };
   pendingAvatar = null;
   fileInput.value = '';
-  showAvatar('', nameInput.value || user.email);
+  showAvatar('', firstNameInput.value || user.email);
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = undefined;
   removeButton.hidden = true;
   document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
-    element.textContent = (nameInput.value || user.email || 'S').charAt(0).toUpperCase();
+    element.textContent = (firstNameInput.value || user.email || 'S').charAt(0).toUpperCase();
     element.style.backgroundImage = '';
     element.classList.remove('has-image');
   });
   setMessage('Votre photo de profil a été supprimée.', 'success');
+});
+
+discordLinkButton.addEventListener('click', async () => {
+  discordLinkButton.disabled = true;
+  discordLinkButton.textContent = 'Redirection…';
+  setMessage('Ouverture de Discord pour associer votre compte…');
+  const { error } = await supabase.auth.linkIdentity({
+    provider: 'discord',
+    options: { redirectTo: new URL('/profil', siteUrl).href },
+  });
+  if (error) {
+    discordLinkButton.disabled = false;
+    discordLinkButton.textContent = 'Associer';
+    setMessage(`Le compte Discord n’a pas pu être associé : ${error.message}`, 'error');
+  }
 });
 
 document.querySelector('#profile-signout').addEventListener('click', async () => {

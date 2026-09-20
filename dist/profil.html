@@ -3,7 +3,7 @@
 <body class="member-page profile-page"><a class="skip" href="#main">Aller au contenu</a>
 <header class="site-header"><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><nav class="pill-nav" aria-label="Navigation membre"><a href="/academie">Mon académie</a><a class="active" href="/profil" aria-current="page">Mon profil</a></nav><a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a></header>
 <main id="main" class="profile-main">
-  <section class="profile-heading"><span class="eyebrow">VOTRE ESPACE PERSONNEL</span><h1>Votre profil.</h1><p>Une identité simple, pour un parcours qui vous appartient.</p></section>
+  <section class="profile-heading"><span class="eyebrow">VOTRE ESPACE PERSONNEL</span><h1>Bonjour <span data-user-first-name>membre</span>.</h1><p>Une identité simple, pour un parcours qui vous appartient.</p></section>
   <div class="profile-layout">
     <section class="profile-card" aria-labelledby="profile-card-title">
       <div class="profile-avatar-block">
@@ -12,14 +12,15 @@
       </div>
       <form class="profile-form" id="profile-form">
         <h2 id="profile-card-title">Informations personnelles</h2>
-        <label for="profile-name">Nom complet</label><input id="profile-name" name="fullName" type="text" autocomplete="name" maxlength="100" required>
+        <div class="profile-name-grid"><div><label for="profile-first-name">Prénom</label><input id="profile-first-name" name="firstName" type="text" autocomplete="given-name" maxlength="60" required></div><div><label for="profile-last-name">Nom</label><input id="profile-last-name" name="lastName" type="text" autocomplete="family-name" maxlength="80" required></div></div>
+        <label for="profile-username">Pseudo</label><input id="profile-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="30" required aria-describedby="profile-username-help"><span class="field-help" id="profile-username-help">3 à 30 caractères. Ce pseudo doit être unique.</span>
         <label for="profile-email">Adresse email</label><input id="profile-email" type="email" autocomplete="email" readonly>
         <div class="profile-meta"><div><span>Offre</span><strong id="profile-role">Membre</strong></div><div><span>Membre depuis</span><strong id="profile-created-at">—</strong></div></div>
         <button class="button dark profile-save" type="submit">Enregistrer les modifications <span>↗</span></button>
         <p class="profile-message" id="profile-message" role="status" aria-live="polite"></p>
       </form>
     </section>
-    <aside class="account-card"><span class="eyebrow">VOTRE COMPTE</span><h2>Accès & session</h2><p id="profile-provider">Compte STOA</p><p>Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p><button class="text-button danger" id="profile-signout" type="button">Se déconnecter</button></aside>
+    <aside class="account-card"><span class="eyebrow">VOTRE COMPTE</span><h2>Accès & session</h2><p id="profile-provider">Compte STOA</p><div class="discord-link-card"><img src="assets/branding/discord.svg" alt="" aria-hidden="true"><div><strong>Discord</strong><span id="discord-link-status">Non associé</span></div><button class="discord-link-button" id="discord-link-button" type="button">Associer</button></div><p>Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p><button class="text-button danger" id="profile-signout" type="button">Se déconnecter</button></aside>
   </div>
 </main>
 <dialog class="crop-dialog" id="avatar-crop-dialog" aria-labelledby="crop-title">
