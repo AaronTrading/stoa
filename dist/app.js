@@ -27,9 +27,28 @@ const chapters = [
   ['toxines','Toxines','⌬','Évaluer les expositions avec mesure et discernement.',[['Comprendre l’exposition','Distinguer danger, dose et contexte',22],['Réduire avec pragmatisme','Prioriser les changements utiles',18]]],
 ].map(([slug,name,icon,description,modules])=>({slug,name,icon,description,modules:modules.map(([title,description,duration])=>({title,description,duration}))}));
 
-const allModules = chapters.flatMap((chapter, chapterIndex) =>
-  chapter.modules.map((module, moduleIndex) => ({...module, chapter, chapterIndex, moduleIndex, id:`${chapterIndex+1}-${moduleIndex+1}`}))
-);
+let allModules = [];
+const rebuildModuleIndex = () => {
+  allModules = chapters.flatMap((chapter, chapterIndex) =>
+    chapter.modules.map((module, moduleIndex) => ({...module, chapter, chapterIndex, moduleIndex, id:`${chapterIndex+1}-${moduleIndex+1}`}))
+  );
+};
+rebuildModuleIndex();
+
+const hydrateCatalog = async () => {
+  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,modules(id,title,description,duration_minutes,order_index)').order('order_index');
+  if (error || !data?.length) return;
+  data.forEach((dbChapter) => {
+    const chapter = chapters[dbChapter.order_index];
+    if (!chapter) return;
+    chapter.name = dbChapter.title || dbChapter.category || chapter.name;
+    chapter.description = dbChapter.description || chapter.description;
+    chapter.modules = (dbChapter.modules || []).sort((a, b) => a.order_index - b.order_index).map((module) => ({ id: module.id, title: module.title, description: module.description || '', duration: module.duration_minutes || 1 }));
+  });
+  rebuildModuleIndex();
+};
+
+if (document.querySelector('#course-list, #lesson-content')) await hydrateCatalog();
 
 document.querySelectorAll('[data-year]').forEach(element => { element.textContent = new Date().getFullYear(); });
 
@@ -160,7 +179,15 @@ if (document.querySelector('#lesson-content')) {
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-  const paragraphMarkup=(value)=>escapeContent(value).replace(/^([^:]{2,90})\s*:\s*/, '<strong>$1 :</strong> ');
+  const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+  const renderContentBlock=(value)=>{
+    const trimmed=value.trim();
+    if(/^##\s+/.test(trimmed)) return `<h3>${inlineMarkup(trimmed.replace(/^##\s+/,''))}</h3>`;
+    if(/^>\s+/.test(trimmed)) return `<blockquote>${inlineMarkup(trimmed.replace(/^>\s+/gm,'')).replaceAll('\n','<br>')}</blockquote>`;
+    const lines=trimmed.split('\n');
+    if(lines.every(line=>/^[-*]\s+/.test(line))) return `<ul>${lines.map(line=>`<li>${inlineMarkup(line.replace(/^[-*]\s+/,''))}</li>`).join('')}</ul>`;
+    return `<p>${inlineMarkup(trimmed).replace(/^([^:]{2,90})\s*:\s*/, '<strong>$1 :</strong> ').replaceAll('\n','<br>')}</p>`;
+  };
   const loadLessonContent=async()=>{
     const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('order_index',chapterIndex).maybeSingle();
     if(!dbChapter)return;
@@ -174,13 +201,15 @@ if (document.querySelector('#lesson-content')) {
     document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction">${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
       const sectionImages=images.filter(image=>image.subchapter_id===section.id);
+      const imageMarkup=(image)=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`;
+      const leading=sectionImages.filter(image=>image.position_index===0).map(imageMarkup).join('');
       const body=paragraphs.map((paragraph,index)=>{
-        const placed=sectionImages.filter(image=>image.position_index===index+1).map(image=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`).join('');
-        return `<p>${paragraphMarkup(paragraph)}</p>${placed}`;
+        const placed=sectionImages.filter(image=>image.position_index===index+1).map(imageMarkup).join('');
+        return `${renderContentBlock(paragraph)}${placed}`;
       }).join('');
-      const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(image=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy"></figure>`).join('');
+      const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(imageMarkup).join('');
       const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2>${escapeContent(section.title)}</h2>`;
-      return `<section class="lesson-subchapter">${heading}${body}${remaining}</section>`;
+      return `<section class="lesson-subchapter">${heading}${leading}${body}${remaining}</section>`;
     }).join('');
   };
   loadLessonContent();

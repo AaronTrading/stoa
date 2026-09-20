@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Gérez votre profil membre STOA."><title>Mon profil — STOA</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script type="module" src="app.js"></script><script type="module" src="auth.js"></script><script type="module" src="community-notifications.js"></script><script type="module" src="profile.js"></script></head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Gérez votre profil membre STOA."><title>Mon profil — STOA</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script type="module" src="app.js"></script><script type="module" src="auth.js"></script><script type="module" src="community-notifications.js"></script><script type="module" src="profile.js"></script><script type="module" src="admin-builder.js"></script></head>
 <body class="member-page profile-page"><a class="skip" href="#main">Aller au contenu</a>
 <header class="site-header"><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><nav class="pill-nav" aria-label="Navigation membre"><a href="/academie">Académie</a><a href="/communaute">Communauté</a><a href="/glossaire">Glossaire</a><a class="active" href="/profil" aria-current="page">Profil</a></nav><a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a></header>
 <main id="main" class="profile-main">
@@ -23,6 +23,47 @@
     </section>
     <aside class="account-card"><span class="eyebrow">VOTRE COMPTE</span><h2>Accès & session</h2><p id="profile-provider">Compte STOA</p><div class="discord-link-card"><img src="assets/branding/discord.svg" alt="" aria-hidden="true"><div><strong>Discord</strong><span id="discord-link-status">Non associé</span></div><button class="discord-link-button" id="discord-link-button" type="button">Associer</button></div><p>Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p><button class="text-button danger" id="profile-signout" type="button">Se déconnecter</button></aside>
   </div>
+  <section class="admin-builder" id="admin-builder" hidden aria-labelledby="builder-title">
+    <div class="builder-heading"><div><span class="eyebrow">ADMINISTRATION DU CONTENU</span><h2 id="builder-title">Éditeur de l’académie</h2><p>Les modifications enregistrées ici sont immédiatement visibles par tous les membres.</p></div><span class="builder-live"><i></i> Supabase actif</span></div>
+    <div class="builder-shell">
+      <aside class="builder-sidebar">
+        <label for="builder-chapter">Chapitre</label><select id="builder-chapter"></select>
+        <div class="builder-sidebar-title"><strong>Modules</strong><button class="builder-icon-button" id="builder-new-module" type="button" aria-label="Créer un module" title="Créer un module">＋</button></div>
+        <div class="builder-module-list" id="builder-modules"></div>
+      </aside>
+      <div class="builder-workspace">
+        <div class="builder-empty" id="builder-empty"><span>✦</span><h3>Sélectionnez un module</h3><p>Choisissez un module à gauche ou créez-en un nouveau.</p></div>
+        <div id="builder-editor" hidden>
+          <form class="builder-form" id="builder-module-form">
+            <div class="builder-section-heading"><div><span class="eyebrow">MODULE</span><h3>Informations générales</h3></div><button class="builder-danger" id="builder-delete-module" type="button">Supprimer</button></div>
+            <label for="builder-module-title">Titre</label><input id="builder-module-title" maxlength="160" required>
+            <label for="builder-module-description">Description</label><textarea id="builder-module-description" rows="3" maxlength="1200"></textarea>
+            <div class="builder-inline-fields"><div><label for="builder-module-duration">Durée (minutes)</label><input id="builder-module-duration" type="number" min="1" max="999" required></div><div><label for="builder-module-order">Position</label><input id="builder-module-order" type="number" min="1" required></div></div>
+            <button class="button dark" type="submit">Enregistrer le module <span>↗</span></button>
+          </form>
+          <section class="builder-subchapters">
+            <div class="builder-section-heading"><div><span class="eyebrow">SOUS-MODULES</span><h3>Contenu du module</h3></div><button class="builder-icon-button labeled" id="builder-new-subchapter" type="button"><span>＋</span> Ajouter</button></div>
+            <div class="builder-subchapter-tabs" id="builder-subchapters"></div>
+            <form class="builder-form builder-content-form" id="builder-subchapter-form" hidden>
+              <div class="builder-section-heading"><strong>Sous-module sélectionné</strong><button class="builder-danger" id="builder-delete-subchapter" type="button">Supprimer</button></div>
+              <label for="builder-subchapter-title">Titre</label><input id="builder-subchapter-title" maxlength="200" required>
+              <label for="builder-subchapter-order">Position</label><input id="builder-subchapter-order" type="number" min="1" required>
+              <label for="builder-subchapter-content">Contenu</label>
+              <div class="builder-toolbar" role="toolbar" aria-label="Mise en forme"><button type="button" data-format="bold" title="Gras"><strong>B</strong></button><button type="button" data-format="italic" title="Italique"><em>I</em></button><button type="button" data-format="underline" title="Souligné"><u>U</u></button><button type="button" data-format="heading" title="Titre">T</button><button type="button" data-format="quote" title="Citation">❝</button><button type="button" data-format="list" title="Liste">☷</button></div>
+              <textarea id="builder-subchapter-content" rows="16" placeholder="Écrivez le contenu du cours…"></textarea>
+              <button class="button dark" type="submit">Enregistrer le sous-module <span>↗</span></button>
+              <div class="builder-images">
+                <div class="builder-section-heading"><div><span class="eyebrow">IMAGES</span><h3>Illustrations du contenu</h3></div><label class="builder-icon-button labeled" for="builder-image-upload"><span>＋</span> Importer</label><input id="builder-image-upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden></div>
+                <p class="field-help">La position correspond au numéro du paragraphe après lequel l’image apparaît.</p>
+                <div id="builder-image-list" class="builder-image-list"></div>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+    <p class="profile-message builder-status" id="builder-status" role="status" aria-live="polite"></p>
+  </section>
 </main>
 <dialog class="crop-dialog" id="avatar-crop-dialog" aria-labelledby="crop-title">
   <button class="auth-close" id="crop-close" type="button" aria-label="Fermer">×</button>
