@@ -180,21 +180,35 @@ if (document.querySelector('#lesson-content')) {
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+  const normalizeQuiz=(value)=>{
+    try{
+      const parsed=typeof value==='string'?JSON.parse(value):value;
+      if(!parsed||!Array.isArray(parsed.questions))return null;
+      return {questions:parsed.questions.map(question=>({question:String(question.question||''),answers:Array.isArray(question.answers)?question.answers.map(String):[],correct:Number(question.correct)})).filter(question=>question.question&&question.answers.length>=2&&Number.isInteger(question.correct)&&question.correct>=0&&question.correct<question.answers.length)};
+    }catch{return null;}
+  };
   const sanitizeStoredHtml=(html)=>{
     const template=document.createElement('template'); template.innerHTML=html;
-    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION']);
+    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION']);
     [...template.content.querySelectorAll('*')].forEach(element=>{
       if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
       const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
+      const quiz=element.tagName==='SECTION'?normalizeQuiz(element.getAttribute('data-quiz')):null;
+      if(element.tagName==='SECTION'&&!quiz){element.replaceWith(...element.childNodes);return;}
       [...element.attributes].forEach(attribute=>element.removeAttribute(attribute.name));
       if(element.tagName==='IMG'){
         if(imageSource.startsWith('https://')||imageSource.startsWith('/')) element.setAttribute('src',imageSource); else element.remove();
         element.setAttribute('alt',''); element.setAttribute('loading','lazy');
       }
       if(element.tagName==='FIGURE') element.className='lesson-inline-image';
+      if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
     });
     return template.innerHTML;
   };
+  const renderLessonQuizzes=()=>document.querySelectorAll('.lesson-quiz[data-quiz]').forEach(element=>{
+    const quiz=normalizeQuiz(element.dataset.quiz); if(!quiz?.questions.length){element.remove();return;}
+    element.innerHTML=`<span class="eyebrow">MINI QUIZ</span><h3>Vérifiez ce que vous retenez.</h3><div class="lesson-quiz-questions">${quiz.questions.map((question,questionIndex)=>`<fieldset data-quiz-question="${questionIndex}"><legend><span>${number(questionIndex+1)}</span>${escapeContent(question.question)}</legend><div>${question.answers.map((answer,answerIndex)=>`<button type="button" data-quiz-answer="${answerIndex}" aria-pressed="false"><i></i>${escapeContent(answer)}</button>`).join('')}</div></fieldset>`).join('')}</div><div class="lesson-quiz-footer"><button type="button" class="button dark" data-quiz-check>Vérifier mes réponses</button><p role="status"></p></div>`;
+  });
   const renderContentBlock=(value)=>{
     const trimmed=value.trim();
     if(/^##\s+/.test(trimmed)) return `<h3>${inlineMarkup(trimmed.replace(/^##\s+/,''))}</h3>`;
@@ -228,9 +242,19 @@ if (document.querySelector('#lesson-content')) {
       return `<section class="lesson-subchapter" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
     window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
+    renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };
   loadLessonContent();
+  document.querySelector('#lesson-copy').addEventListener('click',(event)=>{
+    const answer=event.target.closest('[data-quiz-answer]');
+    if(answer){const fieldset=answer.closest('[data-quiz-question]');fieldset.querySelectorAll('[data-quiz-answer]').forEach(button=>{button.classList.remove('selected','correct','incorrect');button.setAttribute('aria-pressed','false');});answer.classList.add('selected');answer.setAttribute('aria-pressed','true');fieldset.closest('.lesson-quiz').querySelector('.lesson-quiz-footer p').textContent='';return;}
+    const check=event.target.closest('[data-quiz-check]'); if(!check)return;
+    const quizElement=check.closest('.lesson-quiz'),quiz=normalizeQuiz(quizElement.dataset.quiz),fields=[...quizElement.querySelectorAll('[data-quiz-question]')];
+    if(fields.some(field=>!field.querySelector('.selected'))){quizElement.querySelector('.lesson-quiz-footer p').textContent='Répondez à toutes les questions avant de vérifier.';return;}
+    let score=0; fields.forEach((field,index)=>{const selected=field.querySelector('.selected'),answerIndex=Number(selected.dataset.quizAnswer),correct=quiz.questions[index].correct;if(answerIndex===correct){score++;selected.classList.add('correct');}else{selected.classList.add('incorrect');field.querySelector(`[data-quiz-answer="${correct}"]`)?.classList.add('correct');}});
+    quizElement.querySelector('.lesson-quiz-footer p').textContent=`${score} bonne${score>1?'s':''} réponse${score>1?'s':''} sur ${fields.length}.`;
+  });
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
   const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
   notes.addEventListener('input',()=>{document.querySelector('#note-status').textContent=save(noteKey,notes.value)?'Notes enregistrées sur cet appareil.':'Le navigateur ne permet pas l’enregistrement.';});
