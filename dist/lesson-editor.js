@@ -160,4 +160,3 @@ lesson?.addEventListener('drop', (event) => {
   if (range && targetEditor.contains(range.startContainer)) range.insertNode(draggedFigure); else targetEditor.append(draggedFigure);
   draggedFigure = undefined; setStatus('Image déplacée.');
 });
-
