@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="env.js"></script>
-  <script type="module" src="auth.js"></script>
+  <script type="module" src="auth.js"></script><script type="module" src="community-notifications.js"></script>
   <script type="module" src="communaute-v2.js"></script>
 </head>
 <body class="member-page community-page">
@@ -107,12 +107,14 @@
     </div>
   </dialog>
   <aside class="announcement-popup community-live-popup" id="announcement-popup" role="status" aria-live="assertive" hidden>
+    <button class="live-popup-close" id="announcement-close" type="button" aria-label="Fermer l’annonce">×</button>
     <span class="eyebrow">ANNONCE STOA</span>
     <strong id="announcement-author"></strong>
     <p id="announcement-content"></p>
     <time id="announcement-time"></time>
   </aside>
   <aside class="poll-popup community-live-popup" id="poll-popup" aria-live="polite" hidden>
+    <button class="live-popup-close" id="poll-popup-close" type="button" aria-label="Fermer le sondage">×</button>
     <span class="eyebrow">SONDAGE STOA</span>
     <strong id="poll-popup-question"></strong>
     <form id="poll-popup-options"></form>

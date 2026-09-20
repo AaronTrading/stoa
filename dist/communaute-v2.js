@@ -22,8 +22,10 @@ const els = {
   shareList: $('#share-channel-list'), externalDialog: $('#external-link-dialog'), externalHost: $('#external-link-host'),
   externalContinue: $('#external-link-continue'), announcement: $('#announcement-popup'), announcementAuthor: $('#announcement-author'),
   announcementContent: $('#announcement-content'), announcementTime: $('#announcement-time'),
+  announcementClose: $('#announcement-close'),
   typing: $('#typing-indicator'), pinned: $('#pinned-summary'), pollForm: $('#poll-form'), pollQuestion: $('#poll-question'),
   pollPopup: $('#poll-popup'), pollPopupQuestion: $('#poll-popup-question'), pollPopupOptions: $('#poll-popup-options'), pollPopupTime: $('#poll-popup-time'),
+  pollPopupClose: $('#poll-popup-close'),
 };
 let user, ownProfile, channels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
 let oldest, historyEnded = false, switching = false, replyId, editId, shareId, longPressTimer, allProfilesLoaded = false;
@@ -64,10 +66,10 @@ function rich(text = '') {
       let url = token, suffix = '';
       while (/[),.;!?]$/.test(url)) { suffix = url.at(-1) + suffix; url = url.slice(0, -1); }
       out += `<a class="external-link" href="${esc(url)}" data-external-url="${esc(url)}">${esc(url)}</a>${esc(suffix)}`;
-    } else if (token[0] === '@') out += `<button class="inline-mention" type="button" data-mention-username="${esc(token.slice(1))}">${esc(token)}</button>`;
+    } else if (token[0] === '@') out += `<button class="inline-mention profile-mention" type="button" data-mention-username="${esc(token.slice(1))}">${esc(token)}</button>`;
     else {
       const tag = token.slice(1), target = channelFor(tag);
-      out += `<button class="inline-mention" type="button" data-channel-slug="${esc(target?.slug || tag)}">${esc(token)}</button>`;
+      out += `<button class="inline-mention channel-mention" type="button" data-channel-slug="${esc(target?.slug || tag)}">${esc(token)}</button>`;
     }
     cursor = match.index + token.length;
   }
@@ -267,8 +269,9 @@ function applySuggestion(button) { const token = mentionToken(); if (!token) ret
 async function votePoll(pollId, optionId) {
   const { error } = await supabase.from('poll_votes').insert({ poll_id: pollId, option_id: optionId, user_id: user.id });
   if (error) return errorMessage(error.code === '23505' ? 'Votre vote est déjà enregistré.' : `Le vote n’a pas été enregistré : ${error.message}`);
+  sessionStorage.setItem(`stoa-dismissed-poll:${pollId}`, '1');
+  hideLivePopup(els.pollPopup);
   if (active?.kind === 'polls') await loadPolls();
-  await showActivePoll(pollId);
 }
 async function createPoll(event) {
   event.preventDefault(); if (!isAdmin()) return;
@@ -281,17 +284,24 @@ async function createPoll(event) {
 }
 function popupPollMarkup(poll) {
   const options = [...(poll.poll_options || [])].sort((a, b) => a.order_index - b.order_index);
-  const total = options.reduce((sum, option) => sum + (option.poll_votes?.length || 0), 0);
-  const mine = options.find((option) => option.poll_votes?.some((vote) => vote.user_id === user.id))?.id;
-  return options.map((option) => { const count = option.poll_votes?.length || 0; const percent = total ? Math.round(count / total * 100) : 0; return `<button type="button" data-popup-poll="${poll.id}" data-poll-option="${option.id}"${mine ? ' disabled' : ''} class="${mine === option.id ? 'selected' : ''}"><span>${esc(option.label)}</span><b>${mine ? `${percent}%` : 'Voter'}</b><i style="--poll-result:${percent}%"></i></button>`; }).join('');
+  return options.map((option) => `<button type="button" data-popup-poll="${poll.id}" data-poll-option="${option.id}"><span>${esc(option.label)}</span><b>Voter</b></button>`).join('');
+}
+function showLivePopup(element) {
+  element.hidden = false; element.classList.remove('is-leaving', 'is-entering'); void element.offsetWidth; element.classList.add('is-entering');
+}
+function hideLivePopup(element) {
+  if (!element || element.hidden || element.classList.contains('is-leaving')) return;
+  element.classList.remove('is-entering'); element.classList.add('is-leaving');
+  setTimeout(() => { element.hidden = true; element.classList.remove('is-leaving'); }, 260);
 }
 async function showActivePoll(requestedId) {
   let query = supabase.from('polls').select('id,question,created_at,expires_at,poll_options(id,label,order_index,poll_votes(user_id))').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1);
   if (requestedId) query = supabase.from('polls').select('id,question,created_at,expires_at,poll_options(id,label,order_index,poll_votes(user_id))').eq('id', requestedId).gt('expires_at', new Date().toISOString()).limit(1);
   const { data } = await query.maybeSingle();
-  if (!data) { els.pollPopup.hidden = true; return; }
-  els.pollPopupQuestion.textContent = data.question; els.pollPopupOptions.innerHTML = popupPollMarkup(data); els.pollPopupTime.textContent = `Ouvert jusqu’à ${time(data.expires_at)}`; els.pollPopup.hidden = false;
-  clearTimeout(pollTimer); pollTimer = setTimeout(() => { els.pollPopup.hidden = true; }, Math.max(0, new Date(data.expires_at) - Date.now()));
+  const hasVoted = data?.poll_options?.some((option) => option.poll_votes?.some((vote) => vote.user_id === user.id));
+  if (!data || hasVoted || sessionStorage.getItem(`stoa-dismissed-poll:${data.id}`)) { els.pollPopup.hidden = true; return; }
+  els.pollPopup.dataset.pollId = data.id; els.pollPopupQuestion.textContent = data.question; els.pollPopupOptions.innerHTML = popupPollMarkup(data); els.pollPopupTime.textContent = `Ouvert jusqu’à ${time(data.expires_at)}`; showLivePopup(els.pollPopup);
+  clearTimeout(pollTimer); pollTimer = setTimeout(() => hideLivePopup(els.pollPopup), Math.max(0, new Date(data.expires_at) - Date.now()));
 }
 async function subscribePolls() {
   await showActivePoll();
@@ -321,6 +331,8 @@ $('#reply-cancel').addEventListener('click', resetComposer); $('#community-profi
 els.shareList.addEventListener('click', (e) => { const b = e.target.closest('[data-share-channel]'); if (b) shareMessage(b.dataset.shareChannel); });
 els.pollForm.addEventListener('submit', createPoll);
 els.pollPopupOptions.addEventListener('click', (e) => { const option = e.target.closest('[data-poll-option]'); if (option) votePoll(option.dataset.popupPoll, option.dataset.pollOption); });
+els.pollPopupClose.addEventListener('click', () => { const id = els.pollPopup.dataset.pollId; if (id) sessionStorage.setItem(`stoa-dismissed-poll:${id}`, '1'); hideLivePopup(els.pollPopup); });
+els.announcementClose.addEventListener('click', () => { const id = els.announcement.dataset.messageId; if (id) sessionStorage.setItem(`stoa-dismissed-announcement:${id}`, '1'); hideLivePopup(els.announcement); });
 els.pinned.addEventListener('click', () => { const target = document.querySelector('.message-entry.pinned,[data-message-id]:has(.pinned-label)'); target?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 els.list.addEventListener('pointerdown', (e) => { if (e.target.closest('.message-content')) longPressTimer = setTimeout(() => openPicker(e.target.closest('[data-message-id]')), 480); }); ['pointerup', 'pointercancel', 'pointermove'].forEach((name) => els.list.addEventListener(name, () => clearTimeout(longPressTimer)));
 document.addEventListener('click', (e) => { if (!e.target.closest('.message-tools')) closePickers(); if (!e.target.closest('.composer-input-wrap')) els.suggestions.hidden = true; });
@@ -329,7 +341,7 @@ window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(roo
 
 async function subscribeAnnouncements() {
   const channel = channels.find((c) => c.kind === 'announcements'); if (!channel) return;
-  const show = async (m) => { const end = new Date(m.announcement_expires_at || new Date(m.created_at).getTime() + 600000), remaining = end - Date.now(); if (remaining <= 0 || m.deleted_at) return; await loadProfiles([m.user_id]); els.announcementAuthor.textContent = profile(m.user_id).display_name; els.announcementContent.textContent = m.content; els.announcementTime.textContent = `Publié à ${time(m.created_at)}`; els.announcement.hidden = false; clearTimeout(announcementTimer); announcementTimer = setTimeout(() => { els.announcement.hidden = true; }, remaining); };
+  const show = async (m) => { const end = new Date(m.announcement_expires_at || new Date(m.created_at).getTime() + 600000), remaining = end - Date.now(); if (remaining <= 0 || m.deleted_at || sessionStorage.getItem(`stoa-dismissed-announcement:${m.id}`)) return; await loadProfiles([m.user_id]); els.announcement.dataset.messageId = m.id; els.announcementAuthor.textContent = profile(m.user_id).display_name; els.announcementContent.textContent = m.content; els.announcementTime.textContent = `Publié à ${time(m.created_at)}`; showLivePopup(els.announcement); clearTimeout(announcementTimer); announcementTimer = setTimeout(() => hideLivePopup(els.announcement), remaining); };
   const { data } = await supabase.from('messages').select('id,user_id,content,created_at,deleted_at,announcement_expires_at').eq('channel_id', channel.id).is('deleted_at', null).gt('announcement_expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle(); if (data) show(data);
   announcementRoom = supabase.channel(`community-announcements:${channel.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` }, (payload) => show(payload.new)).subscribe();
 }
