@@ -34,6 +34,7 @@
 .realtime-indicator i{width:7px;height:7px;border-radius:50%;background:#778268}
 .message-history{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px 26px 12px;scrollbar-color:#c9c8be transparent}
 .load-more{display:block;margin:0 auto 18px;padding:8px 13px;border:1px solid var(--line);border-radius:20px;background:var(--ivory);color:var(--muted);font-size:10px}
+.load-more[hidden]{display:none}
 .load-more:hover{color:var(--ink);background:var(--white)}
 .load-more:disabled{opacity:.55;cursor:wait}
 .chat-state{text-align:center;color:var(--muted);font-size:12px;padding:42px 15px}
