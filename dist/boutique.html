@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="La boutique STOA : une sélection resserrée, choisie avec soin.">
+  <title>Boutique — STOA</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="env.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="products.js"></script>
+</head>
+<body class="shop-page">
+  <a class="skip" href="#main">Aller au contenu</a>
+  <header class="site-header">
+    <a class="logo" href="/" aria-label="STOA, accueil"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
+    <nav class="pill-nav" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <a href="/#programme">Programme</a>
+      <a href="/#offres">Offres</a>
+      <a class="active" href="/boutique" aria-current="page">Boutique</a>
+    </nav>
+    <a class="login-link" data-auth-link href="/academie">Espace membre <span>↗</span></a>
+  </header>
+
+  <main class="shop-main" id="main">
+    <header class="shop-heading">
+      <span class="eyebrow">LA SÉLECTION STOA</span>
+      <h1>Peu de choses.<br><span>Bien choisies.</span></h1>
+      <p>Une sélection resserrée, choisie avec soin.</p>
+    </header>
+
+    <section class="shop-grid" id="product-grid" aria-label="Produits"></section>
+
+    <p class="shop-manual-note">Les commandes sont traitées manuellement. Leur confirmation peut prendre jusqu’à 24 à 48 heures.</p>
+  </main>
+
+  <footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer>
+
+  <dialog class="order-dialog" id="order-dialog" aria-labelledby="order-title">
+    <button class="auth-close" id="order-close" type="button" aria-label="Fermer">×</button>
+    <span class="eyebrow">COMMANDE MANUELLE</span>
+    <h2 id="order-title">Commander</h2>
+    <p class="order-intro">Votre messagerie préparera un email à destination de STOA. Aucune donnée n’est enregistrée sur le site.</p>
+    <form class="order-form" id="order-form" novalidate>
+      <label for="order-product">Produit</label>
+      <input id="order-product" name="product" readonly>
+      <div class="order-two-columns">
+        <div><label for="order-name">Nom complet</label><input id="order-name" name="name" autocomplete="name" required></div>
+        <div><label for="order-email">Email</label><input id="order-email" name="email" type="email" autocomplete="email" required></div>
+      </div>
+      <label for="order-address">Adresse de livraison complète</label>
+      <textarea id="order-address" name="address" rows="3" autocomplete="street-address" placeholder="Numéro, voie, code postal, ville et pays" required></textarea>
+      <div class="order-two-columns">
+        <div><label for="order-phone">Téléphone <span>facultatif</span></label><input id="order-phone" name="phone" type="tel" autocomplete="tel"></div>
+        <div><label for="order-quantity">Quantité</label><input id="order-quantity" name="quantity" type="number" min="1" max="99" value="1" required></div>
+      </div>
+      <p class="order-error" id="order-error" role="alert" hidden></p>
+      <button class="button dark" type="submit">Envoyer la commande <span>↗</span></button>
+    </form>
+  </dialog>
+</body>
+</html>
