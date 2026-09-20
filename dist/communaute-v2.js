@@ -114,7 +114,7 @@ function pollMarkup(poll) {
   const options = [...(poll.poll_options || [])].sort((a, b) => a.order_index - b.order_index);
   const total = options.reduce((sum, option) => sum + (option.poll_votes?.length || 0), 0);
   const mine = options.find((option) => option.poll_votes?.some((vote) => vote.user_id === user.id))?.id;
-  return `<article class="poll-card" data-poll-id="${poll.id}"><div class="poll-copy"><span class="eyebrow">SONDAGE ${new Date(poll.expires_at) > new Date() ? 'EN COURS' : 'TERMINÉ'}</span><h3>${esc(poll.question)}</h3><small>${total} vote${total > 1 ? 's' : ''} · ${new Date(poll.expires_at) > new Date() ? `se termine à ${time(poll.expires_at)}` : 'clos'}</small></div><div class="poll-options">${options.map((option) => { const count = option.poll_votes?.length || 0; const percent = total ? Math.round(count / total * 100) : 0; return `<button type="button" data-poll-option="${option.id}"${mine || new Date(poll.expires_at) <= new Date() ? ' disabled' : ''} class="${mine === option.id ? 'selected' : ''}"><span>${esc(option.label)}</span><b>${percent}%</b><i style="--poll-result:${percent}%"></i></button>`; }).join('')}</div>${isAdmin() ? `<button class="poll-delete" type="button" data-delete-poll="${poll.id}" aria-label="Supprimer ce sondage" title="Supprimer">${svg.trash}</button>` : ''}</article>`;
+  return `<article class="poll-card" data-poll-id="${poll.id}"><div class="poll-copy"><span class="eyebrow">SONDAGE EN COURS</span><h3>${esc(poll.question)}</h3><small>${total} vote${total > 1 ? 's' : ''} · permanent</small></div><div class="poll-options">${options.map((option) => { const count = option.poll_votes?.length || 0; const percent = total ? Math.round(count / total * 100) : 0; return `<button type="button" data-poll-option="${option.id}"${mine ? ' disabled' : ''} class="${mine === option.id ? 'selected' : ''}"><span>${esc(option.label)}</span><b>${percent}%</b><i style="--poll-result:${percent}%"></i></button>`; }).join('')}</div>${isAdmin() ? `<button class="poll-delete" type="button" data-delete-poll="${poll.id}" aria-label="Supprimer ce sondage" title="Supprimer">${svg.trash}</button>` : ''}</article>`;
 }
 function renderPolls() {
   els.more.hidden = true;
@@ -307,8 +307,7 @@ async function showActivePoll(requestedId) {
   const { data } = await query.maybeSingle();
   const hasVoted = data?.poll_options?.some((option) => option.poll_votes?.some((vote) => vote.user_id === user.id));
   if (!data || hasVoted || sessionStorage.getItem(`stoa-dismissed-poll:${data.id}`)) { els.pollPopup.hidden = true; return; }
-  els.pollPopup.dataset.pollId = data.id; els.pollPopupQuestion.textContent = data.question; els.pollPopupOptions.innerHTML = popupPollMarkup(data); els.pollPopupTime.textContent = `Ouvert jusqu’à ${time(data.expires_at)}`; showLivePopup(els.pollPopup);
-  clearTimeout(pollTimer); pollTimer = setTimeout(() => hideLivePopup(els.pollPopup), Math.max(0, new Date(data.expires_at) - Date.now()));
+  els.pollPopup.dataset.pollId = data.id; els.pollPopupQuestion.textContent = data.question; els.pollPopupOptions.innerHTML = popupPollMarkup(data); els.pollPopupTime.textContent = 'Sondage permanent'; showLivePopup(els.pollPopup);
 }
 async function subscribePolls() {
   await showActivePoll();
