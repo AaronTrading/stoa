@@ -1,10 +1,12 @@
 import { siteUrl, supabase } from './supabase.js';
+import { attachDepartmentPicker, departmentCode, departmentLabel } from './departments.js';
 
 const form = document.querySelector('#profile-form');
 const firstNameInput = document.querySelector('#profile-first-name');
 const lastNameInput = document.querySelector('#profile-last-name');
 const usernameInput = document.querySelector('#profile-username');
 const departmentInput = document.querySelector('#profile-department');
+attachDepartmentPicker(departmentInput);
 const emailInput = document.querySelector('#profile-email');
 const fileInput = document.querySelector('#profile-avatar-input');
 const avatarImage = document.querySelector('#profile-avatar-image');
@@ -170,7 +172,7 @@ const initializeProfile = async () => {
   firstNameInput.value = firstName;
   lastNameInput.value = lastName;
   usernameInput.value = username;
-  departmentInput.value = profile.department || user.user_metadata?.department || '';
+  departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
@@ -281,7 +283,7 @@ form.addEventListener('submit', async (event) => {
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
   const username = usernameInput.value.trim();
-  const department = departmentInput.value.trim().toUpperCase();
+  const department = departmentCode(departmentInput.value);
   const fullName = `${firstName} ${lastName}`.trim();
   if (!firstName || !lastName) {
     setMessage('Renseignez votre prénom et votre nom.', 'error');
@@ -291,7 +293,7 @@ form.addEventListener('submit', async (event) => {
     setMessage('Le pseudo doit contenir entre 3 et 30 caractères.', 'error');
     return;
   }
-  if (!/^(0[1-9]|[1-8][0-9]|9[0-5]|2A|2B|97[1-6]|98[4-8])$/.test(department)) {
+  if (!department) {
     setMessage('Renseignez un numéro de département valide, par exemple 31, 2A ou 974.', 'error');
     return;
   }

@@ -1,4 +1,5 @@
 import { siteUrl, supabase } from './supabase.js';
+import { attachDepartmentPicker, departmentCode } from './departments.js';
 
 const statusToast = document.createElement('div');
 statusToast.className = 'auth-status';
@@ -11,7 +12,7 @@ dialog.className = 'auth-dialog';
 dialog.setAttribute('aria-labelledby', 'auth-title');
 dialog.innerHTML = `
   <button class="auth-close" type="button" aria-label="Fermer">×</button>
-  <div class="auth-mark" aria-hidden="true">Π</div>
+  <img class="auth-logo-image" src="/assets/branding/fondtransparent.png" alt="">
   <span class="eyebrow">ENTRER DANS STOA</span>
   <h2 id="auth-title">Votre espace membre</h2>
   <p class="auth-intro">Retrouvez votre parcours avec votre adresse email ou votre compte Discord.</p>
@@ -20,7 +21,7 @@ dialog.innerHTML = `
       <label for="auth-name">Nom complet <span>pour créer un compte</span></label>
       <input id="auth-name" name="fullName" type="text" autocomplete="name" placeholder="Votre nom">
       <label for="auth-department">Département <span>pour créer un compte</span></label>
-      <input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" maxlength="3" placeholder="Ex. 31, 2A ou 974">
+      <input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" placeholder="Numéro ou nom du département">
       <label for="auth-email">Adresse email</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
       <label for="auth-password">Mot de passe</label>
@@ -41,6 +42,7 @@ dialog.innerHTML = `
   <p class="auth-message" role="status" aria-live="polite"></p>
 `;
 document.body.append(dialog);
+attachDepartmentPicker(dialog.querySelector('#auth-department'));
 
 const form = dialog.querySelector('.auth-form');
 const message = dialog.querySelector('.auth-message');
@@ -189,11 +191,10 @@ const initializeAuth = async () => {
     const data = new FormData(form);
     const fullName = String(data.get('fullName') || '').trim();
     const [firstName, ...lastNameParts] = fullName.split(/\s+/);
-    const department = String(data.get('department') || '').trim().toUpperCase();
+    const department = departmentCode(data.get('department'));
     const email = String(data.get('email') || '').trim();
     const password = String(data.get('password') || '');
-    const departmentPattern = /^(0[1-9]|[1-8][0-9]|9[0-5]|2A|2B|97[1-6]|98[4-8])$/;
-    if (!fullName || !email || password.length < 8 || !departmentPattern.test(department)) {
+    if (!fullName || !email || password.length < 8 || !department) {
       setMessage('Ajoutez votre nom, votre département, un email valide et un mot de passe d’au moins 8 caractères.', 'error');
       return;
     }

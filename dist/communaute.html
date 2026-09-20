@@ -17,7 +17,7 @@
 <body class="member-page community-page">
   <a class="skip" href="#main">Aller au contenu</a>
   <header class="site-header">
-    <a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a>
+    <a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
     <nav class="pill-nav" aria-label="Navigation membre">
       <a href="/academie">Académie</a>
       <a class="active" href="/communaute" aria-current="page">Communauté</a>
@@ -46,6 +46,7 @@
           <p id="active-channel-description"></p>
         </div>
         <span class="realtime-indicator"><i aria-hidden="true"></i><span id="realtime-label">Connexion…</span></span>
+        <button class="pinned-summary" id="pinned-summary" type="button" aria-label="Voir les messages épinglés" hidden></button>
       </header>
 
       <div class="message-history" id="message-history" tabindex="0" aria-label="Historique des messages">
@@ -60,12 +61,26 @@
           <button id="reply-cancel" type="button" aria-label="Annuler la réponse">×</button>
         </div>
         <p class="composer-guidance" id="composer-guidance" hidden></p>
+        <p class="typing-indicator" id="typing-indicator" aria-live="polite" hidden></p>
         <div class="composer-input-wrap">
           <label class="sr-only" for="message-input">Écrire un message</label>
           <textarea id="message-input" rows="1" maxlength="2000" placeholder="Écrire dans le canal…" required autocomplete="off"></textarea>
           <div class="mention-suggestions" id="mention-suggestions" role="listbox" hidden></div>
         </div>
         <button type="submit" aria-label="Envoyer le message">Envoyer <span aria-hidden="true">↗</span></button>
+      </form>
+      <form class="message-composer poll-composer" id="poll-form" hidden>
+        <p class="composer-guidance">Créez un sondage visible pendant 10 minutes.</p>
+        <div class="poll-fields">
+          <label for="poll-question">Question</label>
+          <input id="poll-question" maxlength="300" placeholder="Quelle habitude souhaitez-vous travailler ?" required>
+          <label>Réponses</label>
+          <input class="poll-option-input" maxlength="120" placeholder="Première réponse" required>
+          <input class="poll-option-input" maxlength="120" placeholder="Deuxième réponse" required>
+          <input class="poll-option-input" maxlength="120" placeholder="Troisième réponse (facultatif)">
+          <input class="poll-option-input" maxlength="120" placeholder="Quatrième réponse (facultatif)">
+        </div>
+        <button type="submit">Publier <span aria-hidden="true">↗</span></button>
       </form>
     </section>
   </main>
@@ -91,11 +106,17 @@
       <a class="button primary" id="external-link-continue" href="#" target="_blank" rel="noopener noreferrer">Continuer</a>
     </div>
   </dialog>
-  <aside class="announcement-popup" id="announcement-popup" role="status" aria-live="assertive" hidden>
+  <aside class="announcement-popup community-live-popup" id="announcement-popup" role="status" aria-live="assertive" hidden>
     <span class="eyebrow">ANNONCE STOA</span>
     <strong id="announcement-author"></strong>
     <p id="announcement-content"></p>
     <time id="announcement-time"></time>
+  </aside>
+  <aside class="poll-popup community-live-popup" id="poll-popup" aria-live="polite" hidden>
+    <span class="eyebrow">SONDAGE STOA</span>
+    <strong id="poll-popup-question"></strong>
+    <form id="poll-popup-options"></form>
+    <time id="poll-popup-time"></time>
   </aside>
 </body>
 </html>

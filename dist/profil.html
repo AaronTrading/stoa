@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Gérez votre profil membre STOA."><title>Mon profil — STOA</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script type="module" src="app.js"></script><script type="module" src="auth.js"></script><script type="module" src="profile.js"></script></head>
 <body class="member-page profile-page"><a class="skip" href="#main">Aller au contenu</a>
-<header class="site-header"><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><nav class="pill-nav" aria-label="Navigation membre"><a href="/academie">Académie</a><a href="/communaute">Communauté</a><a href="/glossaire">Glossaire</a><a class="active" href="/profil" aria-current="page">Profil</a></nav><a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a></header>
+<header class="site-header"><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><nav class="pill-nav" aria-label="Navigation membre"><a href="/academie">Académie</a><a href="/communaute">Communauté</a><a href="/glossaire">Glossaire</a><a class="active" href="/profil" aria-current="page">Profil</a></nav><a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a></header>
 <main id="main" class="profile-main">
   <section class="profile-heading"><span class="eyebrow">VOTRE ESPACE PERSONNEL</span><h1>Bonjour <span data-user-first-name>membre</span>.</h1><p>Une identité simple, pour un parcours qui vous appartient.</p></section>
   <div class="profile-layout">
@@ -14,7 +14,7 @@
         <h2 id="profile-card-title">Informations personnelles</h2>
         <div class="profile-name-grid"><div><label for="profile-first-name">Prénom</label><input id="profile-first-name" name="firstName" type="text" autocomplete="given-name" maxlength="60" required></div><div><label for="profile-last-name">Nom</label><input id="profile-last-name" name="lastName" type="text" autocomplete="family-name" maxlength="80" required></div></div>
         <label for="profile-username">Pseudo</label><input id="profile-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="30" required aria-describedby="profile-username-help"><span class="field-help" id="profile-username-help">3 à 30 caractères. Ce pseudo doit être unique.</span>
-        <label for="profile-department">Département</label><input id="profile-department" name="department" type="text" inputmode="text" autocomplete="address-level2" maxlength="3" placeholder="Ex. 31, 2A ou 974" required aria-describedby="profile-department-help"><span class="field-help" id="profile-department-help">Votre numéro de département, visible sur votre profil public.</span>
+        <label for="profile-department">Département</label><input id="profile-department" name="department" type="text" inputmode="text" autocomplete="address-level2" placeholder="Numéro ou nom du département" required aria-describedby="profile-department-help"><span class="field-help" id="profile-department-help">Tapez un numéro ou un nom, puis choisissez par exemple « 31 - Haute-Garonne ».</span>
         <label for="profile-email">Adresse email</label><input id="profile-email" type="email" autocomplete="email" readonly>
         <div class="profile-meta"><div><span>Offre</span><strong id="profile-role">Membre</strong></div><div><span>Niveau</span><strong id="profile-level">Niveau 1 · Initié</strong></div><div><span>Membre depuis</span><strong id="profile-created-at">—</strong></div></div>
         <button class="button dark profile-save" type="submit">Enregistrer les modifications <span>↗</span></button>
@@ -33,4 +33,4 @@
   <label class="crop-zoom-label" for="avatar-crop-zoom"><span>Zoom</span><span aria-hidden="true">−</span><input id="avatar-crop-zoom" type="range" min="1" max="3" step="0.01" value="1"><span aria-hidden="true">+</span></label>
   <div class="crop-actions"><button class="text-button" id="crop-cancel" type="button">Annuler</button><button class="button dark" id="crop-apply" type="button">Utiliser cette photo <span>↗</span></button></div>
 </dialog>
-<footer><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer></body></html>
+<footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer></body></html>
