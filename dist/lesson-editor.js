@@ -150,6 +150,13 @@ lesson?.addEventListener('keydown', (event) => {
   const selected = document.querySelector('.editor-image-selected');
   if (selected) { event.preventDefault(); selected.remove(); setStatus('Image supprimée.'); }
 });
+lesson?.addEventListener('paste', (event) => {
+  if (!editing || !event.target.closest('[contenteditable="true"]')) return;
+  event.preventDefault();
+  let text = event.clipboardData?.getData('text/plain') || '';
+  if (!event.target.closest('.lesson-subchapter-content')) text = text.replace(/\s+/g, ' ').trim();
+  document.execCommand('insertText', false, text.replace(/\r/g, ''));
+});
 lesson?.addEventListener('dragstart', (event) => { if (editing) draggedFigure = event.target.closest('.lesson-subchapter-content figure'); });
 lesson?.addEventListener('dragover', (event) => { if (editing && draggedFigure && event.target.closest('.lesson-subchapter-content')) event.preventDefault(); });
 lesson?.addEventListener('drop', (event) => {
