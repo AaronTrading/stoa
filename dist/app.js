@@ -1,7 +1,14 @@
 import { supabase } from './supabase.js';
 
 const chapters = [
-  ['alimentation','Alimentation','◒','Comprendre ses besoins et construire une alimentation réaliste.',[['Le Carburant Ancestral','Les fondements d’une alimentation dense et consciente',45],['Composer ses repas','Passer des principes à l’assiette',22]]],
+  ['alimentation','Alimentation','◒','Le carburant ancestral : une alimentation dense, consciente et adaptée à votre biologie.',[
+    ['Les fondamentaux de l’assiette primale','Poser les principes d’une alimentation ancestrale et dense.',12],
+    ['Les piliers de votre nutrition','Construire l’assiette autour des aliments essentiels.',25],
+    ['Les aliments à éliminer','Identifier les produits modernes à écarter.',18],
+    ['Structurer vos repas','Organiser ses repas selon sa faim et son activité.',15],
+    ['Approvisionnement et préparation','Choisir ses produits et les préparer simplement.',18],
+    ['L’esprit et l’intuition alimentaire','Retrouver écoute, souplesse et plaisir.',12]
+  ]],
   ['hydratation','Hydratation','≈','Observer et organiser son hydratation au quotidien.',[['Comprendre l’hydratation','Les repères essentiels',15],['Créer ses repères','Une organisation adaptée à sa journée',16]]],
   ['sport','Sport','⌁','Bouger avec méthode, plaisir et régularité.',[['Choisir sa pratique','Trouver le mouvement qui vous correspond',20],['Construire sa progression','Avancer avec des repères adaptés',24]]],
   ['sante','Santé','✚','Mieux comprendre son parcours de santé et ses interlocuteurs.',[['Cultiver sa littératie en santé','Comprendre une information avant de décider',20],['Préparer une consultation','Formuler ses questions et ses priorités',17]]],
@@ -172,7 +179,8 @@ if (document.querySelector('#lesson-content')) {
         return `<p>${paragraphMarkup(paragraph)}</p>${placed}`;
       }).join('');
       const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(image=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy"></figure>`).join('');
-      return `<section class="lesson-subchapter"><span class="eyebrow">${number(sectionIndex+1)}</span><h2>${escapeContent(section.title)}</h2>${body}${remaining}</section>`;
+      const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2>${escapeContent(section.title)}</h2>`;
+      return `<section class="lesson-subchapter">${heading}${body}${remaining}</section>`;
     }).join('');
   };
   loadLessonContent();
