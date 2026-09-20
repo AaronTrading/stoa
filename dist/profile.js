@@ -49,6 +49,17 @@ const showAvatar = (url, fallback = 'S') => {
   else avatarImage.removeAttribute('src');
 };
 
+const showHeaderAvatar = (url, fallback = 'S') => {
+  document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
+    element.textContent = url ? '' : fallback.trim().charAt(0).toUpperCase() || 'S';
+    element.style.backgroundImage = url ? `url("${url.replace(/"/g, '%22')}")` : '';
+    element.style.backgroundPosition = 'center';
+    element.style.backgroundSize = 'cover';
+    element.style.backgroundRepeat = 'no-repeat';
+    element.classList.toggle('has-image', Boolean(url));
+  });
+};
+
 const roleLabels = { member: 'Académie', coaching: 'Accompagnement', admin: 'Administration' };
 const cropSize = cropCanvas.width;
 
@@ -239,6 +250,7 @@ cropApply.addEventListener('click', () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(blob);
     showAvatar(previewUrl, firstNameInput.value || user?.email);
+    showHeaderAvatar(previewUrl, firstNameInput.value || user?.email);
     removeButton.hidden = false;
     fileInput.value = '';
     cropDialog.close();
@@ -324,11 +336,7 @@ form.addEventListener('submit', async (event) => {
   showAvatar(avatarUrl, firstName);
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = undefined;
-  document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
-    element.textContent = avatarUrl ? '' : firstName.charAt(0).toUpperCase();
-    element.style.backgroundImage = avatarUrl ? `url("${avatarUrl}")` : '';
-    element.classList.toggle('has-image', Boolean(avatarUrl));
-  });
+  showHeaderAvatar(avatarUrl, firstName);
   document.querySelectorAll('[data-user-first-name]').forEach((element) => {
     element.textContent = firstName;
   });
@@ -359,11 +367,7 @@ removeButton.addEventListener('click', async () => {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = undefined;
   removeButton.hidden = true;
-  document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
-    element.textContent = (firstNameInput.value || user.email || 'S').charAt(0).toUpperCase();
-    element.style.backgroundImage = '';
-    element.classList.remove('has-image');
-  });
+  showHeaderAvatar('', firstNameInput.value || user.email);
   setMessage('Votre photo de profil a été supprimée.', 'success');
 });
 

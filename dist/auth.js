@@ -45,6 +45,8 @@ const message = dialog.querySelector('.auth-message');
 const guestView = dialog.querySelector('.auth-guest-view');
 const memberView = dialog.querySelector('.auth-member-view');
 let currentSession = null;
+let currentProfile = null;
+let currentProfileUserId = null;
 
 const showToast = (text, tone = 'info') => {
   statusToast.textContent = text;
@@ -65,12 +67,17 @@ const setBusy = (busy) => {
   });
 };
 
-const updateAuthUI = (session) => {
+const updateAuthUI = (session, profile = currentProfile) => {
   currentSession = session;
   const user = session?.user;
-  const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
-  const firstName = user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
+  if (!user) {
+    currentProfile = null;
+    currentProfileUserId = null;
+  }
+  const activeProfile = user && currentProfileUserId === user.id ? profile : null;
+  const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+  const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
+  const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
     link.href = user ? '/academie' : '#connexion';
@@ -100,6 +107,23 @@ const updateAuthUI = (session) => {
   dialog.querySelector('[data-auth-email]').textContent = user?.email || '';
 };
 
+const hydrateAuthUI = async (session) => {
+  updateAuthUI(session);
+  const user = session?.user;
+  if (!user) return;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('full_name, first_name, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!data || currentSession?.user?.id !== user.id) return;
+  currentProfile = data;
+  currentProfileUserId = user.id;
+  updateAuthUI(session, data);
+};
+
 const openDialog = () => {
   setMessage('');
   updateAuthUI(currentSession);
@@ -113,12 +137,15 @@ const redirectTo = new URL('/academie', siteUrl).href;
 
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
-  updateAuthUI(sessionData.session);
+  await hydrateAuthUI(sessionData.session);
   if (document.body.classList.contains('member-page') && !sessionData.session) {
     location.replace('/#connexion');
     return;
   }
-  supabase.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
+  supabase.auth.onAuthStateChange((_event, session) => {
+    updateAuthUI(session);
+    window.setTimeout(() => hydrateAuthUI(session), 0);
+  });
 
   document.addEventListener('click', (event) => {
     const authLink = event.target.closest('[data-auth-link]');
