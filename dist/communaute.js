@@ -16,19 +16,33 @@ const chatState = document.querySelector('#chat-state');
 const loadMoreButton = document.querySelector('#load-more');
 const messageForm = document.querySelector('#message-form');
 const messageInput = document.querySelector('#message-input');
+const replyContext = document.querySelector('#reply-context');
+const replyAuthor = document.querySelector('#reply-author');
+const replyCancel = document.querySelector('#reply-cancel');
+const composerGuidance = document.querySelector('#composer-guidance');
 const profileDialog = document.querySelector('#community-profile-dialog');
 const profileContent = document.querySelector('#community-profile-content');
+const announcementPopup = document.querySelector('#announcement-popup');
+const announcementAuthor = document.querySelector('#announcement-author');
+const announcementContent = document.querySelector('#announcement-content');
+const announcementTime = document.querySelector('#announcement-time');
 
 let currentUser;
 let channels = [];
 let activeChannel;
 let messages = [];
 let roomSubscription;
+let announcementSubscription;
+let announcementTimer;
 let oldestTimestamp;
 let reachedHistoryStart = false;
 let switchingChannel = false;
 let longPressTimer;
+let replyToMessageId;
+let currentProfile;
 const profiles = new Map();
+
+const isAdmin = () => currentProfile?.role === 'admin';
 
 const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;')
@@ -95,6 +109,60 @@ const reactionMarkup = (message) => {
     </button>`).join('')}</div>`;
 };
 
+const messageToolsMarkup = (message, { allowReply = false } = {}) => {
+  const canDelete = isAdmin() || message.user_id === currentUser.id;
+  return `<div class="message-tools">
+    ${allowReply ? '<button class="reply-button" type="button" data-message-action="reply">Répondre</button>' : ''}
+    <button class="reaction-toggle" type="button" aria-label="Ajouter une réaction" aria-expanded="false">＋</button>
+    ${canDelete ? `<button class="message-delete" type="button" data-message-action="delete" aria-label="Supprimer ce message">Supprimer</button>` : ''}
+    <div class="reaction-picker" hidden>${REACTIONS.map((emoji) => `<button type="button" data-reaction="${emoji}" aria-label="Réagir avec ${emoji}">${emoji}</button>`).join('')}</div>
+  </div>`;
+};
+
+const standardMessageMarkup = (message, index) => {
+  const previous = messages[index - 1];
+  const grouped = previous
+    && !message.parent_message_id
+    && previous.user_id === message.user_id
+    && sameMinute(previous.created_at, message.created_at);
+  const profile = getProfile(message.user_id);
+  const mine = message.user_id === currentUser.id;
+  return `
+    <article class="message-entry${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}" data-message-id="${message.id}">
+      <button class="profile-trigger message-profile" type="button" data-profile-id="${message.user_id}" aria-label="Voir le profil de ${escapeHtml(profile.display_name)}">
+        ${avatarMarkup(profile)}
+      </button>
+      <div class="message-column">
+        <header class="message-meta">
+          <button class="profile-trigger message-author" type="button" data-profile-id="${message.user_id}">${escapeHtml(profile.display_name)}</button>
+          <time datetime="${escapeHtml(message.created_at)}">${formatTime(message.created_at)}</time>
+        </header>
+        <div class="message-content">${escapeHtml(message.content).replaceAll('\n', '<br>')}</div>
+        ${message.edited_at ? '<span class="edited-label">modifié</span>' : ''}
+        ${reactionMarkup(message)}
+      </div>
+      ${messageToolsMarkup(message)}
+    </article>`;
+};
+
+const questionMarkup = (question) => {
+  const profile = getProfile(question.user_id);
+  const replies = messages.filter((message) => message.parent_message_id === question.id);
+  return `<article class="question-thread" data-question-id="${question.id}">
+    <div class="message-entry question-root" data-message-id="${question.id}">
+      <button class="profile-trigger message-profile" type="button" data-profile-id="${question.user_id}" aria-label="Voir le profil de ${escapeHtml(profile.display_name)}">${avatarMarkup(profile)}</button>
+      <div class="message-column">
+        <header class="message-meta"><button class="profile-trigger message-author" type="button" data-profile-id="${question.user_id}">${escapeHtml(profile.display_name)}</button><time datetime="${escapeHtml(question.created_at)}">${formatTime(question.created_at)}</time></header>
+        <div class="message-content question-content">${escapeHtml(question.content).replaceAll('\n', '<br>')}</div>
+        ${reactionMarkup(question)}
+        <span class="answer-count">${replies.length} réponse${replies.length > 1 ? 's' : ''}</span>
+      </div>
+      ${messageToolsMarkup(question, { allowReply: true })}
+    </div>
+    ${replies.length ? `<div class="question-replies">${replies.map((reply) => standardMessageMarkup(reply, -1)).join('')}</div>` : '<p class="no-answer">Soyez le premier à répondre.</p>'}
+  </article>`;
+};
+
 const renderMessages = () => {
   if (!messages.length) {
     messageList.innerHTML = '';
@@ -104,40 +172,21 @@ const renderMessages = () => {
   }
 
   chatState.hidden = true;
-  messageList.innerHTML = messages.map((message, index) => {
-    const previous = messages[index - 1];
-    const grouped = previous && previous.user_id === message.user_id && sameMinute(previous.created_at, message.created_at);
-    const profile = getProfile(message.user_id);
-    const mine = message.user_id === currentUser.id;
-    return `
-      <article class="message-entry${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}" data-message-id="${message.id}">
-        <button class="profile-trigger message-profile" type="button" data-profile-id="${message.user_id}" aria-label="Voir le profil de ${escapeHtml(profile.display_name)}">
-          ${avatarMarkup(profile)}
-        </button>
-        <div class="message-column">
-          <header class="message-meta">
-            <button class="profile-trigger message-author" type="button" data-profile-id="${message.user_id}">${escapeHtml(profile.display_name)}</button>
-            <time datetime="${escapeHtml(message.created_at)}">${formatTime(message.created_at)}</time>
-          </header>
-          <div class="message-content">${escapeHtml(message.content).replaceAll('\n', '<br>')}</div>
-          ${message.edited_at ? '<span class="edited-label">modifié</span>' : ''}
-          ${reactionMarkup(message)}
-        </div>
-        <div class="message-tools">
-          <button class="reaction-toggle" type="button" aria-label="Ajouter une réaction" aria-expanded="false">＋</button>
-          <div class="reaction-picker" hidden>${REACTIONS.map((emoji) => `<button type="button" data-reaction="${emoji}" aria-label="Réagir avec ${emoji}">${emoji}</button>`).join('')}</div>
-        </div>
-      </article>`;
-  }).join('');
+  if (activeChannel?.kind === 'questions') {
+    messageList.innerHTML = messages.filter((message) => !message.parent_message_id).map(questionMarkup).join('');
+    return;
+  }
+  messageList.innerHTML = messages.map(standardMessageMarkup).join('');
 };
 
 const isNearBottom = () => history.scrollHeight - history.scrollTop - history.clientHeight < 140;
 const scrollToBottom = (smooth = false) => history.scrollTo({ top: history.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
 
 const renderChannels = () => {
+  const icons = { chat: '#', announcements: '!', questions: '?' };
   channelList.innerHTML = channels.map((channel) => `
     <button class="channel-button${channel.id === activeChannel?.id ? ' active' : ''}" type="button" data-channel-id="${channel.id}">
-      <span aria-hidden="true">#</span><span><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description || '')}</small></span>
+      <span aria-hidden="true">${icons[channel.kind] || '#'}</span><span><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description || '')}</small></span>
     </button>`).join('');
 };
 
@@ -170,9 +219,9 @@ const mergeRealtimeMessage = async (incoming) => {
 };
 
 const removeRealtimeMessage = (oldMessage) => {
-  const index = messages.findIndex((message) => message.id === oldMessage.id);
-  if (index < 0) return;
-  messages.splice(index, 1);
+  const remaining = messages.filter((message) => message.id !== oldMessage.id && message.parent_message_id !== oldMessage.id);
+  if (remaining.length === messages.length) return;
+  messages = remaining;
   renderMessages();
 };
 
@@ -189,6 +238,47 @@ const applyRealtimeReaction = (payload) => {
   const scrollPosition = history.scrollTop;
   renderMessages();
   history.scrollTop = scrollPosition;
+};
+
+const hideAnnouncement = () => {
+  window.clearTimeout(announcementTimer);
+  announcementPopup.hidden = true;
+};
+
+const showAnnouncement = async (announcement) => {
+  const expiresAt = new Date(announcement.announcement_expires_at || new Date(announcement.created_at).getTime() + 600000);
+  const remaining = expiresAt.getTime() - Date.now();
+  if (remaining <= 0) return;
+  await loadProfiles([announcement.user_id]);
+  const profile = getProfile(announcement.user_id);
+  announcementAuthor.textContent = profile.display_name;
+  announcementContent.textContent = announcement.content;
+  announcementTime.textContent = `Publié à ${formatTime(announcement.created_at)}`;
+  announcementTime.dateTime = announcement.created_at;
+  announcementPopup.hidden = false;
+  window.clearTimeout(announcementTimer);
+  announcementTimer = window.setTimeout(hideAnnouncement, remaining);
+};
+
+const subscribeToAnnouncements = async () => {
+  const channel = channels.find((item) => item.kind === 'announcements');
+  if (!channel) return;
+  const { data } = await supabase
+    .from('messages')
+    .select('id, user_id, content, created_at, announcement_expires_at')
+    .eq('channel_id', channel.id)
+    .gt('announcement_expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data) showAnnouncement(data);
+
+  announcementSubscription = supabase
+    .channel(`community-announcements:${channel.id}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}`,
+    }, (payload) => showAnnouncement(payload.new))
+    .subscribe();
 };
 
 const subscribeToRoom = (channel) => {
@@ -226,7 +316,7 @@ const subscribeToRoom = (channel) => {
 const fetchMessages = async ({ before } = {}) => {
   let query = supabase
     .from('messages')
-    .select('id, channel_id, user_id, content, created_at, edited_at, message_reactions(id, message_id, user_id, emoji)')
+    .select('id, channel_id, user_id, parent_message_id, content, created_at, edited_at, announcement_expires_at, message_reactions(id, message_id, user_id, emoji)')
     .eq('channel_id', activeChannel.id)
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE);
@@ -265,7 +355,28 @@ const switchChannel = async (channelIdentifier) => {
   presenceCount.textContent = '0';
   channelName.textContent = nextChannel.name;
   channelDescription.textContent = nextChannel.description || '';
-  messageInput.placeholder = `Écrire dans #${nextChannel.name.toLowerCase()}…`;
+  replyToMessageId = undefined;
+  replyContext.hidden = true;
+  composerGuidance.hidden = true;
+  messageForm.hidden = false;
+  messageInput.disabled = false;
+  const submitButton = messageForm.querySelector('button[type="submit"]');
+  submitButton.disabled = false;
+  if (nextChannel.kind === 'announcements') {
+    messageInput.placeholder = 'Publier une annonce…';
+    if (!isAdmin()) {
+      messageForm.hidden = true;
+    } else {
+      composerGuidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.';
+      composerGuidance.hidden = false;
+    }
+  } else if (nextChannel.kind === 'questions') {
+    messageInput.placeholder = 'Ex. Comment mieux organiser mon sommeil ?';
+    composerGuidance.textContent = 'Posez une question claire qui se termine par « ? ».';
+    composerGuidance.hidden = false;
+  } else {
+    messageInput.placeholder = `Écrire dans #${nextChannel.name.toLowerCase()}…`;
+  }
   renderChannels();
   const url = new URL(location.href);
   url.searchParams.set('canal', nextChannel.slug);
@@ -298,15 +409,22 @@ const loadMoreMessages = async () => {
 const sendMessage = async () => {
   const content = messageInput.value.trim();
   if (!content || !activeChannel) return;
+  if (activeChannel.kind === 'announcements' && !isAdmin()) return;
+  if (activeChannel.kind === 'questions' && !replyToMessageId && !content.endsWith('?')) {
+    composerGuidance.textContent = 'Ajoutez « ? » à la fin pour publier votre question.';
+    composerGuidance.dataset.tone = 'error';
+    messageInput.focus();
+    return;
+  }
   messageInput.disabled = true;
-  messageForm.querySelector('button').disabled = true;
+  messageForm.querySelector('button[type="submit"]').disabled = true;
   const { data, error } = await supabase
     .from('messages')
-    .insert({ channel_id: activeChannel.id, user_id: currentUser.id, content })
-    .select('id, channel_id, user_id, content, created_at, edited_at')
+    .insert({ channel_id: activeChannel.id, user_id: currentUser.id, content, parent_message_id: replyToMessageId || null })
+    .select('id, channel_id, user_id, parent_message_id, content, created_at, edited_at, announcement_expires_at')
     .single();
   messageInput.disabled = false;
-  messageForm.querySelector('button').disabled = false;
+  messageForm.querySelector('button[type="submit"]').disabled = false;
   if (error) {
     chatState.hidden = false;
     chatState.textContent = `Le message n’a pas été envoyé : ${error.message}`;
@@ -315,8 +433,47 @@ const sendMessage = async () => {
   }
   messageInput.value = '';
   messageInput.style.height = '';
+  replyToMessageId = undefined;
+  replyContext.hidden = true;
+  if (activeChannel.kind === 'questions') {
+    composerGuidance.textContent = 'Posez une question claire qui se termine par « ? ».';
+    composerGuidance.dataset.tone = '';
+  }
   await mergeRealtimeMessage({ ...data, message_reactions: [] });
   messageInput.focus();
+};
+
+const startReply = (messageId) => {
+  const question = messages.find((message) => message.id === messageId && !message.parent_message_id);
+  if (!question || activeChannel?.kind !== 'questions') return;
+  replyToMessageId = question.id;
+  replyAuthor.textContent = getProfile(question.user_id).display_name;
+  replyContext.hidden = false;
+  composerGuidance.hidden = true;
+  messageInput.placeholder = 'Écrire votre réponse…';
+  messageInput.focus();
+};
+
+const cancelReply = () => {
+  replyToMessageId = undefined;
+  replyContext.hidden = true;
+  messageInput.placeholder = 'Ex. Comment mieux organiser mon sommeil ?';
+  composerGuidance.textContent = 'Posez une question claire qui se termine par « ? ».';
+  composerGuidance.dataset.tone = '';
+  composerGuidance.hidden = false;
+};
+
+const deleteMessage = async (messageId) => {
+  const message = messages.find((item) => item.id === messageId);
+  if (!message || (!isAdmin() && message.user_id !== currentUser.id)) return;
+  if (!window.confirm('Supprimer définitivement ce message ?')) return;
+  const { error } = await supabase.from('messages').delete().eq('id', messageId);
+  if (error) {
+    chatState.hidden = false;
+    chatState.textContent = `Le message n’a pas pu être supprimé : ${error.message}`;
+    return;
+  }
+  removeRealtimeMessage(message);
 };
 
 const toggleReaction = async (messageId, emoji) => {
@@ -381,6 +538,10 @@ messageInput.addEventListener('keydown', (event) => {
 messageInput.addEventListener('input', () => {
   messageInput.style.height = 'auto';
   messageInput.style.height = `${Math.min(messageInput.scrollHeight, 132)}px`;
+  if (activeChannel?.kind === 'questions' && !replyToMessageId) {
+    composerGuidance.textContent = 'Posez une question claire qui se termine par « ? ».';
+    composerGuidance.dataset.tone = '';
+  }
 });
 
 messageList.addEventListener('click', (event) => {
@@ -391,6 +552,15 @@ messageList.addEventListener('click', (event) => {
   }
   const entry = event.target.closest('[data-message-id]');
   if (!entry) return;
+  const action = event.target.closest('[data-message-action]')?.dataset.messageAction;
+  if (action === 'reply') {
+    startReply(entry.dataset.messageId);
+    return;
+  }
+  if (action === 'delete') {
+    deleteMessage(entry.dataset.messageId);
+    return;
+  }
   const toggle = event.target.closest('.reaction-toggle');
   if (toggle) {
     const picker = entry.querySelector('.reaction-picker');
@@ -404,6 +574,8 @@ messageList.addEventListener('click', (event) => {
     closeReactionPickers();
   }
 });
+
+replyCancel.addEventListener('click', cancelReply);
 
 messageList.addEventListener('pointerdown', (event) => {
   if (!event.target.closest('.message-content')) return;
@@ -427,6 +599,8 @@ profileDialog.addEventListener('click', (event) => {
 
 window.addEventListener('pagehide', () => {
   if (roomSubscription) supabase.removeChannel(roomSubscription);
+  if (announcementSubscription) supabase.removeChannel(announcementSubscription);
+  window.clearTimeout(announcementTimer);
 });
 
 const initializeCommunity = async () => {
@@ -438,7 +612,8 @@ const initializeCommunity = async () => {
   }
 
   await loadProfiles([currentUser.id]);
-  const { data, error } = await supabase.from('channels').select('id, slug, name, description, order_index').order('order_index');
+  currentProfile = getProfile(currentUser.id);
+  const { data, error } = await supabase.from('channels').select('id, slug, kind, name, description, order_index').order('order_index');
   if (error) {
     chatState.textContent = `La communauté ne peut pas être ouverte : ${error.message}`;
     return;
@@ -450,6 +625,7 @@ const initializeCommunity = async () => {
   }
   const requestedChannel = new URLSearchParams(location.search).get('canal');
   const requested = channels.find((channel) => channel.slug === requestedChannel || channel.id === requestedChannel);
+  await subscribeToAnnouncements();
   await switchChannel(requested?.id || channels[0].id);
 };
 

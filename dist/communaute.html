@@ -54,6 +54,11 @@
       </div>
 
       <form class="message-composer" id="message-form">
+        <div class="reply-context" id="reply-context" hidden>
+          <span>Réponse à <strong id="reply-author"></strong></span>
+          <button id="reply-cancel" type="button" aria-label="Annuler la réponse">×</button>
+        </div>
+        <p class="composer-guidance" id="composer-guidance" hidden></p>
         <label class="sr-only" for="message-input">Écrire un message</label>
         <textarea id="message-input" rows="1" maxlength="2000" placeholder="Écrire dans le canal…" required></textarea>
         <button type="submit" aria-label="Envoyer le message">Envoyer <span aria-hidden="true">↗</span></button>
@@ -65,5 +70,11 @@
     <button class="auth-close" id="community-profile-close" type="button" aria-label="Fermer">×</button>
     <div id="community-profile-content"></div>
   </dialog>
+  <aside class="announcement-popup" id="announcement-popup" role="status" aria-live="assertive" hidden>
+    <span class="eyebrow">ANNONCE STOA</span>
+    <strong id="announcement-author"></strong>
+    <p id="announcement-content"></p>
+    <time id="announcement-time"></time>
+  </aside>
 </body>
 </html>
