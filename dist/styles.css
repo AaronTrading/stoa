@@ -80,6 +80,7 @@
 .question-replies .message-entry{padding-top:10px;padding-bottom:10px}
 .no-answer{margin:0 16px 15px 67px;color:var(--muted);font-size:10px}
 .message-composer{display:grid;grid-template-columns:minmax(0,1fr) 116px;gap:10px;align-items:end;padding:15px 25px 20px;border-top:1px solid var(--line);background:#fbfaf6}
+.message-composer[hidden]{display:none}
 .reply-context,.composer-guidance{grid-column:1/-1}
 .reply-context{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:7px 10px;border-left:2px solid var(--olive);background:var(--marble);color:var(--muted);font-size:10px}
 .reply-context[hidden],.composer-guidance[hidden]{display:none}
