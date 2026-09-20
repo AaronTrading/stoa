@@ -180,6 +180,21 @@ if (document.querySelector('#lesson-content')) {
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+  const sanitizeStoredHtml=(html)=>{
+    const template=document.createElement('template'); template.innerHTML=html;
+    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION']);
+    [...template.content.querySelectorAll('*')].forEach(element=>{
+      if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
+      const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
+      [...element.attributes].forEach(attribute=>element.removeAttribute(attribute.name));
+      if(element.tagName==='IMG'){
+        if(imageSource.startsWith('https://')||imageSource.startsWith('/')) element.setAttribute('src',imageSource); else element.remove();
+        element.setAttribute('alt',''); element.setAttribute('loading','lazy');
+      }
+      if(element.tagName==='FIGURE') element.className='lesson-inline-image';
+    });
+    return template.innerHTML;
+  };
   const renderContentBlock=(value)=>{
     const trimmed=value.trim();
     if(/^##\s+/.test(trimmed)) return `<h3>${inlineMarkup(trimmed.replace(/^##\s+/,''))}</h3>`;
@@ -198,19 +213,22 @@ if (document.querySelector('#lesson-content')) {
     const {data:imageRows}=await supabase.from('subchapter_images').select('subchapter_id,image_url,alt_text,caption,position_index,order_index').in('subchapter_id',sections.map(section=>section.id)).order('order_index');
     const images=imageRows||[];
     document.title=`${dbModule.title} — STOA`; document.querySelector('#lesson-title').textContent=dbModule.title;
-    document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction">${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
+    document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction" data-module-description>${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
-      const sectionImages=images.filter(image=>image.subchapter_id===section.id);
+      const storedAsHtml=/^\s*<(?:p|div|h[2-4]|ul|ol|blockquote|figure)\b/i.test(section.content);
+      const sectionImages=storedAsHtml?[]:images.filter(image=>image.subchapter_id===section.id);
       const imageMarkup=(image)=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`;
       const leading=sectionImages.filter(image=>image.position_index===0).map(imageMarkup).join('');
-      const body=paragraphs.map((paragraph,index)=>{
+      const body=storedAsHtml?sanitizeStoredHtml(section.content):paragraphs.map((paragraph,index)=>{
         const placed=sectionImages.filter(image=>image.position_index===index+1).map(imageMarkup).join('');
         return `${renderContentBlock(paragraph)}${placed}`;
       }).join('');
       const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(imageMarkup).join('');
-      const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2>${escapeContent(section.title)}</h2>`;
-      return `<section class="lesson-subchapter">${heading}${leading}${body}${remaining}</section>`;
+      const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
+      return `<section class="lesson-subchapter" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
+    window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
+    window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };
   loadLessonContent();
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
