@@ -5,6 +5,7 @@ const pencil = document.querySelector('#lesson-edit-pencil');
 const bar = document.querySelector('#lesson-editor-bar');
 const status = document.querySelector('#lesson-editor-status');
 const imageInput = document.querySelector('#lesson-image-input');
+const imageButton = document.querySelector('label[for="lesson-image-input"]');
 let lessonData;
 let editing = false;
 let original = {};
@@ -122,6 +123,28 @@ bar?.addEventListener('click', (event) => {
   activeEditor?.focus();
 });
 
+imageButton?.addEventListener('click', () => {
+  document.querySelectorAll('.lesson-image-cursor').forEach((marker) => marker.remove());
+  if (!activeEditor || !savedRange || !activeEditor.contains(savedRange.commonAncestorContainer)) return;
+  const marker = document.createElement('span');
+  marker.className = 'lesson-image-cursor'; marker.setAttribute('aria-hidden', 'true');
+  const range = savedRange.cloneRange(); range.collapse(false); range.insertNode(marker);
+});
+
+const insertImageAtMarker = (figure) => {
+  const marker = document.querySelector('.lesson-image-cursor');
+  if (!marker) { const paragraph = document.createElement('p'); paragraph.append(document.createElement('br')); activeEditor.append(figure, paragraph); return; }
+  const block = marker.closest('p,div,li,blockquote,h2,h3,h4');
+  if (!block || block === activeEditor || !activeEditor.contains(block)) { marker.replaceWith(figure); return; }
+  const trailingRange = document.createRange();
+  trailingRange.setStartAfter(marker); trailingRange.setEnd(block, block.childNodes.length);
+  const trailing = trailingRange.extractContents(); marker.remove(); block.after(figure);
+  const hasTrailingContent = trailing.textContent.trim() || trailing.querySelector('*');
+  const nextBlock = block.cloneNode(false); nextBlock.removeAttribute('class');
+  if (hasTrailingContent) nextBlock.append(trailing); else nextBlock.append(document.createElement('br'));
+  figure.after(nextBlock);
+};
+
 imageInput?.addEventListener('change', async () => {
   const file = imageInput.files?.[0]; imageInput.value = '';
   if (!file || !activeEditor) { setStatus('Placez d’abord le curseur dans le contenu.', 'error'); return; }
@@ -130,13 +153,12 @@ imageInput?.addEventListener('change', async () => {
   const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').toLowerCase();
   const path = `modules/${lessonData.moduleId}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await supabase.storage.from('module-assets').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
-  if (error) { setStatus(`Échec : ${error.message}`, 'error'); return; }
+  if (error) { document.querySelector('.lesson-image-cursor')?.remove(); setStatus(`Échec : ${error.message}`, 'error'); return; }
   const { data } = supabase.storage.from('module-assets').getPublicUrl(path);
-  activeEditor.focus();
-  const selection = getSelection(); selection.removeAllRanges();
-  if (savedRange && activeEditor.contains(savedRange.commonAncestorContainer)) selection.addRange(savedRange);
-  else { const range = document.createRange(); range.selectNodeContents(activeEditor); range.collapse(false); selection.addRange(range); }
-  document.execCommand('insertHTML', false, `<figure class="lesson-inline-image"><img src="${data.publicUrl}" alt=""><figcaption>Écrivez une légende…</figcaption></figure><p><br></p>`);
+  const figure = document.createElement('figure'); figure.className = 'lesson-inline-image';
+  const image = document.createElement('img'); image.src = data.publicUrl; image.alt = '';
+  const caption = document.createElement('figcaption'); caption.textContent = 'Écrivez une légende…';
+  figure.append(image, caption); insertImageAtMarker(figure);
   prepareFigures(); setStatus('Image ajoutée. Faites-la glisser pour la déplacer.');
 });
 
