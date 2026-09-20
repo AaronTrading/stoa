@@ -114,7 +114,7 @@ function pollMarkup(poll) {
   const options = [...(poll.poll_options || [])].sort((a, b) => a.order_index - b.order_index);
   const total = options.reduce((sum, option) => sum + (option.poll_votes?.length || 0), 0);
   const mine = options.find((option) => option.poll_votes?.some((vote) => vote.user_id === user.id))?.id;
-  return `<article class="poll-card" data-poll-id="${poll.id}"><span class="eyebrow">SONDAGE ${new Date(poll.expires_at) > new Date() ? 'EN COURS' : 'TERMINÉ'}</span><h3>${esc(poll.question)}</h3><div class="poll-options">${options.map((option) => { const count = option.poll_votes?.length || 0; const percent = total ? Math.round(count / total * 100) : 0; return `<button type="button" data-poll-option="${option.id}"${mine || new Date(poll.expires_at) <= new Date() ? ' disabled' : ''} class="${mine === option.id ? 'selected' : ''}"><span>${esc(option.label)}</span><b>${percent}%</b><i style="--poll-result:${percent}%"></i></button>`; }).join('')}</div><small>${total} vote${total > 1 ? 's' : ''} · ${new Date(poll.expires_at) > new Date() ? `se termine à ${time(poll.expires_at)}` : 'clos'}</small></article>`;
+  return `<article class="poll-card" data-poll-id="${poll.id}"><div class="poll-copy"><span class="eyebrow">SONDAGE ${new Date(poll.expires_at) > new Date() ? 'EN COURS' : 'TERMINÉ'}</span><h3>${esc(poll.question)}</h3><small>${total} vote${total > 1 ? 's' : ''} · ${new Date(poll.expires_at) > new Date() ? `se termine à ${time(poll.expires_at)}` : 'clos'}</small></div><div class="poll-options">${options.map((option) => { const count = option.poll_votes?.length || 0; const percent = total ? Math.round(count / total * 100) : 0; return `<button type="button" data-poll-option="${option.id}"${mine || new Date(poll.expires_at) <= new Date() ? ' disabled' : ''} class="${mine === option.id ? 'selected' : ''}"><span>${esc(option.label)}</span><b>${percent}%</b><i style="--poll-result:${percent}%"></i></button>`; }).join('')}</div>${isAdmin() ? `<button class="poll-delete" type="button" data-delete-poll="${poll.id}" aria-label="Supprimer ce sondage" title="Supprimer">${svg.trash}</button>` : ''}</article>`;
 }
 function renderPolls() {
   els.more.hidden = true;
@@ -282,6 +282,13 @@ async function createPoll(event) {
   if (error) return void (els.state.textContent = `Le sondage n’a pas été publié : ${error.message}`);
   els.pollForm.reset(); await loadPolls();
 }
+async function deletePoll(pollId) {
+  if (!isAdmin() || !window.confirm('Supprimer définitivement ce sondage et ses votes ?')) return;
+  const { error } = await supabase.rpc('delete_poll', { p_poll_id: pollId });
+  if (error) return errorMessage(`Le sondage n’a pas été supprimé : ${error.message}`);
+  polls = polls.filter((poll) => poll.id !== pollId); renderPolls();
+  if (els.pollPopup.dataset.pollId === pollId) hideLivePopup(els.pollPopup);
+}
 function popupPollMarkup(poll) {
   const options = [...(poll.poll_options || [])].sort((a, b) => a.order_index - b.order_index);
   return options.map((option) => `<button type="button" data-popup-poll="${poll.id}" data-poll-option="${option.id}"><span>${esc(option.label)}</span><b>Voter</b></button>`).join('');
@@ -326,7 +333,7 @@ els.list.addEventListener('click', async (e) => {
   const toggle = e.target.closest('.reaction-toggle'); if (toggle) { const picker = entry.querySelector('.reaction-picker'); return picker.hidden ? openPicker(entry) : closePickers(); }
   const reaction = e.target.closest('[data-reaction]'); if (reaction) { toggleReaction(entry.dataset.messageId, reaction.dataset.reaction); closePickers(); }
 });
-els.list.addEventListener('click', (e) => { const option = e.target.closest('[data-poll-option]'); if (option) votePoll(option.closest('[data-poll-id]').dataset.pollId, option.dataset.pollOption); const jump = e.target.closest('[data-jump-message]'); if (jump) { const target = document.querySelector(`[data-message-id="${CSS.escape(jump.dataset.jumpMessage)}"]`); target?.scrollIntoView({ behavior: 'smooth', block: 'center' }); target?.classList.add('message-highlight'); setTimeout(() => target?.classList.remove('message-highlight'), 1600); } });
+els.list.addEventListener('click', (e) => { const remove = e.target.closest('[data-delete-poll]'); if (remove) return deletePoll(remove.dataset.deletePoll); const option = e.target.closest('[data-poll-option]'); if (option) votePoll(option.closest('[data-poll-id]').dataset.pollId, option.dataset.pollOption); const jump = e.target.closest('[data-jump-message]'); if (jump) { const target = document.querySelector(`[data-message-id="${CSS.escape(jump.dataset.jumpMessage)}"]`); target?.scrollIntoView({ behavior: 'smooth', block: 'center' }); target?.classList.add('message-highlight'); setTimeout(() => target?.classList.remove('message-highlight'), 1600); } });
 $('#reply-cancel').addEventListener('click', resetComposer); $('#community-profile-close').addEventListener('click', () => els.profileDialog.close()); $('#share-dialog-close').addEventListener('click', () => els.shareDialog.close()); $('#external-link-close').addEventListener('click', () => els.externalDialog.close()); $('#external-link-cancel').addEventListener('click', () => els.externalDialog.close()); els.externalContinue.addEventListener('click', () => els.externalDialog.close());
 els.shareList.addEventListener('click', (e) => { const b = e.target.closest('[data-share-channel]'); if (b) shareMessage(b.dataset.shareChannel); });
 els.pollForm.addEventListener('submit', createPoll);

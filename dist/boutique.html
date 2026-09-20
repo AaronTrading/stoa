@@ -49,6 +49,10 @@
     <form class="order-form" id="order-form" novalidate>
       <label for="order-product">Produit</label>
       <input id="order-product" name="product" readonly>
+      <div class="order-selection-wrap" id="order-selection-wrap" hidden>
+        <label for="order-selection">Sélection</label>
+        <select id="order-selection" name="selection"></select>
+      </div>
       <div class="order-two-columns">
         <div><label for="order-name">Nom complet</label><input id="order-name" name="name" autocomplete="name" required></div>
         <div><label for="order-email">Email</label><input id="order-email" name="email" type="email" autocomplete="email" required></div>
