@@ -253,9 +253,9 @@ const loadInitialMessages = async () => {
   requestAnimationFrame(() => scrollToBottom());
 };
 
-const switchChannel = async (channelId) => {
-  if (switchingChannel || activeChannel?.id === channelId) return;
-  const nextChannel = channels.find((channel) => channel.id === channelId);
+const switchChannel = async (channelIdentifier) => {
+  const nextChannel = channels.find((channel) => channel.id === channelIdentifier || channel.slug === channelIdentifier);
+  if (switchingChannel || activeChannel?.id === nextChannel?.id) return;
   if (!nextChannel) return;
   switchingChannel = true;
   await unsubscribeFromRoom();
@@ -268,7 +268,7 @@ const switchChannel = async (channelId) => {
   messageInput.placeholder = `Écrire dans #${nextChannel.name.toLowerCase()}…`;
   renderChannels();
   const url = new URL(location.href);
-  url.searchParams.set('canal', nextChannel.id);
+  url.searchParams.set('canal', nextChannel.slug);
   window.history.replaceState(null, '', url);
   await loadInitialMessages();
   subscribeToRoom(nextChannel);
@@ -438,7 +438,7 @@ const initializeCommunity = async () => {
   }
 
   await loadProfiles([currentUser.id]);
-  const { data, error } = await supabase.from('channels').select('id, name, description, order_index').order('order_index');
+  const { data, error } = await supabase.from('channels').select('id, slug, name, description, order_index').order('order_index');
   if (error) {
     chatState.textContent = `La communauté ne peut pas être ouverte : ${error.message}`;
     return;
@@ -449,7 +449,8 @@ const initializeCommunity = async () => {
     return;
   }
   const requestedChannel = new URLSearchParams(location.search).get('canal');
-  await switchChannel(channels.some((channel) => channel.id === requestedChannel) ? requestedChannel : channels[0].id);
+  const requested = channels.find((channel) => channel.slug === requestedChannel || channel.id === requestedChannel);
+  await switchChannel(requested?.id || channels[0].id);
 };
 
 initializeCommunity();
