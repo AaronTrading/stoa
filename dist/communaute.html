@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Échangez en direct avec les membres de l’académie STOA.">
+  <title>Communauté — STOA</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="env.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="communaute.js"></script>
+</head>
+<body class="member-page community-page">
+  <a class="skip" href="#main">Aller au contenu</a>
+  <header class="site-header">
+    <a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a>
+    <nav class="pill-nav" aria-label="Navigation membre">
+      <a href="/academie">Académie</a>
+      <a class="active" href="/communaute" aria-current="page">Communauté</a>
+      <a href="/profil">Profil</a>
+    </nav>
+    <a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a>
+  </header>
+
+  <main class="community-shell" id="main">
+    <aside class="channel-sidebar" aria-label="Canaux de discussion">
+      <div class="channel-intro">
+        <span class="eyebrow">LE PORTIQUE</span>
+        <h1>Communauté</h1>
+        <p>Des échanges courts pour avancer ensemble.</p>
+      </div>
+      <nav class="channel-list" id="channel-list" aria-label="Canaux"></nav>
+      <div class="presence-note"><span class="presence-dot" aria-hidden="true"></span><strong id="presence-count">0</strong> membre<span id="presence-plural">s</span> dans ce canal</div>
+    </aside>
+
+    <section class="chat-panel" aria-labelledby="active-channel-name">
+      <header class="chat-heading">
+        <div>
+          <span class="eyebrow">CANAL ACTIF</span>
+          <h2 id="active-channel-name">Chargement…</h2>
+          <p id="active-channel-description"></p>
+        </div>
+        <span class="realtime-indicator"><i aria-hidden="true"></i><span id="realtime-label">Connexion…</span></span>
+      </header>
+
+      <div class="message-history" id="message-history" tabindex="0" aria-label="Historique des messages">
+        <button class="load-more" id="load-more" type="button" hidden>Charger les messages précédents</button>
+        <p class="chat-state" id="chat-state" role="status" aria-live="polite">Ouverture du canal…</p>
+        <div class="message-list" id="message-list" aria-live="polite" aria-relevant="additions text"></div>
+      </div>
+
+      <form class="message-composer" id="message-form">
+        <label class="sr-only" for="message-input">Écrire un message</label>
+        <textarea id="message-input" rows="1" maxlength="2000" placeholder="Écrire dans le canal…" required></textarea>
+        <button type="submit" aria-label="Envoyer le message">Envoyer <span aria-hidden="true">↗</span></button>
+      </form>
+    </section>
+  </main>
+
+  <dialog class="community-profile-dialog" id="community-profile-dialog" aria-labelledby="community-profile-name">
+    <button class="auth-close" id="community-profile-close" type="button" aria-label="Fermer">×</button>
+    <div id="community-profile-content"></div>
+  </dialog>
+</body>
+</html>

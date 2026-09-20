@@ -10,6 +10,7 @@ Ouvrir `dist/index.html` directement, ou lancer `node serve.cjs` puis visiter ht
 - `dist/academie.html` : programme filtrable et progression.
 - `dist/module.html` : lecteur des modules, exercices et notes personnelles.
 - `dist/profil.html` : profil membre, nom et photo de profil Supabase.
+- `dist/communaute.html` : salons de discussion en temps réel, réactions et présence.
 - `dist/styles.css` : styles partagés, palette et responsive.
 - `dist/app.js` : contenu, interactions et stockage local.
 
@@ -22,6 +23,8 @@ Les migrations SQL sont dans `supabase/migrations/` et les données de démonstr
 Le client navigateur est dans `lib/supabase.js`, avec les helpers d’authentification dans `lib/auth.js` et le schéma JSDoc dans `lib/database.js`. Comme le site reste sans build, le client officiel `@supabase/supabase-js` est chargé comme module ESM. Les valeurs publiques sont injectées par `window.__STOA_ENV__`; `dist/env.example.js` montre le format attendu.
 
 L’interface d’authentification dans `dist/auth.js` permet la connexion et l’inscription par email et mot de passe, l’envoi d’un magic link et la connexion avec Discord. La page `/profil` permet de modifier le prénom, le nom et le pseudo, de recadrer une photo puis d’envoyer l’avatar optimisé dans le bucket Supabase `avatars`. Un membre connecté par email peut aussi associer son identité Discord depuis cette page. Le secret Discord reste uniquement dans la configuration du fournisseur Supabase.
+
+La page `/communaute` utilise les changements PostgreSQL de Supabase Realtime pour les messages et les réactions, et Presence pour compter les membres présents dans le canal actif. Les profils affichés passent par une fonction SQL qui ne retourne que les informations publiques utiles à la communauté.
 
 ## Portée
 
