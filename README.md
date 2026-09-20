@@ -9,6 +9,7 @@ Ouvrir `dist/index.html` directement, ou lancer `node serve.cjs` puis visiter ht
 - `dist/index.html` : landing, philosophie, programme, offres et FAQ.
 - `dist/academie.html` : programme filtrable et progression.
 - `dist/module.html` : lecteur des modules, exercices et notes personnelles.
+- `dist/profil.html` : profil membre, nom et photo de profil Supabase.
 - `dist/styles.css` : styles partagés, palette et responsive.
 - `dist/app.js` : contenu, interactions et stockage local.
 
@@ -20,7 +21,7 @@ Les migrations SQL sont dans `supabase/migrations/` et les données de démonstr
 
 Le client navigateur est dans `lib/supabase.js`, avec les helpers d’authentification dans `lib/auth.js` et le schéma JSDoc dans `lib/database.js`. Comme le site reste sans build, le client officiel `@supabase/supabase-js` est chargé comme module ESM. Les valeurs publiques sont injectées par `window.__STOA_ENV__`; `dist/env.example.js` montre le format attendu.
 
-L’interface d’authentification dans `dist/auth.js` permet la connexion et l’inscription par email et mot de passe, l’envoi d’un magic link et la connexion avec Discord. Le secret Discord reste uniquement dans la configuration du fournisseur Supabase.
+L’interface d’authentification dans `dist/auth.js` permet la connexion et l’inscription par email et mot de passe, l’envoi d’un magic link et la connexion avec Discord. La page `/profil` permet de modifier le nom et d’envoyer un avatar dans le bucket Supabase `avatars`. Le secret Discord reste uniquement dans la configuration du fournisseur Supabase.
 
 ## Portée
 

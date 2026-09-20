@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Gérez votre profil membre STOA."><title>Mon profil — STOA</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script src="app.js" defer></script><script type="module" src="auth.js"></script><script type="module" src="profile.js"></script></head>
+<body class="member-page profile-page"><a class="skip" href="#main">Aller au contenu</a>
+<header class="site-header"><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><nav class="pill-nav" aria-label="Navigation membre"><a href="/academie">Mon académie</a><a class="active" href="/profil" aria-current="page">Mon profil</a></nav><a class="member-avatar" data-auth-avatar href="/profil" aria-label="Ouvrir mon profil">S</a></header>
+<main id="main" class="profile-main">
+  <section class="profile-heading"><span class="eyebrow">VOTRE ESPACE PERSONNEL</span><h1>Votre profil.</h1><p>Une identité simple, pour un parcours qui vous appartient.</p></section>
+  <div class="profile-layout">
+    <section class="profile-card" aria-labelledby="profile-card-title">
+      <div class="profile-avatar-block">
+        <div class="profile-avatar-preview" id="profile-avatar-preview" aria-hidden="true"><span id="profile-avatar-initial">S</span><img id="profile-avatar-image" alt="" hidden></div>
+        <div><span class="eyebrow">PHOTO DE PROFIL</span><p>JPG, PNG ou WebP · 5 Mo maximum.</p><div class="profile-avatar-actions"><label class="button dark upload-button" for="profile-avatar-input">Choisir une photo</label><input id="profile-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="text-button" id="profile-avatar-remove" type="button">Supprimer</button></div></div>
+      </div>
+      <form class="profile-form" id="profile-form">
+        <h2 id="profile-card-title">Informations personnelles</h2>
+        <label for="profile-name">Nom complet</label><input id="profile-name" name="fullName" type="text" autocomplete="name" maxlength="100" required>
+        <label for="profile-email">Adresse email</label><input id="profile-email" type="email" autocomplete="email" readonly>
+        <div class="profile-meta"><div><span>Offre</span><strong id="profile-role">Membre</strong></div><div><span>Membre depuis</span><strong id="profile-created-at">—</strong></div></div>
+        <button class="button dark profile-save" type="submit">Enregistrer les modifications <span>↗</span></button>
+        <p class="profile-message" id="profile-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <aside class="account-card"><span class="eyebrow">VOTRE COMPTE</span><h2>Accès & session</h2><p id="profile-provider">Compte STOA</p><p>Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p><button class="text-button danger" id="profile-signout" type="button">Se déconnecter</button></aside>
+  </div>
+</main>
+<footer><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer></body></html>

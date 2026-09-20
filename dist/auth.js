@@ -1,8 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const runtimeEnv = globalThis.__STOA_ENV__ ?? {};
-const supabaseUrl = runtimeEnv.SUPABASE_URL;
-const supabaseKey = runtimeEnv.SUPABASE_PUBLISHABLE_KEY ?? runtimeEnv.SUPABASE_ANON_KEY;
+import { siteUrl, supabase } from './supabase.js';
 
 const statusToast = document.createElement('div');
 statusToast.className = 'auth-status';
@@ -37,6 +33,7 @@ dialog.innerHTML = `
   <div class="auth-member-view" hidden>
     <p>Vous êtes connecté avec <strong data-auth-email></strong>.</p>
     <a class="button dark" href="/academie">Ouvrir mon académie <span>↗</span></a>
+    <a class="button profile-button" href="/profil">Gérer mon profil <span>↗</span></a>
     <button class="auth-secondary" type="button" data-auth-action="signout">Se déconnecter</button>
   </div>
   <p class="auth-message" role="status" aria-live="polite"></p>
@@ -72,6 +69,7 @@ const updateAuthUI = (session) => {
   currentSession = session;
   const user = session?.user;
   const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
@@ -84,9 +82,13 @@ const updateAuthUI = (session) => {
   });
 
   document.querySelectorAll('[data-auth-avatar]').forEach((avatar) => {
-    avatar.textContent = (fullName || user?.email || 'S').trim().charAt(0).toUpperCase();
+    const initial = (fullName || user?.email || 'S').trim().charAt(0).toUpperCase();
+    avatar.textContent = avatarUrl ? '' : initial;
+    avatar.style.backgroundImage = avatarUrl ? `url("${avatarUrl.replace(/"/g, '%22')}")` : '';
+    avatar.classList.toggle('has-image', Boolean(avatarUrl));
+    avatar.href = user ? '/profil' : '#connexion';
     avatar.title = user ? fullName || user.email : 'Se connecter';
-    avatar.setAttribute('aria-label', user ? 'Ouvrir les options du compte' : 'Se connecter à STOA');
+    avatar.setAttribute('aria-label', user ? 'Ouvrir mon profil' : 'Se connecter à STOA');
   });
 
   guestView.hidden = Boolean(user);
@@ -97,31 +99,27 @@ const updateAuthUI = (session) => {
 const openDialog = () => {
   setMessage('');
   updateAuthUI(currentSession);
+  document.querySelectorAll('dialog[open]').forEach((openDialogElement) => {
+    if (openDialogElement !== dialog) openDialogElement.close();
+  });
   if (!dialog.open) dialog.showModal();
 };
 
-const canonicalSiteUrl = runtimeEnv.SITE_URL || location.origin;
-const redirectTo = new URL('/academie', canonicalSiteUrl).href;
+const redirectTo = new URL('/academie', siteUrl).href;
 
 const initializeAuth = async () => {
-  if (!supabaseUrl || !supabaseKey) return;
-
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-
   const { data: sessionData } = await supabase.auth.getSession();
   updateAuthUI(sessionData.session);
+  if (document.body.classList.contains('member-page') && !sessionData.session) {
+    location.replace('/#connexion');
+    return;
+  }
   supabase.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
 
   document.addEventListener('click', (event) => {
     const authLink = event.target.closest('[data-auth-link]');
     const avatar = event.target.closest('[data-auth-avatar]');
-    if ((authLink && !currentSession) || avatar) {
+    if ((authLink && !currentSession) || (avatar && !currentSession)) {
       event.preventDefault();
       openDialog();
     }
@@ -215,6 +213,8 @@ const initializeAuth = async () => {
     dialog.close();
     showToast('Vous êtes déconnecté.', 'success');
   });
+
+  if (location.hash === '#connexion' && !currentSession) openDialog();
 };
 
 dialog.querySelector('.auth-close').addEventListener('click', () => dialog.close());
