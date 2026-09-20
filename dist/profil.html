@@ -8,7 +8,7 @@
     <section class="profile-card" aria-labelledby="profile-card-title">
       <div class="profile-avatar-block">
         <div class="profile-avatar-preview" id="profile-avatar-preview" aria-hidden="true"><span id="profile-avatar-initial">S</span><img id="profile-avatar-image" alt="" hidden></div>
-        <div><span class="eyebrow">PHOTO DE PROFIL</span><p>JPG, PNG ou WebP · 5 Mo maximum.</p><div class="profile-avatar-actions"><label class="button dark upload-button" for="profile-avatar-input">Choisir une photo</label><input id="profile-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="text-button" id="profile-avatar-remove" type="button">Supprimer</button></div></div>
+        <div><span class="eyebrow">PHOTO DE PROFIL</span><p>JPG, PNG ou WebP · recadrage avant l’envoi.</p><div class="profile-avatar-actions"><label class="button dark upload-button" for="profile-avatar-input">Choisir une photo</label><input id="profile-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="text-button" id="profile-avatar-remove" type="button">Supprimer</button></div></div>
       </div>
       <form class="profile-form" id="profile-form">
         <h2 id="profile-card-title">Informations personnelles</h2>
@@ -22,4 +22,13 @@
     <aside class="account-card"><span class="eyebrow">VOTRE COMPTE</span><h2>Accès & session</h2><p id="profile-provider">Compte STOA</p><p>Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p><button class="text-button danger" id="profile-signout" type="button">Se déconnecter</button></aside>
   </div>
 </main>
+<dialog class="crop-dialog" id="avatar-crop-dialog" aria-labelledby="crop-title">
+  <button class="auth-close" id="crop-close" type="button" aria-label="Fermer">×</button>
+  <span class="eyebrow">PHOTO DE PROFIL</span>
+  <h2 id="crop-title">Recadrez votre photo.</h2>
+  <p>Faites glisser l’image pour choisir la zone visible dans votre avatar.</p>
+  <div class="crop-stage"><canvas id="avatar-crop-canvas" width="640" height="640" tabindex="0" aria-label="Zone de recadrage. Faites glisser l’image ou utilisez les flèches du clavier."></canvas></div>
+  <label class="crop-zoom-label" for="avatar-crop-zoom"><span>Zoom</span><span aria-hidden="true">−</span><input id="avatar-crop-zoom" type="range" min="1" max="3" step="0.01" value="1"><span aria-hidden="true">+</span></label>
+  <div class="crop-actions"><button class="text-button" id="crop-cancel" type="button">Annuler</button><button class="button dark" id="crop-apply" type="button">Utiliser cette photo <span>↗</span></button></div>
+</dialog>
 <footer><a class="logo" href="/"><span class="brand-icon">Π</span> STOA</a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer></body></html>

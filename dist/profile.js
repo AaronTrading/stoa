@@ -9,11 +9,22 @@ const avatarInitial = document.querySelector('#profile-avatar-initial');
 const removeButton = document.querySelector('#profile-avatar-remove');
 const message = document.querySelector('#profile-message');
 const saveButton = form.querySelector('button[type="submit"]');
+const cropDialog = document.querySelector('#avatar-crop-dialog');
+const cropCanvas = document.querySelector('#avatar-crop-canvas');
+const cropContext = cropCanvas.getContext('2d');
+const cropZoom = document.querySelector('#avatar-crop-zoom');
+const cropApply = document.querySelector('#crop-apply');
 
 let user;
 let profile;
 let pendingAvatar;
 let previewUrl;
+let cropImage;
+let cropSourceUrl;
+let cropBaseScale = 1;
+let cropOffsetX = 0;
+let cropOffsetY = 0;
+let dragStart;
 
 const setMessage = (text, tone = 'info') => {
   message.textContent = text;
@@ -35,6 +46,71 @@ const showAvatar = (url, fallback = 'S') => {
 };
 
 const roleLabels = { member: 'Académie', coaching: 'Accompagnement', admin: 'Administration' };
+const cropSize = cropCanvas.width;
+
+const cropMetrics = () => {
+  const scale = cropBaseScale * Number(cropZoom.value);
+  return { scale, width: cropImage.width * scale, height: cropImage.height * scale };
+};
+
+const clampCropOffset = () => {
+  const { width, height } = cropMetrics();
+  const maxX = Math.max(0, (width - cropSize) / 2);
+  const maxY = Math.max(0, (height - cropSize) / 2);
+  cropOffsetX = Math.min(maxX, Math.max(-maxX, cropOffsetX));
+  cropOffsetY = Math.min(maxY, Math.max(-maxY, cropOffsetY));
+};
+
+const drawCrop = (context = cropContext, size = cropSize) => {
+  if (!cropImage) return;
+  clampCropOffset();
+  const { width, height } = cropMetrics();
+  const ratio = size / cropSize;
+  context.clearRect(0, 0, size, size);
+  context.fillStyle = '#e9e7df';
+  context.fillRect(0, 0, size, size);
+  context.drawImage(
+    cropImage,
+    ((cropSize - width) / 2 + cropOffsetX) * ratio,
+    ((cropSize - height) / 2 + cropOffsetY) * ratio,
+    width * ratio,
+    height * ratio
+  );
+};
+
+const releaseCropSource = () => {
+  if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl);
+  cropSourceUrl = undefined;
+  cropImage = undefined;
+  dragStart = undefined;
+};
+
+const cancelCrop = () => {
+  fileInput.value = '';
+  if (cropDialog.open) cropDialog.close();
+  releaseCropSource();
+};
+
+const openCropEditor = (file) => {
+  releaseCropSource();
+  cropSourceUrl = URL.createObjectURL(file);
+  const image = new Image();
+  image.onload = () => {
+    cropImage = image;
+    cropBaseScale = Math.max(cropSize / image.naturalWidth, cropSize / image.naturalHeight);
+    cropOffsetX = 0;
+    cropOffsetY = 0;
+    cropZoom.value = '1';
+    drawCrop();
+    cropDialog.showModal();
+    cropCanvas.focus();
+  };
+  image.onerror = () => {
+    cancelCrop();
+    setMessage('Cette image ne peut pas être ouverte.', 'error');
+  };
+  image.src = cropSourceUrl;
+};
 
 const initializeProfile = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
@@ -75,17 +151,85 @@ fileInput.addEventListener('change', () => {
     setMessage('Choisissez une image JPG, PNG ou WebP.', 'error');
     return;
   }
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > 10 * 1024 * 1024) {
     fileInput.value = '';
-    setMessage('Cette image dépasse la limite de 5 Mo.', 'error');
+    setMessage('Cette image dépasse la limite de 10 Mo.', 'error');
     return;
   }
-  if (previewUrl) URL.revokeObjectURL(previewUrl);
-  previewUrl = URL.createObjectURL(file);
-  pendingAvatar = file;
-  showAvatar(previewUrl, nameInput.value || user?.email);
-  removeButton.hidden = false;
-  setMessage('Photo prête à être enregistrée.');
+  openCropEditor(file);
+});
+
+cropZoom.addEventListener('input', () => drawCrop());
+
+cropCanvas.addEventListener('pointerdown', (event) => {
+  if (!cropImage) return;
+  const bounds = cropCanvas.getBoundingClientRect();
+  const ratio = cropSize / bounds.width;
+  dragStart = { x: event.clientX, y: event.clientY, offsetX: cropOffsetX, offsetY: cropOffsetY, ratio };
+  cropCanvas.setPointerCapture(event.pointerId);
+  cropCanvas.classList.add('dragging');
+});
+
+cropCanvas.addEventListener('pointermove', (event) => {
+  if (!dragStart) return;
+  cropOffsetX = dragStart.offsetX + (event.clientX - dragStart.x) * dragStart.ratio;
+  cropOffsetY = dragStart.offsetY + (event.clientY - dragStart.y) * dragStart.ratio;
+  drawCrop();
+});
+
+const endCropDrag = () => {
+  dragStart = undefined;
+  cropCanvas.classList.remove('dragging');
+};
+
+cropCanvas.addEventListener('pointerup', endCropDrag);
+cropCanvas.addEventListener('pointercancel', endCropDrag);
+
+cropCanvas.addEventListener('keydown', (event) => {
+  const movements = { ArrowLeft: [-8, 0], ArrowRight: [8, 0], ArrowUp: [0, -8], ArrowDown: [0, 8] };
+  const movement = movements[event.key];
+  if (!movement) return;
+  event.preventDefault();
+  cropOffsetX += movement[0];
+  cropOffsetY += movement[1];
+  drawCrop();
+});
+
+cropApply.addEventListener('click', () => {
+  if (!cropImage) return;
+  cropApply.disabled = true;
+  const output = document.createElement('canvas');
+  output.width = 768;
+  output.height = 768;
+  drawCrop(output.getContext('2d'), output.width);
+  output.toBlob((blob) => {
+    cropApply.disabled = false;
+    if (!blob) {
+      setMessage('Le recadrage n’a pas pu être créé.', 'error');
+      return;
+    }
+    pendingAvatar = new File([blob], 'avatar.webp', { type: 'image/webp', lastModified: Date.now() });
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(blob);
+    showAvatar(previewUrl, nameInput.value || user?.email);
+    removeButton.hidden = false;
+    fileInput.value = '';
+    cropDialog.close();
+    releaseCropSource();
+    setMessage('Recadrage prêt. Enregistrez les modifications pour l’appliquer.', 'success');
+  }, 'image/webp', 0.9);
+});
+
+document.querySelector('#crop-close').addEventListener('click', cancelCrop);
+document.querySelector('#crop-cancel').addEventListener('click', cancelCrop);
+cropDialog.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  cancelCrop();
+});
+cropDialog.addEventListener('click', (event) => {
+  if (event.target !== cropDialog) return;
+  const bounds = cropDialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) cancelCrop();
 });
 
 form.addEventListener('submit', async (event) => {
@@ -138,6 +282,8 @@ form.addEventListener('submit', async (event) => {
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, fullName);
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = undefined;
   document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
     element.textContent = avatarUrl ? '' : fullName.charAt(0).toUpperCase();
     element.style.backgroundImage = avatarUrl ? `url("${avatarUrl}")` : '';
@@ -167,6 +313,8 @@ removeButton.addEventListener('click', async () => {
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar('', nameInput.value || user.email);
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = undefined;
   removeButton.hidden = true;
   document.querySelectorAll('[data-auth-avatar]').forEach((element) => {
     element.textContent = (nameInput.value || user.email || 'S').charAt(0).toUpperCase();

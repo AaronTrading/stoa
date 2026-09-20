@@ -53,3 +53,20 @@
 .account-card .danger{margin-top:18px}
 @media(max-width:800px){.profile-main{padding:75px 6% 60px}.profile-heading{padding-top:15px}.profile-layout{grid-template-columns:1fr}.account-card{position:static}.profile-card{padding:26px}.profile-avatar-block{align-items:flex-start}.profile-avatar-preview{width:92px;height:92px}.profile-meta{grid-template-columns:1fr}}
 @media(max-width:480px){.profile-avatar-block{display:grid}.profile-avatar-preview{width:100px;height:100px}.profile-card{padding:22px}.profile-heading h1{font-size:3.2rem}}
+
+/* Avatar crop editor */
+.crop-dialog{width:min(620px,calc(100% - 28px));max-width:620px;max-height:calc(100vh - 28px);overflow:auto;padding:34px;border-radius:18px}
+.crop-dialog::backdrop{background:#20251f99;backdrop-filter:blur(10px)}
+.crop-dialog h2{font-size:34px;margin:13px 0 8px}
+.crop-dialog>p{font-size:13px;color:var(--muted);margin:0 0 22px}
+.crop-stage{position:relative;width:min(100%,460px);aspect-ratio:1;margin:0 auto;overflow:hidden;border-radius:10px;background:var(--stone);touch-action:none}
+.crop-stage canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none;outline:none}
+.crop-stage canvas.dragging{cursor:grabbing}
+.crop-stage canvas:focus-visible{outline:3px solid #9b8e63;outline-offset:-4px}
+.crop-stage::after{content:'';position:absolute;inset:1px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 999px #1e211d80;pointer-events:none}
+.crop-zoom-label{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:12px;width:min(100%,460px);margin:20px auto 0;color:var(--muted);font-size:12px}
+.crop-zoom-label>span:first-child{color:var(--ink);margin-right:5px}
+.crop-zoom-label input{width:100%;accent-color:var(--olive)}
+.crop-actions{display:flex;align-items:center;justify-content:flex-end;gap:25px;margin-top:24px}
+.crop-actions .button{width:auto;min-width:210px}
+@media(max-width:520px){.crop-dialog{padding:28px 20px}.crop-dialog h2{font-size:29px}.crop-actions{align-items:stretch;flex-direction:column-reverse;gap:8px}.crop-actions .button,.crop-actions .text-button{width:100%}}
