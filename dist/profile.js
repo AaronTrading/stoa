@@ -4,6 +4,7 @@ const form = document.querySelector('#profile-form');
 const firstNameInput = document.querySelector('#profile-first-name');
 const lastNameInput = document.querySelector('#profile-last-name');
 const usernameInput = document.querySelector('#profile-username');
+const departmentInput = document.querySelector('#profile-department');
 const emailInput = document.querySelector('#profile-email');
 const fileInput = document.querySelector('#profile-avatar-input');
 const avatarImage = document.querySelector('#profile-avatar-image');
@@ -142,13 +143,14 @@ const initializeProfile = async () => {
     return;
   }
 
-  const [profileResult, identitiesResult] = await Promise.all([
+  const [profileResult, identitiesResult, publicProfileResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('full_name, first_name, last_name, username, avatar_url, role, created_at')
+      .select('full_name, first_name, last_name, username, avatar_url, department, role, created_at')
       .eq('id', user.id)
       .single(),
     supabase.auth.getUserIdentities(),
+    supabase.rpc('get_community_profiles', { profile_ids: [user.id] }).maybeSingle(),
   ]);
 
   const { data, error } = profileResult;
@@ -168,8 +170,11 @@ const initializeProfile = async () => {
   firstNameInput.value = firstName;
   lastNameInput.value = lastName;
   usernameInput.value = username;
+  departmentInput.value = profile.department || user.user_metadata?.department || '';
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
+  const publicProfile = publicProfileResult.data;
+  document.querySelector('#profile-level').textContent = publicProfile ? `Niveau ${publicProfile.level_number} · ${publicProfile.level_label} (${publicProfile.completed_modules} module${Number(publicProfile.completed_modules) > 1 ? 's' : ''})` : 'Niveau 1 · Initié';
   document.querySelector('#profile-created-at').textContent = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at));
   document.querySelector('#profile-provider').textContent = user.app_metadata?.provider === 'discord' ? 'Connecté avec Discord' : 'Connecté par email';
   showAvatar(avatarUrl, firstName || user.email);
@@ -276,6 +281,7 @@ form.addEventListener('submit', async (event) => {
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
   const username = usernameInput.value.trim();
+  const department = departmentInput.value.trim().toUpperCase();
   const fullName = `${firstName} ${lastName}`.trim();
   if (!firstName || !lastName) {
     setMessage('Renseignez votre prénom et votre nom.', 'error');
@@ -283,6 +289,10 @@ form.addEventListener('submit', async (event) => {
   }
   if (username.length < 3 || username.length > 30) {
     setMessage('Le pseudo doit contenir entre 3 et 30 caractères.', 'error');
+    return;
+  }
+  if (!/^(0[1-9]|[1-8][0-9]|9[0-5]|2A|2B|97[1-6]|98[4-8])$/.test(department)) {
+    setMessage('Renseignez un numéro de département valide, par exemple 31, 2A ou 974.', 'error');
     return;
   }
 
@@ -308,7 +318,7 @@ form.addEventListener('submit', async (event) => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
@@ -322,7 +332,7 @@ form.addEventListener('submit', async (event) => {
   }
 
   const { error: userError } = await supabase.auth.updateUser({
-    data: { full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl },
+    data: { full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl },
   });
   setBusy(false);
   if (userError) {
@@ -330,7 +340,7 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, firstName);

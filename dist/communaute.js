@@ -68,8 +68,12 @@ const fallbackProfile = (id) => ({
   display_name: 'Membre STOA',
   username: null,
   avatar_url: null,
+  department: null,
   role: 'member',
   created_at: new Date().toISOString(),
+  completed_modules: 0,
+  level_number: 1,
+  level_label: 'Initié',
 });
 
 const getProfile = (id) => profiles.get(id) || fallbackProfile(id);
@@ -518,7 +522,8 @@ const showProfile = (profileId) => {
     <span class="eyebrow">PROFIL MEMBRE</span>
     <h2 id="community-profile-name">${escapeHtml(profile.display_name)}</h2>
     ${profile.username ? `<p class="community-profile-username">@${escapeHtml(profile.username)}</p>` : ''}
-    <div class="community-profile-meta"><span>${escapeHtml(roleLabels[profile.role] || roleLabels.member)}</span><span>Membre depuis ${formatMemberSince(profile.created_at)}</span></div>`;
+    <div class="community-profile-level"><strong>Niveau ${Number(profile.level_number) || 1}</strong><span>${escapeHtml(profile.level_label || 'Initié')} · ${Number(profile.completed_modules) || 0} module${Number(profile.completed_modules) > 1 ? 's' : ''} terminé${Number(profile.completed_modules) > 1 ? 's' : ''}</span></div>
+    <div class="community-profile-meta"><span>${escapeHtml(roleLabels[profile.role] || roleLabels.member)}</span>${profile.department ? `<span>Département ${escapeHtml(profile.department)}</span>` : ''}<span>Membre depuis ${formatMemberSince(profile.created_at)}</span></div>`;
   profileDialog.showModal();
 };
 

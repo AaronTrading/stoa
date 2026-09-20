@@ -19,6 +19,8 @@ dialog.innerHTML = `
     <form class="auth-form" novalidate>
       <label for="auth-name">Nom complet <span>pour créer un compte</span></label>
       <input id="auth-name" name="fullName" type="text" autocomplete="name" placeholder="Votre nom">
+      <label for="auth-department">Département <span>pour créer un compte</span></label>
+      <input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" maxlength="3" placeholder="Ex. 31, 2A ou 974">
       <label for="auth-email">Adresse email</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
       <label for="auth-password">Mot de passe</label>
@@ -114,7 +116,7 @@ const hydrateAuthUI = async (session) => {
 
   const { data } = await supabase
     .from('profiles')
-    .select('full_name, first_name, avatar_url')
+    .select('full_name, first_name, avatar_url, department')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -122,6 +124,9 @@ const hydrateAuthUI = async (session) => {
   currentProfile = data;
   currentProfileUserId = user.id;
   updateAuthUI(session, data);
+  if (user.app_metadata?.provider === 'discord' && !data.department && location.pathname !== '/profil') {
+    location.replace('/profil?nouveau=1');
+  }
 };
 
 const openDialog = () => {
@@ -184,10 +189,12 @@ const initializeAuth = async () => {
     const data = new FormData(form);
     const fullName = String(data.get('fullName') || '').trim();
     const [firstName, ...lastNameParts] = fullName.split(/\s+/);
+    const department = String(data.get('department') || '').trim().toUpperCase();
     const email = String(data.get('email') || '').trim();
     const password = String(data.get('password') || '');
-    if (!fullName || !email || password.length < 8) {
-      setMessage('Ajoutez votre nom, un email valide et un mot de passe d’au moins 8 caractères.', 'error');
+    const departmentPattern = /^(0[1-9]|[1-8][0-9]|9[0-5]|2A|2B|97[1-6]|98[4-8])$/;
+    if (!fullName || !email || password.length < 8 || !departmentPattern.test(department)) {
+      setMessage('Ajoutez votre nom, votre département, un email valide et un mot de passe d’au moins 8 caractères.', 'error');
       return;
     }
 
@@ -196,7 +203,7 @@ const initializeAuth = async () => {
       email,
       password,
       options: {
-        data: { full_name: fullName, first_name: firstName, last_name: lastNameParts.join(' ') || null },
+        data: { full_name: fullName, first_name: firstName, last_name: lastNameParts.join(' ') || null, department },
         emailRedirectTo: redirectTo,
       },
     });
