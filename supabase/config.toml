@@ -2,7 +2,7 @@ project_id = "stoa"
 
 [auth]
 site_url = "https://stoa-coaching.fr"
-additional_redirect_urls = ["https://stoa-coaching.fr/academie.html", "http://127.0.0.1:4173/academie.html"]
+additional_redirect_urls = ["https://stoa-coaching.fr/academie", "http://127.0.0.1:4173/academie"]
 enable_signup = true
 
 [auth.email]

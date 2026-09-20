@@ -36,7 +36,7 @@ dialog.innerHTML = `
   </div>
   <div class="auth-member-view" hidden>
     <p>Vous êtes connecté avec <strong data-auth-email></strong>.</p>
-    <a class="button dark" href="academie.html">Ouvrir mon académie <span>↗</span></a>
+    <a class="button dark" href="/academie">Ouvrir mon académie <span>↗</span></a>
     <button class="auth-secondary" type="button" data-auth-action="signout">Se déconnecter</button>
   </div>
   <p class="auth-message" role="status" aria-live="polite"></p>
@@ -75,7 +75,7 @@ const updateAuthUI = (session) => {
   const firstName = fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
-    link.href = user ? 'academie.html' : '#connexion';
+    link.href = user ? '/academie' : '#connexion';
     const label = user ? (firstName ? `Bonjour ${firstName}` : 'Mon académie') : 'Espace membre';
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
@@ -101,7 +101,7 @@ const openDialog = () => {
 };
 
 const canonicalSiteUrl = runtimeEnv.SITE_URL || location.origin;
-const redirectTo = new URL('/academie.html', canonicalSiteUrl).href;
+const redirectTo = new URL('/academie', canonicalSiteUrl).href;
 
 const initializeAuth = async () => {
   if (!supabaseUrl || !supabaseKey) return;
@@ -148,7 +148,7 @@ const initializeAuth = async () => {
     updateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
-    if (location.pathname.endsWith('/index.html') || location.pathname.endsWith('/')) location.assign('academie.html');
+    if (location.pathname === '/' || location.pathname === '/index') location.assign('/academie');
   });
 
   dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {

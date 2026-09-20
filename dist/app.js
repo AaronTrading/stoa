@@ -38,7 +38,7 @@ if (categoryStrip) {
 
 const landingChapters = document.querySelector('#landing-chapters');
 if (landingChapters) {
-  landingChapters.innerHTML = chapters.map((chapter,index)=>`<a class="chapter-card" href="academie.html?chapitre=${index+1}"><span class="chapter-num">CHAPITRE ${number(index+1)}</span><img class="chapter-visual" src="${imagePath(chapter)}" alt="Illustration du chapitre ${chapter.name}" loading="lazy"><h3>${chapter.name}</h3><p>${chapter.description}</p><div class="card-bottom"><span>${chapter.modules.length} modules</span><span>↗</span></div></a>`).join('');
+  landingChapters.innerHTML = chapters.map((chapter,index)=>`<a class="chapter-card" href="/academie?chapitre=${index+1}"><span class="chapter-num">CHAPITRE ${number(index+1)}</span><img class="chapter-visual" src="${imagePath(chapter)}" alt="Illustration du chapitre ${chapter.name}" loading="lazy"><h3>${chapter.name}</h3><p>${chapter.description}</p><div class="card-bottom"><span>${chapter.modules.length} modules</span><span>↗</span></div></a>`).join('');
 }
 
 const dialog = document.querySelector('#plan-dialog');
@@ -56,7 +56,7 @@ function renderCourses(filter='all') {
     const chapterNumber=chapterIndex+1;
     if(filter!=='all' && String(chapterNumber)!==filter) return '';
     const finished=chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterNumber}-${moduleIndex+1}`)).length;
-    return `<section class="course-chapter"><div class="course-chapter-title"><img class="module-thumbnail" src="${imagePath(chapter)}" alt="" loading="lazy"><div><span class="eyebrow">CHAPITRE ${number(chapterNumber)}</span><h3>${chapter.name}</h3><p>${chapter.description}</p></div><span class="chapter-completion">${finished} / ${chapter.modules.length}</span></div><div class="module-list">${chapter.modules.map((module,moduleIndex)=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id);return `<a href="module.html?chapitre=${chapterNumber}&module=${moduleIndex+1}" class="module-row"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span class="module-label">${module.title}</span><span class="module-state">${module.duration} min · ${done?'Terminé':'À découvrir'}</span><span aria-hidden="true">↗</span></a>`;}).join('')}</div></section>`;
+    return `<section class="course-chapter"><div class="course-chapter-title"><img class="module-thumbnail" src="${imagePath(chapter)}" alt="" loading="lazy"><div><span class="eyebrow">CHAPITRE ${number(chapterNumber)}</span><h3>${chapter.name}</h3><p>${chapter.description}</p></div><span class="chapter-completion">${finished} / ${chapter.modules.length}</span></div><div class="module-list">${chapter.modules.map((module,moduleIndex)=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}" class="module-row"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span class="module-label">${module.title}</span><span class="module-state">${module.duration} min · ${done?'Terminé':'À découvrir'}</span><span aria-hidden="true">↗</span></a>`;}).join('')}</div></section>`;
   }).join('');
   document.querySelectorAll('[data-filter]').forEach(button=>{const active=button.dataset.filter===filter;button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));});
 }
@@ -73,7 +73,7 @@ if (courseList) {
   document.querySelector('#library-count').textContent=`${chapters.length} chapitres · ${allModules.length} modules`;
   if(completed.size)document.querySelector('#progress-caption').textContent=completed.size===allModules.length?'Vos fondations sont posées. Continuez à les cultiver.':'Chaque module compte. Continuez à votre rythme.';
   const next=allModules.find(module=>!completed.has(module.id));
-  if(next){document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`CHAPITRE ${number(next.chapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`module.html?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
+  if(next){document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`CHAPITRE ${number(next.chapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
 }
 
 if (document.querySelector('#lesson-content')) {
@@ -87,7 +87,7 @@ if (document.querySelector('#lesson-content')) {
   const artwork=document.querySelector('#lesson-artwork');artwork.src=imagePath(chapter);artwork.alt=`Illustration du chapitre ${chapter.name}`;
   document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">CHAPITRE ${number(chapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
-  const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="module.html?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
+  const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
   const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
@@ -96,5 +96,5 @@ if (document.querySelector('#lesson-content')) {
   const updateCompletion=()=>{const done=completed.has(id);completeButton.innerHTML=done?'Terminé — annuler <span>↶</span>':'Marquer comme terminé <span>✓</span>';completeButton.setAttribute('aria-pressed',String(done));};updateCompletion();
   completeButton.addEventListener('click',()=>{completed.has(id)?completed.delete(id):completed.add(id);const saved=save('stoa-progress',[...completed]);updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Module terminé. Votre progression est enregistrée.':'Ce module est de nouveau à découvrir.'):'Progression modifiée pour cette session.';});
   const nextIndex=allModules.findIndex(item=>item.id===id)+1,nextLink=document.querySelector('#next-module');
-  if(nextIndex<allModules.length){const next=allModules[nextIndex];nextLink.href=`module.html?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;}else nextLink.innerHTML='Retour à mon académie <span>→</span>';
+  if(nextIndex<allModules.length){const next=allModules[nextIndex];nextLink.href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;}else nextLink.innerHTML='Retour à mon académie <span>→</span>';
 }
