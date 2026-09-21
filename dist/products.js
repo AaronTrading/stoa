@@ -104,7 +104,7 @@ let products = structuredClone(fallbackProducts);
 let editing = false;
 let originalProducts = [];
 let deletedIds = [];
-let imageProductId;
+let imageTarget;
 let persistedIds = new Set();
 
 const escapeHtml = (value = '') => String(value)
@@ -116,8 +116,8 @@ const price = (value) => new Intl.NumberFormat('fr-FR', {
 }).format(value);
 
 const normalizeSelections = (selections, defaultPrice) => (Array.isArray(selections) ? selections : []).map((selection) => {
-  if (typeof selection === 'string') return { name: selection, price: Number(defaultPrice) };
-  return { name: String(selection?.name || ''), price: Number(selection?.price) };
+  if (typeof selection === 'string') return { name: selection, price: Number(defaultPrice), image: '' };
+  return { name: String(selection?.name || ''), price: Number(selection?.price), image: String(selection?.image || '') };
 }).filter((selection) => selection.name);
 
 products = products.map((product) => ({ ...product, selections: normalizeSelections(product.selections, product.prix) }));
@@ -125,7 +125,7 @@ products = products.map((product) => ({ ...product, selections: normalizeSelecti
 const selectionMarkup = (product) => product.selections?.length ? `
   <label class="product-selection-label" for="selection-${escapeHtml(product.id)}">Sélection</label>
   <select class="product-selection" id="selection-${escapeHtml(product.id)}" data-product-selection>
-    ${product.selections.map((selection) => `<option value="${escapeHtml(selection.name)}" data-price="${escapeHtml(selection.price)}">${escapeHtml(selection.name)} — ${price(selection.price)}</option>`).join('')}
+    ${product.selections.map((selection) => `<option value="${escapeHtml(selection.name)}" data-price="${escapeHtml(selection.price)}" data-image="${escapeHtml(selection.image || product.image)}">${escapeHtml(selection.name)} — ${price(selection.price)}</option>`).join('')}
   </select>` : '';
 
 const editorCardMarkup = (product, index) => `
@@ -145,6 +145,7 @@ const editorCardMarkup = (product, index) => `
           <span>Variantes et prix</span>
           <div>${(product.selections || []).map((selection, selectionIndex) => `
             <div class="shop-variant-row" data-variant-row data-variant-index="${selectionIndex}">
+              <button class="shop-variant-image" type="button" data-edit-variant-image aria-label="Changer l’image de cette variante"><img src="${escapeHtml(selection.image || product.image)}" alt=""><span>Image</span></button>
               <input data-variant-name value="${escapeHtml(selection.name)}" aria-label="Nom de la variante" placeholder="Nom de la variante">
               <input type="number" min="0" step="0.01" data-variant-price value="${escapeHtml(selection.price)}" aria-label="Prix de la variante" placeholder="Prix">
               <span>€</span><button type="button" data-remove-variant aria-label="Supprimer cette variante">×</button>
@@ -158,7 +159,7 @@ const editorCardMarkup = (product, index) => `
 
 const publicCardMarkup = (product, index) => `
   <article class="product-card" data-product-card="${escapeHtml(product.id)}">
-    <div class="product-image"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.nom)}" loading="lazy"></div>
+    <div class="product-image"><img src="${escapeHtml(product.selections?.[0]?.image || product.image)}" alt="${escapeHtml(product.nom)}" loading="lazy"></div>
     <div class="product-card-body">
       <span class="eyebrow">SÉLECTION ${String(index + 1).padStart(2, '0')}</span>
       <h2>${escapeHtml(product.nom)}</h2>
@@ -196,9 +197,10 @@ const syncEditor = () => {
     product.prix = Number(card.querySelector('[data-shop-field="prix"]').value);
     product.producteur = card.querySelector('[data-shop-field="producteur"]').value.trim();
     product.source = card.querySelector('[data-shop-field="source"]').value.trim();
-    product.selections = [...card.querySelectorAll('[data-variant-row]')].map((row) => ({
+    product.selections = [...card.querySelectorAll('[data-variant-row]')].map((row, index) => ({
       name: row.querySelector('[data-variant-name]').value.trim(),
       price: Number(row.querySelector('[data-variant-price]').value),
+      image: product.selections[index]?.image || '',
     })).filter((selection) => selection.name);
   });
 };
@@ -264,11 +266,18 @@ variantInput.addEventListener('change', () => {
 const closeOrder = () => { if (dialog.open) dialog.close(); };
 
 grid.addEventListener('click', (event) => {
+  const variantImageButton = event.target.closest('[data-edit-variant-image]');
+  if (editing && variantImageButton) {
+    const row = variantImageButton.closest('[data-variant-row]');
+    syncEditor();
+    imageTarget = { productId: variantImageButton.closest('[data-product-card]').dataset.productCard, variantIndex: Number(row.dataset.variantIndex) };
+    imageInput.click(); return;
+  }
   const addVariantButton = event.target.closest('[data-add-variant]');
   if (editing && addVariantButton) {
     syncEditor();
     const product = products.find((item) => item.id === addVariantButton.closest('[data-product-card]').dataset.productCard);
-    product?.selections.push({ name: 'Nouvelle variante', price: product.prix });
+    product?.selections.push({ name: 'Nouvelle variante', price: product.prix, image: '' });
     renderProducts(); return;
   }
   const removeVariantButton = event.target.closest('[data-remove-variant]');
@@ -281,7 +290,7 @@ grid.addEventListener('click', (event) => {
   }
   const imageButton = event.target.closest('[data-edit-image]');
   if (editing && imageButton) {
-    syncEditor(); imageProductId = imageButton.closest('[data-product-card]').dataset.productCard; imageInput.click(); return;
+    syncEditor(); imageTarget = { productId: imageButton.closest('[data-product-card]').dataset.productCard, variantIndex: null }; imageInput.click(); return;
   }
   const deleteButton = event.target.closest('[data-delete-product]');
   if (editing && deleteButton) {
@@ -302,6 +311,9 @@ const updateDisplayedVariantPrice = (event) => {
   const amount = Number(select.selectedOptions[0]?.dataset.price);
   const priceElement = select.closest('[data-product-card]')?.querySelector('[data-product-price]');
   if (priceElement && Number.isFinite(amount)) priceElement.textContent = price(amount);
+  const imageElement = select.closest('[data-product-card]')?.querySelector('.product-image img');
+  const selectedImage = select.selectedOptions[0]?.dataset.image;
+  if (imageElement && selectedImage) imageElement.src = selectedImage;
 };
 grid.addEventListener('change', updateDisplayedVariantPrice);
 grid.addEventListener('input', updateDisplayedVariantPrice);
@@ -328,14 +340,17 @@ document.querySelector('#shop-add-product').addEventListener('click', () => {
 
 imageInput.addEventListener('change', async () => {
   const file = imageInput.files?.[0];
-  if (!file || !imageProductId) return;
+  if (!file || !imageTarget?.productId) return;
   editorStatus.textContent = 'Envoi de l’image…';
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const path = `shop/${imageProductId}/${crypto.randomUUID()}.${extension}`;
+  const folder = imageTarget.variantIndex === null ? 'principale' : `variante-${imageTarget.variantIndex + 1}`;
+  const path = `shop/${imageTarget.productId}/${folder}/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabase.storage.from('module-assets').upload(path, file, { upsert: false, contentType: file.type });
   if (error) { editorStatus.textContent = error.message; imageInput.value = ''; return; }
-  const product = products.find((item) => item.id === imageProductId);
-  if (product) product.image = supabase.storage.from('module-assets').getPublicUrl(path).data.publicUrl;
+  const product = products.find((item) => item.id === imageTarget.productId);
+  const publicUrl = supabase.storage.from('module-assets').getPublicUrl(path).data.publicUrl;
+  if (product && imageTarget.variantIndex === null) product.image = publicUrl;
+  else if (product?.selections[imageTarget.variantIndex]) product.selections[imageTarget.variantIndex].image = publicUrl;
   editorStatus.textContent = 'Image ajoutée. Enregistrez pour publier.'; imageInput.value = ''; renderProducts();
 });
 
