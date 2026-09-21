@@ -1,94 +1,69 @@
 import { supabase } from './supabase.js';
 
-const seen = new Set();
-let room;
-let timer;
-let currentMessageId;
+let room, timer, user, notification, currentNotificationId;
+let unread = [];
+let channels = new Map();
 
-function excerpt(value = '') {
-  const clean = value.replace(/\s+/g, ' ').trim();
-  return clean.length > 150 ? `${clean.slice(0, 147)}…` : clean;
-}
+const excerpt = (value = '') => { const clean = value.replace(/\s+/g, ' ').trim(); return clean.length > 150 ? `${clean.slice(0, 147)}…` : clean; };
+const countsByChannel = () => unread.reduce((counts, item) => { counts[item.channel_id] = (counts[item.channel_id] || 0) + 1; return counts; }, {});
+const broadcast = () => { window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ = countsByChannel(); window.dispatchEvent(new CustomEvent('stoa:community-notifications', { detail: window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ })); };
 
-function containsMention(content, username) {
-  if (!username) return false;
-  const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|\\s)@${escaped}(?=$|[\\s.,!?;:])`, 'i').test(content || '');
-}
-
-function buildNotification() {
+const buildNotification = () => {
   const node = document.createElement('aside');
-  node.className = 'community-live-popup direct-notification';
-  node.setAttribute('role', 'status');
-  node.setAttribute('aria-live', 'polite');
-  node.hidden = true;
-  node.innerHTML = `
-    <button class="live-popup-close" type="button" aria-label="Fermer la notification">×</button>
-    <span class="eyebrow">COMMUNAUTÉ</span>
-    <strong data-notification-title></strong>
-    <p data-notification-content></p>
-    <a class="direct-notification-link" data-notification-link href="/communaute">Voir le message <span aria-hidden="true">→</span></a>`;
+  node.className = 'community-live-popup direct-notification'; node.setAttribute('role', 'status'); node.setAttribute('aria-live', 'polite'); node.hidden = true;
+  node.innerHTML = `<button class="live-popup-close" type="button" aria-label="Fermer la notification">×</button><span class="eyebrow">COMMUNAUTÉ</span><strong data-notification-title></strong><p data-notification-content></p><a class="direct-notification-link" data-notification-link href="/communaute">Voir le message <span aria-hidden="true">→</span></a>`;
   document.body.append(node);
-  node.querySelector('.live-popup-close').addEventListener('click', () => dismiss(node));
-  node.querySelector('[data-notification-link]').addEventListener('click', () => markSeen());
+  node.querySelector('.live-popup-close').addEventListener('click', dismiss);
+  node.querySelector('[data-notification-link]').addEventListener('click', async (event) => { event.preventDefault(); const destination = event.currentTarget.href; await markRead(currentNotificationId); location.href = destination; });
   return node;
+};
+
+const dismiss = () => { if (!notification || notification.hidden || notification.classList.contains('is-leaving')) return; clearTimeout(timer); notification.classList.remove('is-entering'); notification.classList.add('is-leaving'); setTimeout(() => { notification.hidden = true; notification.classList.remove('is-leaving'); }, 260); };
+const reveal = () => { notification.hidden = false; notification.classList.remove('is-leaving', 'is-entering'); void notification.offsetWidth; notification.classList.add('is-entering'); clearTimeout(timer); timer = setTimeout(dismiss, 600000); };
+const authorName = async (id) => { const { data } = await supabase.rpc('get_community_profiles', { profile_ids: [id] }); return data?.[0]?.display_name || 'Un membre'; };
+
+const show = async (item) => {
+  if (!item || !notification) return;
+  currentNotificationId = item.id;
+  const author = await authorName(item.actor_id);
+  const titles = { reply: `${author} vous a répondu`, mention: `${author} vous a mentionné`, reply_mention: `${author} vous a répondu et mentionné` };
+  notification.querySelector('[data-notification-title]').textContent = titles[item.kind] || 'Nouvelle notification';
+  notification.querySelector('[data-notification-content]').textContent = excerpt(item.content);
+  const channel = channels.get(item.channel_id), link = notification.querySelector('[data-notification-link]');
+  link.href = channel?.slug ? `/communaute?canal=${encodeURIComponent(channel.slug)}` : '/communaute';
+  link.firstChild.textContent = channel?.name ? `Voir dans #${channel.name} ` : 'Voir le message ';
+  reveal();
+};
+
+async function markRead(id) {
+  if (!id || !user) return;
+  const { error } = await supabase.from('community_notifications').update({ read_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
+  if (!error) { unread = unread.filter((item) => item.id !== id); broadcast(); }
 }
 
-function markSeen() {
-  if (currentMessageId) sessionStorage.setItem(`stoa-seen-message:${currentMessageId}`, '1');
+async function markChannelRead(channelId) {
+  if (!channelId) return;
+  if (!user) user = (await supabase.auth.getSession()).data.session?.user;
+  if (!user) return;
+  const { error } = await supabase.from('community_notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).eq('channel_id', channelId).is('read_at', null);
+  if (!error) { unread = unread.filter((item) => item.channel_id !== channelId); broadcast(); }
 }
 
-function dismiss(node) {
-  if (node.hidden || node.classList.contains('is-leaving')) return;
-  markSeen(); clearTimeout(timer); node.classList.remove('is-entering'); node.classList.add('is-leaving');
-  setTimeout(() => { node.hidden = true; node.classList.remove('is-leaving'); }, 260);
-}
-
-function reveal(node) {
-  node.hidden = false; node.classList.remove('is-leaving', 'is-entering'); void node.offsetWidth; node.classList.add('is-entering');
-  clearTimeout(timer); timer = setTimeout(() => dismiss(node), 600000);
-}
+window.STOACommunityNotifications = { markChannelRead };
 
 async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
+  user = (await supabase.auth.getSession()).data.session?.user;
   if (!user) return;
-
-  const [{ data: profiles }, { data: channels }] = await Promise.all([
-    supabase.rpc('get_community_profiles', { profile_ids: [user.id] }),
+  const [{ data: channelRows }, { data: notificationRows }] = await Promise.all([
     supabase.from('channels').select('id,slug,name'),
+    supabase.from('community_notifications').select('id,user_id,actor_id,message_id,channel_id,kind,content,created_at').is('read_at', null).order('created_at', { ascending: false }).limit(100),
   ]);
-  const ownProfile = profiles?.[0];
-  const channelMap = new Map((channels || []).map((channel) => [channel.id, channel]));
-  const notification = buildNotification();
-
-  async function handle(message) {
-    if (!message?.id || message.user_id === user.id || seen.has(message.id) || sessionStorage.getItem(`stoa-seen-message:${message.id}`)) return;
-    let isReply = false;
-    if (message.reply_to_message_id) {
-      const { data: target } = await supabase.from('messages').select('user_id').eq('id', message.reply_to_message_id).maybeSingle();
-      isReply = target?.user_id === user.id;
-    }
-    const isMention = containsMention(message.content, ownProfile?.username);
-    if (!isReply && !isMention) return;
-
-    seen.add(message.id); currentMessageId = message.id;
-    const { data: authors } = await supabase.rpc('get_community_profiles', { profile_ids: [message.user_id] });
-    const author = authors?.[0]?.display_name || 'Un membre';
-    const title = notification.querySelector('[data-notification-title]');
-    title.textContent = isReply && isMention ? `${author} vous a répondu et mentionné` : isReply ? `${author} vous a répondu` : `${author} vous a mentionné`;
-    notification.querySelector('[data-notification-content]').textContent = excerpt(message.content);
-    const channel = channelMap.get(message.channel_id);
-    const link = notification.querySelector('[data-notification-link]');
-    link.href = channel?.slug ? `/communaute?canal=${encodeURIComponent(channel.slug)}` : '/communaute';
-    link.firstChild.textContent = channel?.name ? `Voir dans #${channel.name} ` : 'Voir le message ';
-    reveal(notification);
-  }
-
+  channels = new Map((channelRows || []).map((channel) => [channel.id, channel]));
+  unread = notificationRows || []; notification = buildNotification(); broadcast();
+  if (unread[0]) show(unread[0]);
   room = supabase.channel(`personal-community-notifications:${user.id}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, ({ new: message }) => handle(message))
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_notifications', filter: `user_id=eq.${user.id}` }, ({ new: item }) => { if (unread.some((current) => current.id === item.id)) return; unread.unshift(item); broadcast(); show(item); })
     .subscribe();
-
   window.addEventListener('pagehide', () => { clearTimeout(timer); if (room) supabase.removeChannel(room); }, { once: true });
 }
 

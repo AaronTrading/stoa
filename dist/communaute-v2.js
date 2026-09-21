@@ -30,6 +30,7 @@ const els = {
 let user, ownProfile, channels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
 let oldest, historyEnded = false, switching = false, replyId, editId, shareId, longPressTimer, allProfilesLoaded = false;
 const profiles = new Map();
+let notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || {};
 const isAdmin = () => ownProfile?.role === 'admin';
 const esc = (v = '') => String(v).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 const norm = (v = '') => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -145,7 +146,7 @@ const nearBottom = () => els.history.scrollHeight - els.history.scrollTop - els.
 const bottom = (smooth = false) => els.history.scrollTo({ top: els.history.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
 function renderChannels() {
   const marks = { chat: '#', announcements: '!', questions: '?', polls: '◌' };
-  els.channels.innerHTML = channels.map((c) => `<button class="channel-button${c.id === active?.id ? ' active' : ''}" type="button" data-channel-id="${c.id}"><span aria-hidden="true">${marks[c.kind] || '#'}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.description || '')}</small></span></button>`).join('');
+  els.channels.innerHTML = channels.map((c) => { const count = Number(notificationCounts[c.id]) || 0; return `<button class="channel-button${c.id === active?.id ? ' active' : ''}${count ? ' has-notification' : ''}" type="button" data-channel-id="${c.id}"><span aria-hidden="true">${marks[c.kind] || '#'}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.description || '')}</small></span>${count ? `<em class="channel-notification-badge" aria-label="${count} notification${count > 1 ? 's' : ''} non lue${count > 1 ? 's' : ''}">${count > 9 ? '9+' : count}</em>` : ''}</button>`; }).join('');
 }
 async function unsubscribe() { if (room) { const old = room; room = null; await supabase.removeChannel(old); } }
 function fetchMessages(before) { return supabase.rpc('get_channel_messages', { p_channel_id: active.id, p_before: before || null, p_limit: PAGE_SIZE }); }
@@ -209,7 +210,7 @@ async function switchChannel(id) {
   els.form.hidden = next.kind === 'polls' || (next.kind === 'announcements' && !isAdmin());
   els.pollForm.hidden = next.kind !== 'polls' || !isAdmin(); els.guidance.hidden = true;
   if (next.kind === 'announcements' && isAdmin()) { els.guidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
-  resetComposer(); renderChannels(); const url = new URL(location.href); url.searchParams.set('canal', next.slug); window.history.replaceState(null, '', url);
+  resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.set('canal', next.slug); window.history.replaceState(null, '', url);
   await loadMessages(); subscribe(next); switching = false;
 }
 async function loadMore() {
@@ -352,6 +353,7 @@ els.announcementClose.addEventListener('click', () => { const id = els.announcem
 els.pinned.addEventListener('click', () => { const target = document.querySelector('.message-entry.pinned,[data-message-id]:has(.pinned-label)'); target?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 els.list.addEventListener('pointerdown', (e) => { if (e.target.closest('.message-content')) longPressTimer = setTimeout(() => openPicker(e.target.closest('[data-message-id]')), 480); }); ['pointerup', 'pointercancel', 'pointermove'].forEach((name) => els.list.addEventListener(name, () => clearTimeout(longPressTimer)));
 document.addEventListener('click', (e) => { if (!e.target.closest('.message-tools')) closePickers(); if (!e.target.closest('.composer-input-wrap')) els.suggestions.hidden = true; });
+window.addEventListener('stoa:community-notifications', async (event) => { notificationCounts = event.detail || {}; if (active?.id && notificationCounts[active.id]) { await window.STOACommunityNotifications?.markChannelRead(active.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; } renderChannels(); });
 [els.profileDialog, els.shareDialog, els.externalDialog].forEach((dialog) => dialog.addEventListener('click', (e) => { if (e.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); }));
 window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(room); if (announcementRoom) supabase.removeChannel(announcementRoom); if (pollRoom) supabase.removeChannel(pollRoom); clearTimeout(announcementTimer); clearTimeout(pollTimer); clearTimeout(typingTimer); });
 

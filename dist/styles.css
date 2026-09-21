@@ -18,12 +18,13 @@
 .channel-intro p{color:var(--muted);font-size:12px;line-height:1.6}
 .channel-list{display:flex;flex-direction:column;gap:5px;padding:20px 0;overflow:auto;scrollbar-width:none}
 .channel-list::-webkit-scrollbar{display:none}
-.channel-button{width:100%;display:grid;grid-template-columns:21px minmax(0,1fr);gap:9px;padding:12px 11px;border-radius:9px;background:transparent;color:var(--muted);text-align:left;transition:background .18s,color .18s}
+.channel-button{width:100%;display:grid;grid-template-columns:21px minmax(0,1fr) auto;align-items:start;gap:9px;padding:12px 11px;border-radius:9px;background:transparent;color:var(--muted);text-align:left;transition:background .18s,color .18s}
 .channel-button>span:first-child{font-family:'Cormorant Garamond',Georgia,serif;font-size:23px;line-height:1}
 .channel-button strong{display:block;color:inherit;font-family:'Cormorant Garamond',Georgia,serif;font-size:19px;font-weight:600;line-height:1.05}
 .channel-button small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 10px/1.4 'Jost',sans-serif;margin-top:5px;color:var(--muted)}
 .channel-button:hover,.channel-button.active{background:var(--white);color:var(--ink)}
 .channel-button.active{box-shadow:0 8px 25px #343b2d09}
+.channel-notification-badge{display:grid;min-width:19px;height:19px;padding:0 5px;place-items:center;border-radius:10px;background:var(--olive);color:#fff;font:600 9px/1 'Jost',sans-serif;font-style:normal;box-shadow:0 4px 12px #343b2d22}.channel-button.has-notification:not(.active) strong{color:var(--ink)}
 .presence-note{margin-top:auto;padding:16px 9px 0;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
 .presence-note strong{font-weight:600;color:var(--ink)}
 .presence-dot{display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:#6d795c;box-shadow:0 0 0 3px #6d795c1c}
