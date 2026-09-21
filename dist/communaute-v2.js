@@ -33,7 +33,17 @@ const profiles = new Map();
 const isAdmin = () => ownProfile?.role === 'admin';
 const esc = (v = '') => String(v).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 const norm = (v = '') => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const time = (v) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(v));
+const clock = (v) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(v));
+const time = (v) => {
+  const date = new Date(v), today = new Date();
+  const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const currentDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysAgo = Math.round((currentDay - day) / 86400000);
+  if (daysAgo === 0) return clock(date);
+  if (daysAgo === 1) return `Hier à ${clock(date)}`;
+  const calendarDate = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
+  return `${calendarDate} à ${clock(date)}`;
+};
 const memberSince = (v) => new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(v));
 const sameMinute = (a, b) => Math.floor(new Date(a) / 60000) === Math.floor(new Date(b) / 60000);
 const fallback = (id) => ({ id, display_name: 'Membre STOA', username: null, avatar_url: null, role: 'member', created_at: new Date().toISOString(), completed_modules: 0, level_number: 1, level_label: 'Initié' });
@@ -347,7 +357,7 @@ window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(roo
 
 async function subscribeAnnouncements() {
   const channel = channels.find((c) => c.kind === 'announcements'); if (!channel) return;
-  const show = async (m) => { const end = new Date(m.announcement_expires_at || new Date(m.created_at).getTime() + 600000), remaining = end - Date.now(); if (remaining <= 0 || m.deleted_at || sessionStorage.getItem(`stoa-dismissed-announcement:${m.id}`)) return; await loadProfiles([m.user_id]); els.announcement.dataset.messageId = m.id; els.announcementAuthor.textContent = profile(m.user_id).display_name; els.announcementContent.textContent = m.content; els.announcementTime.textContent = `Publié à ${time(m.created_at)}`; showLivePopup(els.announcement); clearTimeout(announcementTimer); announcementTimer = setTimeout(() => hideLivePopup(els.announcement), remaining); };
+  const show = async (m) => { const end = new Date(m.announcement_expires_at || new Date(m.created_at).getTime() + 600000), remaining = end - Date.now(); if (remaining <= 0 || m.deleted_at || sessionStorage.getItem(`stoa-dismissed-announcement:${m.id}`)) return; await loadProfiles([m.user_id]); els.announcement.dataset.messageId = m.id; els.announcementAuthor.textContent = profile(m.user_id).display_name; els.announcementContent.textContent = m.content; els.announcementTime.textContent = `Publié à ${clock(m.created_at)}`; showLivePopup(els.announcement); clearTimeout(announcementTimer); announcementTimer = setTimeout(() => hideLivePopup(els.announcement), remaining); };
   const { data } = await supabase.from('messages').select('id,user_id,content,created_at,deleted_at,announcement_expires_at').eq('channel_id', channel.id).is('deleted_at', null).gt('announcement_expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle(); if (data) show(data);
   announcementRoom = supabase.channel(`community-announcements:${channel.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` }, (payload) => show(payload.new)).subscribe();
 }
