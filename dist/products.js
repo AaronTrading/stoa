@@ -141,7 +141,16 @@ const editorCardMarkup = (product, index) => `
         <label>Prix (€)<input type="number" min="0" step="0.01" data-shop-field="prix" value="${escapeHtml(product.prix)}"></label>
         <label>Producteur<input data-shop-field="producteur" value="${escapeHtml(product.producteur || '')}"></label>
         <label class="wide">Lien source<input type="url" data-shop-field="source" value="${escapeHtml(product.source || '')}"></label>
-        <label class="wide">Variantes — une par ligne : nom | prix<textarea rows="4" data-shop-field="selections" placeholder="Coffret complet | 74,99">${escapeHtml((product.selections || []).map((selection) => `${selection.name} | ${selection.price.toFixed(2)}`).join('\n'))}</textarea></label>
+        <div class="wide shop-variant-editor">
+          <span>Variantes et prix</span>
+          <div>${(product.selections || []).map((selection, selectionIndex) => `
+            <div class="shop-variant-row" data-variant-row data-variant-index="${selectionIndex}">
+              <input data-variant-name value="${escapeHtml(selection.name)}" aria-label="Nom de la variante" placeholder="Nom de la variante">
+              <input type="number" min="0" step="0.01" data-variant-price value="${escapeHtml(selection.price)}" aria-label="Prix de la variante" placeholder="Prix">
+              <span>€</span><button type="button" data-remove-variant aria-label="Supprimer cette variante">×</button>
+            </div>`).join('')}</div>
+          <button type="button" data-add-variant>＋ Ajouter une variante</button>
+        </div>
       </div>
       <button class="shop-delete-product" type="button" data-delete-product>Supprimer ce produit</button>
     </div>
@@ -187,12 +196,10 @@ const syncEditor = () => {
     product.prix = Number(card.querySelector('[data-shop-field="prix"]').value);
     product.producteur = card.querySelector('[data-shop-field="producteur"]').value.trim();
     product.source = card.querySelector('[data-shop-field="source"]').value.trim();
-    product.selections = card.querySelector('[data-shop-field="selections"]').value.split('\n').map((line) => {
-      const separator = line.lastIndexOf('|');
-      const name = (separator < 0 ? line : line.slice(0, separator)).trim();
-      const variantPrice = separator < 0 ? Number.NaN : Number(line.slice(separator + 1).trim().replace(',', '.'));
-      return { name, price: variantPrice };
-    }).filter((selection) => selection.name);
+    product.selections = [...card.querySelectorAll('[data-variant-row]')].map((row) => ({
+      name: row.querySelector('[data-variant-name]').value.trim(),
+      price: Number(row.querySelector('[data-variant-price]').value),
+    })).filter((selection) => selection.name);
   });
 };
 
@@ -257,6 +264,21 @@ variantInput.addEventListener('change', () => {
 const closeOrder = () => { if (dialog.open) dialog.close(); };
 
 grid.addEventListener('click', (event) => {
+  const addVariantButton = event.target.closest('[data-add-variant]');
+  if (editing && addVariantButton) {
+    syncEditor();
+    const product = products.find((item) => item.id === addVariantButton.closest('[data-product-card]').dataset.productCard);
+    product?.selections.push({ name: 'Nouvelle variante', price: product.prix });
+    renderProducts(); return;
+  }
+  const removeVariantButton = event.target.closest('[data-remove-variant]');
+  if (editing && removeVariantButton) {
+    const card = removeVariantButton.closest('[data-product-card]');
+    const index = Number(removeVariantButton.closest('[data-variant-row]').dataset.variantIndex);
+    syncEditor();
+    const product = products.find((item) => item.id === card.dataset.productCard);
+    product?.selections.splice(index, 1); renderProducts(); return;
+  }
   const imageButton = event.target.closest('[data-edit-image]');
   if (editing && imageButton) {
     syncEditor(); imageProductId = imageButton.closest('[data-product-card]').dataset.productCard; imageInput.click(); return;
@@ -274,12 +296,15 @@ grid.addEventListener('click', (event) => {
   openOrder(button.dataset.orderProduct, card?.querySelector('[data-product-selection]')?.value);
 });
 
-grid.addEventListener('change', (event) => {
+const updateDisplayedVariantPrice = (event) => {
   const select = event.target.closest('[data-product-selection]');
   if (!select) return;
   const amount = Number(select.selectedOptions[0]?.dataset.price);
-  select.closest('[data-product-card]')?.querySelector('[data-product-price]')?.replaceChildren(price(amount));
-});
+  const priceElement = select.closest('[data-product-card]')?.querySelector('[data-product-price]');
+  if (priceElement && Number.isFinite(amount)) priceElement.textContent = price(amount);
+};
+grid.addEventListener('change', updateDisplayedVariantPrice);
+grid.addEventListener('input', updateDisplayedVariantPrice);
 
 grid.addEventListener('paste', (event) => {
   if (!editing || !event.target.closest('[contenteditable="true"]')) return;
