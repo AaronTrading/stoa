@@ -99,6 +99,7 @@ const editorBar = document.querySelector('#shop-editor-bar');
 const editorStatus = document.querySelector('#shop-editor-status');
 const imageInput = document.querySelector('#shop-image-input');
 let selectedProduct;
+let selectedUnitPrice;
 let products = structuredClone(fallbackProducts);
 let editing = false;
 let originalProducts = [];
@@ -114,10 +115,17 @@ const price = (value) => new Intl.NumberFormat('fr-FR', {
   style: 'currency', currency: 'EUR', minimumFractionDigits: 2,
 }).format(value);
 
+const normalizeSelections = (selections, defaultPrice) => (Array.isArray(selections) ? selections : []).map((selection) => {
+  if (typeof selection === 'string') return { name: selection, price: Number(defaultPrice) };
+  return { name: String(selection?.name || ''), price: Number(selection?.price) };
+}).filter((selection) => selection.name);
+
+products = products.map((product) => ({ ...product, selections: normalizeSelections(product.selections, product.prix) }));
+
 const selectionMarkup = (product) => product.selections?.length ? `
   <label class="product-selection-label" for="selection-${escapeHtml(product.id)}">Sélection</label>
   <select class="product-selection" id="selection-${escapeHtml(product.id)}" data-product-selection>
-    ${product.selections.map((selection) => `<option>${escapeHtml(selection)}</option>`).join('')}
+    ${product.selections.map((selection) => `<option value="${escapeHtml(selection.name)}" data-price="${escapeHtml(selection.price)}">${escapeHtml(selection.name)} — ${price(selection.price)}</option>`).join('')}
   </select>` : '';
 
 const editorCardMarkup = (product, index) => `
@@ -133,7 +141,7 @@ const editorCardMarkup = (product, index) => `
         <label>Prix (€)<input type="number" min="0" step="0.01" data-shop-field="prix" value="${escapeHtml(product.prix)}"></label>
         <label>Producteur<input data-shop-field="producteur" value="${escapeHtml(product.producteur || '')}"></label>
         <label class="wide">Lien source<input type="url" data-shop-field="source" value="${escapeHtml(product.source || '')}"></label>
-        <label class="wide">Variantes — une par ligne<textarea rows="4" data-shop-field="selections">${escapeHtml((product.selections || []).join('\n'))}</textarea></label>
+        <label class="wide">Variantes — une par ligne : nom | prix<textarea rows="4" data-shop-field="selections" placeholder="Coffret complet | 74,99">${escapeHtml((product.selections || []).map((selection) => `${selection.name} | ${selection.price.toFixed(2)}`).join('\n'))}</textarea></label>
       </div>
       <button class="shop-delete-product" type="button" data-delete-product>Supprimer ce produit</button>
     </div>
@@ -147,7 +155,7 @@ const publicCardMarkup = (product, index) => `
       <h2>${escapeHtml(product.nom)}</h2>
       <p>${escapeHtml(product.description)}</p>
       ${selectionMarkup(product)}
-      <div class="product-card-bottom"><strong>${price(product.prix)}</strong><button class="button dark" type="button" data-order-product="${escapeHtml(product.id)}">Commander <span>↗</span></button></div>
+      <div class="product-card-bottom"><strong data-product-price>${price(product.selections?.[0]?.price ?? product.prix)}</strong><button class="button dark" type="button" data-order-product="${escapeHtml(product.id)}">Commander <span>↗</span></button></div>
     </div>
   </article>`;
 
@@ -158,7 +166,7 @@ const renderProducts = () => {
 const fromDatabase = (row) => ({
   id: row.id, nom: row.name, prix: Number(row.price), description: row.description,
   image: row.image_url, producteur: row.producer || '', source: row.source_url || '',
-  selections: Array.isArray(row.selections) ? row.selections : [],
+  selections: normalizeSelections(row.selections, row.price),
 });
 
 const loadProducts = async () => {
@@ -179,7 +187,12 @@ const syncEditor = () => {
     product.prix = Number(card.querySelector('[data-shop-field="prix"]').value);
     product.producteur = card.querySelector('[data-shop-field="producteur"]').value.trim();
     product.source = card.querySelector('[data-shop-field="source"]').value.trim();
-    product.selections = card.querySelector('[data-shop-field="selections"]').value.split('\n').map((value) => value.trim()).filter(Boolean);
+    product.selections = card.querySelector('[data-shop-field="selections"]').value.split('\n').map((line) => {
+      const separator = line.lastIndexOf('|');
+      const name = (separator < 0 ? line : line.slice(0, separator)).trim();
+      const variantPrice = separator < 0 ? Number.NaN : Number(line.slice(separator + 1).trim().replace(',', '.'));
+      return { name, price: variantPrice };
+    }).filter((selection) => selection.name);
   });
 };
 
@@ -190,8 +203,8 @@ const leaveEditor = () => {
 
 const saveProducts = async () => {
   syncEditor();
-  if (products.some((product) => !product.nom || !Number.isFinite(product.prix) || product.prix < 0)) {
-    editorStatus.textContent = 'Chaque produit doit avoir un nom et un prix valide.'; return;
+  if (products.some((product) => !product.nom || !Number.isFinite(product.prix) || product.prix < 0 || product.selections.some((selection) => !Number.isFinite(selection.price) || selection.price < 0))) {
+    editorStatus.textContent = 'Chaque produit et chaque variante doivent avoir un nom et un prix valide.'; return;
   }
   editorStatus.textContent = 'Enregistrement…';
   const rows = products.map((product, index) => ({
@@ -227,13 +240,19 @@ const openOrder = (productId, preferredSelection) => {
   selectedProduct = products.find((product) => product.id === productId);
   if (!selectedProduct) return;
   form.reset(); errorMessage.hidden = true;
-  productInput.value = `${selectedProduct.nom} — ${price(selectedProduct.prix)}`;
   variantWrap.hidden = !selectedProduct.selections?.length;
   variantInput.required = Boolean(selectedProduct.selections?.length);
-  variantInput.innerHTML = (selectedProduct.selections || []).map((selection) => `<option${selection === preferredSelection ? ' selected' : ''}>${escapeHtml(selection)}</option>`).join('');
+  variantInput.innerHTML = (selectedProduct.selections || []).map((selection) => `<option value="${escapeHtml(selection.name)}" data-price="${escapeHtml(selection.price)}"${selection.name === preferredSelection ? ' selected' : ''}>${escapeHtml(selection.name)} — ${price(selection.price)}</option>`).join('');
+  selectedUnitPrice = selectedProduct.selections?.length ? Number(variantInput.selectedOptions[0].dataset.price) : selectedProduct.prix;
+  productInput.value = `${selectedProduct.nom} — ${price(selectedUnitPrice)}`;
   document.querySelector('#order-quantity').value = '1';
   dialog.showModal(); document.querySelector('#order-name').focus();
 };
+
+variantInput.addEventListener('change', () => {
+  selectedUnitPrice = Number(variantInput.selectedOptions[0]?.dataset.price ?? selectedProduct?.prix ?? 0);
+  if (selectedProduct) productInput.value = `${selectedProduct.nom} — ${price(selectedUnitPrice)}`;
+});
 
 const closeOrder = () => { if (dialog.open) dialog.close(); };
 
@@ -253,6 +272,13 @@ grid.addEventListener('click', (event) => {
   if (!button) return;
   const card = button.closest('[data-product-card]');
   openOrder(button.dataset.orderProduct, card?.querySelector('[data-product-selection]')?.value);
+});
+
+grid.addEventListener('change', (event) => {
+  const select = event.target.closest('[data-product-selection]');
+  if (!select) return;
+  const amount = Number(select.selectedOptions[0]?.dataset.price);
+  select.closest('[data-product-card]')?.querySelector('[data-product-price]')?.replaceChildren(price(amount));
 });
 
 grid.addEventListener('paste', (event) => {
@@ -309,7 +335,7 @@ form.addEventListener('submit', (event) => {
     'Bonjour,', '', 'Je souhaite commander le produit suivant :',
     `Produit : ${selectedProduct.nom}`, `Référence : ${selectedProduct.id}`,
     selection ? `Sélection : ${selection}` : null,
-    `Prix unitaire affiché : ${price(selectedProduct.prix)}`, `Quantité : ${quantity}`, '',
+    `Prix unitaire affiché : ${price(selectedUnitPrice ?? selectedProduct.prix)}`, `Quantité : ${quantity}`, '',
     `Nom complet : ${String(data.get('name')).trim()}`, `Email : ${String(data.get('email')).trim()}`,
     `Téléphone : ${String(data.get('phone')).trim() || 'Non renseigné'}`,
     `Adresse de livraison : ${String(data.get('address')).trim()}`, '',
