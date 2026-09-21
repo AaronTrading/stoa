@@ -28,6 +28,18 @@
   </header>
 
   <main class="shop-main" id="main">
+    <button class="shop-edit-pencil" id="shop-edit-pencil" type="button" aria-label="Modifier la boutique" title="Modifier la boutique" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Zm9.5-13.5 4 4M14.5 5.5l2-2a1.4 1.4 0 0 1 2 0l2 2a1.4 1.4 0 0 1 0 2l-2 2"/></svg>
+    </button>
+    <div class="shop-editor-bar" id="shop-editor-bar" hidden>
+      <span id="shop-editor-status">Modifiez directement les produits.</span>
+      <div>
+        <button type="button" id="shop-add-product">＋ Produit</button>
+        <button type="button" id="shop-edit-cancel">Annuler</button>
+        <button class="button dark" type="button" id="shop-edit-save">Enregistrer</button>
+      </div>
+    </div>
+    <input id="shop-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden>
     <header class="shop-heading">
       <span class="eyebrow">LA SÉLECTION STOA</span>
       <h1>Peu de choses.<br><span>Bien choisies.</span></h1>

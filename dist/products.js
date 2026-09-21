@@ -1,5 +1,7 @@
-// Catalogue éditable à la main. Les champs producteur et source restent internes.
-export const products = [
+import { supabase } from './supabase.js';
+
+// Copie locale utilisée si Supabase est momentanément indisponible.
+const fallbackProducts = [
   {
     id: 'huile-olive-charisma', nom: 'Huile d’olive Charisma', prix: 29.99,
     description: 'Huile d’olive vierge extra biologique grecque, issue d’olives Koroneiki. Format 1 litre.',
@@ -92,7 +94,17 @@ const productInput = document.querySelector('#order-product');
 const variantWrap = document.querySelector('#order-selection-wrap');
 const variantInput = document.querySelector('#order-selection');
 const errorMessage = document.querySelector('#order-error');
+const pencil = document.querySelector('#shop-edit-pencil');
+const editorBar = document.querySelector('#shop-editor-bar');
+const editorStatus = document.querySelector('#shop-editor-status');
+const imageInput = document.querySelector('#shop-image-input');
 let selectedProduct;
+let products = structuredClone(fallbackProducts);
+let editing = false;
+let originalProducts = [];
+let deletedIds = [];
+let imageProductId;
+let persistedIds = new Set();
 
 const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -108,7 +120,26 @@ const selectionMarkup = (product) => product.selections?.length ? `
     ${product.selections.map((selection) => `<option>${escapeHtml(selection)}</option>`).join('')}
   </select>` : '';
 
-grid.innerHTML = products.map((product, index) => `
+const editorCardMarkup = (product, index) => `
+  <article class="product-card shop-product-editing" data-product-card="${escapeHtml(product.id)}">
+    <button class="product-image shop-edit-image" type="button" data-edit-image aria-label="Changer l’image de ${escapeHtml(product.nom)}">
+      <img src="${escapeHtml(product.image)}" alt="" loading="lazy"><span>Changer l’image</span>
+    </button>
+    <div class="product-card-body">
+      <span class="eyebrow">PRODUIT ${String(index + 1).padStart(2, '0')}</span>
+      <h2 contenteditable="true" data-shop-field="nom" spellcheck="true">${escapeHtml(product.nom)}</h2>
+      <p contenteditable="true" data-shop-field="description" spellcheck="true">${escapeHtml(product.description)}</p>
+      <div class="shop-edit-fields">
+        <label>Prix (€)<input type="number" min="0" step="0.01" data-shop-field="prix" value="${escapeHtml(product.prix)}"></label>
+        <label>Producteur<input data-shop-field="producteur" value="${escapeHtml(product.producteur || '')}"></label>
+        <label class="wide">Lien source<input type="url" data-shop-field="source" value="${escapeHtml(product.source || '')}"></label>
+        <label class="wide">Variantes — une par ligne<textarea rows="4" data-shop-field="selections">${escapeHtml((product.selections || []).join('\n'))}</textarea></label>
+      </div>
+      <button class="shop-delete-product" type="button" data-delete-product>Supprimer ce produit</button>
+    </div>
+  </article>`;
+
+const publicCardMarkup = (product, index) => `
   <article class="product-card" data-product-card="${escapeHtml(product.id)}">
     <div class="product-image"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.nom)}" loading="lazy"></div>
     <div class="product-card-body">
@@ -118,7 +149,77 @@ grid.innerHTML = products.map((product, index) => `
       ${selectionMarkup(product)}
       <div class="product-card-bottom"><strong>${price(product.prix)}</strong><button class="button dark" type="button" data-order-product="${escapeHtml(product.id)}">Commander <span>↗</span></button></div>
     </div>
-  </article>`).join('');
+  </article>`;
+
+const renderProducts = () => {
+  grid.innerHTML = products.map((product, index) => editing ? editorCardMarkup(product, index) : publicCardMarkup(product, index)).join('');
+};
+
+const fromDatabase = (row) => ({
+  id: row.id, nom: row.name, prix: Number(row.price), description: row.description,
+  image: row.image_url, producteur: row.producer || '', source: row.source_url || '',
+  selections: Array.isArray(row.selections) ? row.selections : [],
+});
+
+const loadProducts = async () => {
+  const { data } = await supabase.from('shop_products').select('*').eq('active', true).order('order_index');
+  if (data?.length) {
+    products = data.map(fromDatabase);
+    persistedIds = new Set(data.map((row) => row.id));
+  }
+  renderProducts();
+};
+
+const syncEditor = () => {
+  grid.querySelectorAll('[data-product-card]').forEach((card) => {
+    const product = products.find((item) => item.id === card.dataset.productCard);
+    if (!product) return;
+    product.nom = card.querySelector('[data-shop-field="nom"]').textContent.trim();
+    product.description = card.querySelector('[data-shop-field="description"]').textContent.trim();
+    product.prix = Number(card.querySelector('[data-shop-field="prix"]').value);
+    product.producteur = card.querySelector('[data-shop-field="producteur"]').value.trim();
+    product.source = card.querySelector('[data-shop-field="source"]').value.trim();
+    product.selections = card.querySelector('[data-shop-field="selections"]').value.split('\n').map((value) => value.trim()).filter(Boolean);
+  });
+};
+
+const leaveEditor = () => {
+  editing = false; editorBar.hidden = true; pencil.hidden = false; deletedIds = [];
+  renderProducts();
+};
+
+const saveProducts = async () => {
+  syncEditor();
+  if (products.some((product) => !product.nom || !Number.isFinite(product.prix) || product.prix < 0)) {
+    editorStatus.textContent = 'Chaque produit doit avoir un nom et un prix valide.'; return;
+  }
+  editorStatus.textContent = 'Enregistrement…';
+  const rows = products.map((product, index) => ({
+    id: product.id, name: product.nom, description: product.description, price: product.prix,
+    image_url: product.image, producer: product.producteur || null, source_url: product.source || null,
+    selections: product.selections || [], order_index: index + 1, active: true,
+  }));
+  const { error } = await supabase.from('shop_products').upsert(rows, { onConflict: 'id' });
+  if (!error && deletedIds.length) {
+    const result = await supabase.from('shop_products').delete().in('id', deletedIds);
+    if (result.error) { editorStatus.textContent = result.error.message; return; }
+  }
+  if (error) { editorStatus.textContent = error.message; return; }
+  persistedIds = new Set(products.map((product) => product.id));
+  editorStatus.textContent = 'Boutique enregistrée.';
+  leaveEditor();
+};
+
+const initializeEditor = async () => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return;
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (profile?.role === 'admin') pencil.hidden = false;
+};
+
+await loadProducts();
+initializeEditor();
 
 document.querySelectorAll('[data-year]').forEach((element) => { element.textContent = new Date().getFullYear(); });
 
@@ -137,10 +238,54 @@ const openOrder = (productId, preferredSelection) => {
 const closeOrder = () => { if (dialog.open) dialog.close(); };
 
 grid.addEventListener('click', (event) => {
+  const imageButton = event.target.closest('[data-edit-image]');
+  if (editing && imageButton) {
+    syncEditor(); imageProductId = imageButton.closest('[data-product-card]').dataset.productCard; imageInput.click(); return;
+  }
+  const deleteButton = event.target.closest('[data-delete-product]');
+  if (editing && deleteButton) {
+    syncEditor();
+    const id = deleteButton.closest('[data-product-card]').dataset.productCard;
+    if (persistedIds.has(id)) deletedIds.push(id);
+    products = products.filter((product) => product.id !== id); renderProducts(); return;
+  }
   const button = event.target.closest('[data-order-product]');
   if (!button) return;
   const card = button.closest('[data-product-card]');
   openOrder(button.dataset.orderProduct, card?.querySelector('[data-product-selection]')?.value);
+});
+
+grid.addEventListener('paste', (event) => {
+  if (!editing || !event.target.closest('[contenteditable="true"]')) return;
+  event.preventDefault(); document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+});
+
+pencil.addEventListener('click', () => {
+  editing = true; originalProducts = structuredClone(products); deletedIds = [];
+  pencil.hidden = true; editorBar.hidden = false; editorStatus.textContent = 'Modifiez directement les produits.'; renderProducts();
+});
+
+document.querySelector('#shop-edit-cancel').addEventListener('click', () => {
+  products = structuredClone(originalProducts); leaveEditor();
+});
+document.querySelector('#shop-edit-save').addEventListener('click', saveProducts);
+document.querySelector('#shop-add-product').addEventListener('click', () => {
+  syncEditor();
+  products.push({ id: `produit-${crypto.randomUUID()}`, nom: 'Nouveau produit', prix: 0, description: 'Description du produit.', image: '/assets/shop/catalog/huile-charisma.webp', producteur: '', source: '', selections: [] });
+  renderProducts(); grid.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+imageInput.addEventListener('change', async () => {
+  const file = imageInput.files?.[0];
+  if (!file || !imageProductId) return;
+  editorStatus.textContent = 'Envoi de l’image…';
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const path = `shop/${imageProductId}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from('module-assets').upload(path, file, { upsert: false, contentType: file.type });
+  if (error) { editorStatus.textContent = error.message; imageInput.value = ''; return; }
+  const product = products.find((item) => item.id === imageProductId);
+  if (product) product.image = supabase.storage.from('module-assets').getPublicUrl(path).data.publicUrl;
+  editorStatus.textContent = 'Image ajoutée. Enregistrez pour publier.'; imageInput.value = ''; renderProducts();
 });
 
 document.querySelector('#order-close').addEventListener('click', closeOrder);
