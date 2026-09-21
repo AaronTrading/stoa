@@ -27,10 +27,11 @@ const normalizeQuiz = (value) => {
 const cleanHtml = (html) => {
   const template = document.createElement('template');
   template.innerHTML = html;
-  const allowed = new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','OL','UL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION']);
+  const allowed = new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','A','OL','UL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION']);
   [...template.content.querySelectorAll('*')].forEach((element) => {
     if (!allowed.has(element.tagName)) { element.replaceWith(...element.childNodes); return; }
     const source = element.tagName === 'IMG' ? element.getAttribute('src') || '' : '';
+    const href = element.tagName === 'A' ? element.getAttribute('href') || '' : '';
     const quiz = element.tagName === 'SECTION' ? normalizeQuiz(element.getAttribute('data-quiz')) : null;
     if (element.tagName === 'SECTION' && !quiz.questions.length) { element.remove(); return; }
     [...element.attributes].forEach((attribute) => element.removeAttribute(attribute.name));
@@ -38,6 +39,12 @@ const cleanHtml = (html) => {
       if (source.startsWith('https://') || source.startsWith('/')) element.setAttribute('src', source);
       else element.remove();
       element.setAttribute('alt', ''); element.setAttribute('loading', 'lazy');
+    }
+    if (element.tagName === 'A') {
+      if (/^(https?:\/\/|mailto:|\/|#)/i.test(href)) {
+        element.setAttribute('href', href);
+        if (/^https?:\/\//i.test(href)) { element.setAttribute('target', '_blank'); element.setAttribute('rel', 'noopener noreferrer'); }
+      } else element.replaceWith(...element.childNodes);
     }
     if (element.tagName === 'FIGURE') element.className = 'lesson-inline-image';
     if (element.tagName === 'SECTION') { element.className = 'lesson-quiz'; element.dataset.quiz = JSON.stringify(quiz); element.replaceChildren(); }
@@ -151,7 +158,7 @@ document.addEventListener('selectionchange', () => {
   if (editor) { savedRange = range.cloneRange(); activeEditor = editor; }
 });
 
-bar?.addEventListener('mousedown', (event) => { if (event.target.closest('button[data-edit-command],button[data-edit-block]')) event.preventDefault(); });
+bar?.addEventListener('mousedown', (event) => { if (event.target.closest('button[data-edit-command],button[data-edit-block],#lesson-link-add')) event.preventDefault(); });
 bar?.addEventListener('click', (event) => {
   const commandButton = event.target.closest('[data-edit-command]');
   const blockButton = event.target.closest('[data-edit-block]');
@@ -168,6 +175,23 @@ document.querySelector('#lesson-quiz-add')?.addEventListener('click', () => {
   const data = { questions: [{ question: '', answers: ['', ''], correct: 0 }] };
   activeEditor.append(quiz); renderQuizEditor(quiz, data); quiz.scrollIntoView({ behavior: 'smooth', block: 'center' });
   setStatus('Quiz ajouté à la fin du sous-module.');
+});
+
+document.querySelector('#lesson-link-add')?.addEventListener('click', () => {
+  activeEditor ||= document.querySelector('.lesson-subchapter-content');
+  if (!activeEditor) { setStatus('Placez d’abord le curseur dans le contenu.', 'error'); return; }
+  const selectedText = savedRange && activeEditor.contains(savedRange.commonAncestorContainer) ? savedRange.toString().trim() : '';
+  const label = window.prompt('Texte affiché pour le lien :', selectedText);
+  if (label === null || !label.trim()) return;
+  const href = window.prompt('Adresse du lien :', 'https://');
+  if (href === null || !/^(https?:\/\/|mailto:|\/|#)/i.test(href.trim())) { setStatus('Saisissez une adresse valide.', 'error'); return; }
+  const link = document.createElement('a'); link.textContent = label.trim(); link.href = href.trim();
+  if (/^https?:\/\//i.test(href.trim())) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+  if (savedRange && activeEditor.contains(savedRange.commonAncestorContainer)) {
+    const range = savedRange.cloneRange(); range.deleteContents(); range.insertNode(link); range.setStartAfter(link); range.collapse(true);
+    const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); savedRange = range.cloneRange();
+  } else activeEditor.append(link);
+  activeEditor.focus(); setStatus('Lien ajouté.');
 });
 
 lesson?.addEventListener('click', (event) => {
