@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Trouvez les points de vente de lait cru autour de vous avec la carte STOA.">
+  <title>Carte du lait cru — STOA</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+  <script src="env.js"></script>
+  <script type="module" src="auth.js"></script>
+</head>
+<body class="tool-page map-page">
+  <a class="skip" href="#main">Aller au contenu</a>
+  <header class="site-header">
+    <a class="logo" href="/" aria-label="STOA, accueil"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
+    <nav class="pill-nav" aria-label="Navigation principale"><a href="/">Accueil</a><a class="active" href="/carte" aria-current="page">Carte</a><a href="/scanner">Scanner</a><a href="/boutique">Boutique</a></nav>
+    <a class="login-link" data-auth-link href="/academie">Espace membre <span>↗</span></a>
+  </header>
+  <main class="tool-main" id="main">
+    <header class="tool-heading">
+      <div><span class="eyebrow">CARTE STOA</span><h1>Le lait cru,<br><span>près de vous.</span></h1></div>
+      <p>848 fermes, magasins et distributeurs répertoriés en France. Autorisez votre position pour trouver le point le plus proche.</p>
+    </header>
+    <section class="stoa-map-shell" aria-label="Carte des points de vente de lait cru">
+      <div id="stoa-map"></div>
+      <div class="map-glass-panel">
+        <button class="button dark" id="locate-me" type="button"><span class="location-symbol" aria-hidden="true">⌖</span> Autour de moi</button>
+        <p id="map-status" role="status">Appuyez pour utiliser votre position.</p>
+      </div>
+    </section>
+    <p class="tool-source">Répertoire des points issu de lait-cru.fr, copie du 21 septembre 2026. Vérifiez les informations avant de vous déplacer.</p>
+  </main>
+  <footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="map.js"></script>
+</body>
+</html>

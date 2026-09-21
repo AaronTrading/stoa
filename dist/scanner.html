@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Scannez le code-barres d’un produit et obtenez un repère nutritionnel STOA.">
+  <title>Scanner un produit — STOA</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="env.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="scanner.js"></script>
+</head>
+<body class="tool-page scanner-page">
+  <a class="skip" href="#main">Aller au contenu</a>
+  <header class="site-header">
+    <a class="logo" href="/" aria-label="STOA, accueil"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
+    <nav class="pill-nav" aria-label="Navigation principale"><a href="/">Accueil</a><a href="/carte">Carte</a><a class="active" href="/scanner" aria-current="page">Scanner</a><a href="/boutique">Boutique</a></nav>
+    <a class="login-link" data-auth-link href="/academie">Espace membre <span>↗</span></a>
+  </header>
+  <main class="tool-main" id="main">
+    <header class="tool-heading">
+      <div><span class="eyebrow">OUTIL STOA</span><h1>Lire l’étiquette.<br><span>Comprendre le produit.</span></h1></div>
+      <p>Scannez un code-barres alimentaire. La note suit des règles fixes à partir des informations publiques du produit, sans intelligence artificielle.</p>
+    </header>
+    <section class="scanner-shell">
+      <div class="scanner-camera-card">
+        <div class="scanner-preview" id="scanner-preview">
+          <video id="scanner-video" playsinline muted></video>
+          <div class="scanner-frame" aria-hidden="true"><i></i></div>
+          <p id="scanner-camera-copy">La caméra reste sur votre appareil.</p>
+        </div>
+        <div class="scanner-controls">
+          <button class="button dark" id="scanner-start" type="button">Ouvrir la caméra <span>⌁</span></button>
+          <button class="button scanner-stop" id="scanner-stop" type="button" hidden>Arrêter</button>
+        </div>
+        <form class="barcode-form" id="barcode-form">
+          <label for="barcode-input">Ou saisir le code</label>
+          <div><input id="barcode-input" inputmode="numeric" autocomplete="off" placeholder="Ex. 3017620422003" required><button type="submit">Analyser</button></div>
+        </form>
+        <p class="scanner-status" id="scanner-status" role="status">Prêt à scanner.</p>
+      </div>
+      <article class="product-analysis" id="product-analysis" hidden aria-live="polite"></article>
+      <aside class="scanner-empty" id="scanner-empty"><span>Σ</span><h2>Une lecture simple.</h2><p>Le code identifie le produit. STOA présente ensuite sa qualité nutritionnelle, son degré de transformation et les données disponibles.</p></aside>
+    </section>
+    <p class="tool-source">Données produit : Open Food Facts. La note STOA est un repère pédagogique calculé automatiquement et ne remplace pas un avis médical.</p>
+  </main>
+  <footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer>
+</body>
+</html>
