@@ -1,34 +1,51 @@
 import { supabase } from './supabase.js';
 
-const chapters = [
-  ['alimentation','Alimentation','◒','Le carburant ancestral : une alimentation dense, consciente et adaptée à votre biologie.',[
-    ['Les fondamentaux de l’assiette primale','Poser les principes d’une alimentation ancestrale et dense.',12],
-    ['Les piliers de votre nutrition','Construire l’assiette autour des aliments essentiels.',25],
-    ['Les aliments à éliminer','Identifier les produits modernes à écarter.',18],
-    ['Structurer vos repas','Organiser ses repas selon sa faim et son activité.',15],
-    ['Approvisionnement et préparation','Choisir ses produits et les préparer simplement.',18],
-    ['L’esprit et l’intuition alimentaire','Retrouver écoute, souplesse et plaisir.',12]
-  ]],
-  ['hydratation','Hydratation','≈','Observer et organiser son hydratation au quotidien.',[['Comprendre l’hydratation','Les repères essentiels',15],['Créer ses repères','Une organisation adaptée à sa journée',16]]],
-  ['sport','Sport','⌁','Bouger avec méthode, plaisir et régularité.',[['Choisir sa pratique','Trouver le mouvement qui vous correspond',20],['Construire sa progression','Avancer avec des repères adaptés',24]]],
-  ['sante','Santé','✚','Mieux comprendre son parcours de santé et ses interlocuteurs.',[['Cultiver sa littératie en santé','Comprendre une information avant de décider',20],['Préparer une consultation','Formuler ses questions et ses priorités',17]]],
-  ['sommeil','Sommeil','☾','Observer son rythme et donner une place au repos.',[['Comprendre son sommeil','Observer avant de changer',19],['Construire son rituel du soir','Créer une transition réaliste',16]]],
-  ['hygiene','Hygiène','✧','Des gestes simples pour prendre soin de soi et de son environnement.',[['Les gestes essentiels','Choisir des routines sobres',14],['Un environnement sain','Observer ses espaces de vie',18]]],
-  ['energie','Énergie','☼','Identifier ce qui soutient ou disperse son énergie.',[['Cartographier son énergie','Repérer les variations de la journée',17],['Gérer ses ressources','Choisir où placer son effort',20]]],
-  ['productivite','Productivité','▦','Faire moins, avec davantage d’intention.',[['Clarifier ses priorités','Distinguer l’urgent de l’important',18],['Protéger son attention','Organiser des temps de concentration',21]]],
-  ['longevite','Longévité','∞','Penser sa santé dans le temps long.',[['Le temps comme allié','Comprendre l’effet des habitudes répétées',20],['Construire pour durer','Créer des systèmes soutenables',23]]],
-  ['societe','Société','◉','Comprendre l’influence de nos milieux de vie.',[['Lire son environnement','Observer les normes et les incitations',22],['Choisir sa participation','Agir à son échelle',19]]],
-  ['spiritualite','Spiritualité','△','Explorer le sens, les valeurs et la présence.',[['Nommer ce qui compte','Clarifier ses valeurs',18],['Créer un temps de présence','Installer un espace de réflexion',16]]],
-  ['courses','Courses','◇','Acheter avec méthode et simplicité.',[['Préparer ses courses','Partir de ses besoins réels',15],['Lire et choisir','Comparer sans se perdre',20]]],
-  ['recettes','Recettes','◐','Développer un répertoire simple et adaptable.',[['Construire son répertoire','Choisir quelques bases fiables',18],['Cuisiner avec souplesse','Adapter une recette à ce que l’on a',22]]],
-  ['autonomie','Autonomie','↗','Renforcer sa capacité à comprendre, choisir et agir.',[['Décider avec méthode','Passer de l’information au choix',21],['Apprendre par soi-même','Construire une pratique de recherche',24]]],
-  ['relations','Relations','⋈','Cultiver les liens et poser des limites claires.',[['Prendre soin de ses liens','Donner du temps à ce qui compte',18],['Poser ses limites','Dire ce qui est possible',20]]],
-  ['argent','Argent','◌','Mettre ses ressources au service de ses priorités.',[['Lire ses dépenses','Observer sans culpabiliser',19],['Construire un budget utile','Donner une fonction à son argent',23]]],
-  ['toxines','Toxines','⌬','Évaluer les expositions avec mesure et discernement.',[['Comprendre l’exposition','Distinguer danger, dose et contexte',22],['Réduire avec pragmatisme','Prioriser les changements utiles',18]]],
-].map(([slug,name,icon,description,modules])=>({slug,name,icon,description,modules:modules.map(([title,description,duration])=>({title,description,duration}))}));
+let pillars = [
+  {id:'nourrir',name:'NOURRIR',orderIndex:0},
+  {id:'corps',name:'CORPS',orderIndex:1},
+  {id:'proteger',name:'PROTÉGER',orderIndex:2},
+  {id:'vivre',name:'VIVRE',orderIndex:3},
+  {id:'se-construire',name:'SE CONSTRUIRE',orderIndex:4},
+];
 
+const fallbackDescriptions = {
+  alimentation:'Le carburant ancestral : une alimentation dense, consciente et adaptée à votre biologie.',
+  courses:'Acheter, préparer et cuisiner avec méthode et simplicité.',
+  hydratation:'Observer et organiser son hydratation au quotidien.', sport:'Bouger avec méthode, plaisir et régularité.',
+  sommeil:'Observer son rythme, sa récupération et son énergie.', sante:'Mieux comprendre son parcours de santé et son hygiène.',
+  toxines:'Évaluer les expositions avec mesure et discernement.', productivite:'Faire moins, avec davantage d’intention.',
+  argent:'Mettre ses ressources au service de ses priorités.', relations:'Cultiver les liens et poser des limites claires.',
+  societe:'Comprendre l’influence de nos milieux de vie.', autonomie:'Renforcer sa capacité à comprendre, choisir et agir.',
+  spiritualite:'Explorer le sens, les valeurs et la présence.', longevite:'Penser sa santé dans le temps long.'
+};
+const icons = {alimentation:'◒',courses:'◇',hydratation:'≈',sport:'⌁',sommeil:'☾',sante:'✚',hygiene:'✧',toxines:'⌬',productivite:'▦',argent:'◌',relations:'⋈',societe:'◉',autonomie:'↗',spiritualite:'△',longevite:'∞'};
+const makeChapter = (pillarId,slug,name,moduleTitles,description=fallbackDescriptions[slug]||'') => ({pillarId,slug,name,icon:icons[slug]||'◇',description,modules:moduleTitles.map(title=>({title,description:'',duration:10}))});
+
+let chapters = [
+  makeChapter('nourrir','alimentation','Alimentation primale',['Les Fondamentaux de l’Assiette Primale','Les Piliers de Votre Nutrition','Les Aliments à Éliminer','Structurer vos Repas']),
+  makeChapter('nourrir','courses','Approvisionnement et Cuisine',['Approvisionnement et Préparation','Préparer ses courses','Lire et choisir','Construire son répertoire','Cuisiner avec souplesse']),
+  makeChapter('nourrir','hydratation','Hydratation',['Comprendre l’hydratation','Choisir son eau','Créer ses repères']),
+  makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression']),
+  makeChapter('corps','sommeil','Récupération',['Comprendre son sommeil','Construire son rituel du soir','Cartographier son énergie','Gérer ses ressources']),
+  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Les gestes essentiels','Un environnement sain']),
+  makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Corriger ses problèmes de peau']),
+  makeChapter('proteger','toxines','Expositions',['Comprendre l’exposition','Réduire avec pragmatisme','alimentation','environnement','produits ménagers','pollution','cosmétiques','matériaux']),
+  makeChapter('proteger','autonomie','Sécurité personnelle',['Identifier une situation à risque','Éviter les situations dangereuses','Vigilance et conscience de l’environnement','Réagir face à une menace','Se déplacer en sécurité','Premiers réflexes en situation d’urgence'],'Savoir réduire les risques et réagir face aux situations dangereuses.'),
+  makeChapter('proteger','relations','Protéger ses proches',['Sécurité des enfants','Protection des proches','Situations d’urgence','Organisation familiale','Prévention des accidents','Savoir alerter et demander de l’aide'],'Veiller sur les personnes dont on a la responsabilité.'),
+  makeChapter('proteger','autonomie','Foyer & biens',['Sécurité du domicile','Cambriolage','Incendie','Dégâts des eaux','Sécurisation des accès','Protection des objets de valeur','Assurances','Inventaire et sauvegardes'],'Protéger son domicile et ce qui nous appartient.'),
+  makeChapter('proteger','autonomie','Résilience',['Préparer une situation d’urgence','Trousse et équipements essentiels','Eau et alimentation','Électricité et communications','Plans d’urgence','Autonomie temporaire','Continuité familiale'],'Être capable de faire face lorsque les systèmes habituels ne fonctionnent plus.'),
+  makeChapter('vivre','productivite','Organisation',['Clarifier ses priorités','Protéger son attention']),
+  makeChapter('vivre','argent','Ressources',['Lire ses dépenses','Construire un budget utile']),
+  makeChapter('vivre','relations','Relations',['Prendre soin de ses liens','Poser ses limites']),
+  makeChapter('vivre','societe','Société',['Lire son environnement','Choisir sa participation']),
+  makeChapter('se-construire','autonomie','Autonomie',['Décider avec méthode','Apprendre par soi-même']),
+  makeChapter('se-construire','spiritualite','Sens',['Nommer ce qui compte','Créer un temps de présence']),
+  makeChapter('se-construire','longevite','Longévité',['Le temps comme allié','Construire pour durer']),
+];
 let allModules = [];
 const rebuildModuleIndex = () => {
+  const perPillar = new Map();
+  chapters.forEach(chapter => { const index=perPillar.get(chapter.pillarId)||0; chapter.pillarChapterIndex=index; perPillar.set(chapter.pillarId,index+1); });
   allModules = chapters.flatMap((chapter, chapterIndex) =>
     chapter.modules.map((module, moduleIndex) => ({...module, chapter, chapterIndex, moduleIndex, id:`${chapterIndex+1}-${moduleIndex+1}`}))
   );
@@ -36,15 +53,15 @@ const rebuildModuleIndex = () => {
 rebuildModuleIndex();
 
 const hydrateCatalog = async () => {
-  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,modules(id,title,description,duration_minutes,order_index)').order('order_index');
+  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,pillar_id,visual_key,is_visible,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible)').eq('is_visible',true).order('order_index');
   if (error || !data?.length) return;
-  data.forEach((dbChapter) => {
-    const chapter = chapters[dbChapter.order_index];
-    if (!chapter) return;
-    chapter.name = dbChapter.title || dbChapter.category || chapter.name;
-    chapter.description = dbChapter.description || chapter.description;
-    chapter.modules = (dbChapter.modules || []).sort((a, b) => a.order_index - b.order_index).map((module) => ({ id: module.id, title: module.title, description: module.description || '', duration: module.duration_minutes || 1 }));
-  });
+  const dbPillars=[...new Map(data.filter(item=>item.pillar).map(item=>[item.pillar.id,item.pillar])).values()].sort((a,b)=>a.order_index-b.order_index);
+  if(dbPillars.length) pillars=dbPillars.map(item=>({id:item.id,name:item.title,orderIndex:item.order_index}));
+  chapters=data.map(dbChapter=>({
+    id:dbChapter.id,pillarId:dbChapter.pillar_id,slug:dbChapter.visual_key||'autonomie',icon:icons[dbChapter.visual_key]||'◇',
+    name:dbChapter.title||dbChapter.category,description:dbChapter.description||'',
+    modules:(dbChapter.modules||[]).filter(module=>module.is_visible!==false).sort((a,b)=>a.order_index-b.order_index).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1}))
+  }));
   rebuildModuleIndex();
 };
 
@@ -56,7 +73,8 @@ const imagePath = chapter => `assets/categories/${chapter.slug}.jpg`;
 const number = value => String(value).padStart(2,'0');
 const readSaved = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } };
-let completed = new Set(readSaved('stoa-progress', []).filter(id => allModules.some(module => module.id === id)));
+const progressStorageKey='stoa-progress-pillars-v1';
+let completed = new Set(readSaved(progressStorageKey, []).filter(id => allModules.some(module => module.id === id)));
 const params = new URLSearchParams(location.search);
 const moduleUuidByLocalId = new Map();
 let currentAuthUser;
@@ -66,11 +84,11 @@ const syncRemoteProgress = async () => {
   currentAuthUser = sessionData.session?.user;
   if (!currentAuthUser) return;
   const [{ data: dbChapters }, { data: progressRows }] = await Promise.all([
-    supabase.from('chapters').select('id, order_index, modules(id, order_index)').order('order_index'),
+    supabase.from('chapters').select('id, order_index, modules(id, order_index, is_visible)').eq('is_visible',true).order('order_index'),
     supabase.from('user_progress').select('module_id, status').eq('user_id', currentAuthUser.id).eq('status', 'completed'),
   ]);
   (dbChapters || []).forEach(chapter => {
-    (chapter.modules || []).forEach(module => {
+    (chapter.modules || []).filter(module=>module.is_visible!==false).forEach(module => {
       moduleUuidByLocalId.set(`${chapter.order_index + 1}-${module.order_index + 1}`, module.id);
     });
   });
@@ -86,7 +104,7 @@ const syncRemoteProgress = async () => {
     })), { onConflict: 'user_id,module_id,subchapter_id' });
   }
   completed = new Set([...remoteCompleted, ...completed]);
-  save('stoa-progress', [...completed]);
+  save(progressStorageKey, [...completed]);
 };
 
 const persistModuleProgress = async (localId, done) => {
@@ -124,17 +142,24 @@ function renderCourses(search='') {
   if (!courseList) return;
   const tokens=normalizeSearch(search).split(/\s+/).filter(Boolean);
   let resultCount=0;
-  courseList.innerHTML = chapters.map((chapter,chapterIndex)=>{
-    const chapterNumber=chapterIndex+1;
-    const chapterText=normalizeSearch(`${chapter.name} ${chapter.description}`);
-    const matchingModules=chapter.modules.map((module,moduleIndex)=>({module,moduleIndex})).filter(({module})=>{
-      const haystack=normalizeSearch(`${chapterText} ${module.title} ${module.description}`);
-      return !tokens.length || tokens.every(token=>haystack.includes(token));
-    });
-    if(!matchingModules.length) return '';
-    resultCount+=matchingModules.length;
-    const finished=chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterNumber}-${moduleIndex+1}`)).length;
-    return `<section class="course-chapter"><div class="course-chapter-title"><img class="module-thumbnail" src="${imagePath(chapter)}" alt="" loading="lazy"><div><span class="eyebrow">CHAPITRE ${number(chapterNumber)}</span><h3>${chapter.name}</h3><p>${chapter.description}</p></div><span class="chapter-completion">${finished} / ${chapter.modules.length}</span></div><div class="module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}" class="module-row"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span class="module-label"><strong>${module.title}</strong><small>${module.description}</small></span><span class="module-state">${module.duration} min · ${done?'Terminé':'À découvrir'}</span><span aria-hidden="true">↗</span></a>`;}).join('')}</div></section>`;
+  const roman=['I','II','III','IV','V'];
+  courseList.innerHTML = pillars.map((pillar,pillarIndex)=>{
+    const pillarChapters=chapters.map((chapter,chapterIndex)=>({chapter,chapterIndex})).filter(({chapter})=>chapter.pillarId===pillar.id);
+    const renderedChapters=pillarChapters.map(({chapter,chapterIndex})=>{
+      const chapterNumber=chapterIndex+1;
+      const chapterText=normalizeSearch(`${pillar.name} ${chapter.name} ${chapter.description}`);
+      const matchingModules=chapter.modules.map((module,moduleIndex)=>({module,moduleIndex})).filter(({module})=>{
+        const haystack=normalizeSearch(`${chapterText} ${module.title} ${module.description}`);
+        return !tokens.length || tokens.every(token=>haystack.includes(token));
+      });
+      if(!matchingModules.length)return '';
+      resultCount+=matchingModules.length;
+      const finished=chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterNumber}-${moduleIndex+1}`)).length;
+      return `<section class="course-chapter"><div class="course-chapter-title"><img class="module-thumbnail" src="${imagePath(chapter)}" alt="" loading="lazy"><div><span class="eyebrow">CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h3>${chapter.name}</h3><p>${chapter.description}</p></div><span class="chapter-completion">${finished} / ${chapter.modules.length}</span></div><div class="module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}" class="module-row"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span class="module-label"><strong>${module.title}</strong>${module.description?`<small>${module.description}</small>`:''}</span><span class="module-state">${module.duration} min · ${done?'Terminé':'À découvrir'}</span><span aria-hidden="true">↗</span></a>`;}).join('')}</div></section>`;
+    }).filter(Boolean).join('');
+    if(!renderedChapters)return '';
+    const moduleTotal=pillarChapters.reduce((sum,item)=>sum+item.chapter.modules.length,0);
+    return `<details class="academy-pillar" ${!tokens.length&&pillarIndex===0?'open':''}${tokens.length?' open':''}><summary class="academy-pillar-heading"><span class="pillar-number">PILIER ${roman[pillarIndex]||number(pillarIndex+1)}</span><h2>${pillar.name}</h2><span class="pillar-meta">${pillarChapters.length} chapitres · ${moduleTotal} modules</span><i aria-hidden="true"></i></summary><div class="pillar-chapters">${renderedChapters}</div></details>`;
   }).join('');
   if(!resultCount) courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucun module trouvé.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';
   const status=document.querySelector('#module-search-status');
@@ -154,10 +179,10 @@ if (courseList) {
   document.querySelector('#progress-count').textContent=completed.size;
   document.querySelector('#progress-total').textContent=`/ ${allModules.length} modules`;
   const progress=document.querySelector('#total-progress');progress.max=allModules.length;progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;
-  document.querySelector('#library-count').textContent=`${chapters.length} chapitres · ${allModules.length} modules`;
+  document.querySelector('#library-count').textContent=`${pillars.length} piliers · ${chapters.length} chapitres · ${allModules.length} modules`;
   if(completed.size)document.querySelector('#progress-caption').textContent=completed.size===allModules.length?'Vos fondations sont posées. Continuez à les cultiver.':'Chaque module compte. Continuez à votre rythme.';
   const next=allModules.find(module=>!completed.has(module.id));
-  if(next){document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`CHAPITRE ${number(next.chapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
+  if(next){const pillar=pillars.find(item=>item.id===next.chapter.pillarId);document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`${pillar?.name||''} · CHAPITRE ${number(next.chapter.pillarChapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
   syncRemoteProgress().then(()=>{
     renderCourses(searchInput.value);
     document.querySelector('#progress-count').textContent=completed.size;
@@ -170,11 +195,12 @@ if (document.querySelector('#lesson-content')) {
   const chapter=chapters[chapterIndex];
   const moduleIndex=Math.min(Math.max(Number(params.get('module'))||1,1),chapter.modules.length)-1;
   const module=chapter.modules[moduleIndex],id=`${chapterIndex+1}-${moduleIndex+1}`;
+  const lessonPillar=pillars.find(item=>item.id===chapter.pillarId);
   document.title=`${module.title} — STOA`;
   document.querySelector('#lesson-title').textContent=module.title;
-  document.querySelector('#lesson-kicker').textContent=`CHAPITRE ${number(chapterIndex+1)} — ${chapter.name.toUpperCase()} / MODULE ${number(moduleIndex+1)}`;
+  document.querySelector('#lesson-kicker').textContent=`PILIER ${lessonPillar?.name||''} / CHAPITRE ${number(chapter.pillarChapterIndex+1)} — ${chapter.name.toUpperCase()} / MODULE ${number(moduleIndex+1)}`;
   const artwork=document.querySelector('#lesson-artwork');artwork.src=imagePath(chapter);artwork.alt=`Illustration du chapitre ${chapter.name}`;
-  document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">CHAPITRE ${number(chapterIndex+1)}</span><h2>${chapter.name}</h2>`;
+  document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">${lessonPillar?.name||''} · CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
   document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
@@ -189,16 +215,21 @@ if (document.querySelector('#lesson-content')) {
   };
   const sanitizeStoredHtml=(html)=>{
     const template=document.createElement('template'); template.innerHTML=html;
-    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION']);
+    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','A']);
     [...template.content.querySelectorAll('*')].forEach(element=>{
       if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
       const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
+      const linkTarget=element.tagName==='A'?(element.getAttribute('href')||''):'';
       const quiz=element.tagName==='SECTION'?normalizeQuiz(element.getAttribute('data-quiz')):null;
       if(element.tagName==='SECTION'&&!quiz){element.replaceWith(...element.childNodes);return;}
       [...element.attributes].forEach(attribute=>element.removeAttribute(attribute.name));
       if(element.tagName==='IMG'){
         if(imageSource.startsWith('https://')||imageSource.startsWith('/')) element.setAttribute('src',imageSource); else element.remove();
         element.setAttribute('alt',''); element.setAttribute('loading','lazy');
+      }
+      if(element.tagName==='A'){
+        if(/^(https?:\/\/|mailto:|\/|#)/i.test(linkTarget)) element.setAttribute('href',linkTarget); else {element.replaceWith(...element.childNodes);return;}
+        if(/^https?:\/\//i.test(linkTarget)){element.setAttribute('target','_blank');element.setAttribute('rel','noopener noreferrer');}
       }
       if(element.tagName==='FIGURE') element.className='lesson-inline-image';
       if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
@@ -218,9 +249,9 @@ if (document.querySelector('#lesson-content')) {
     return `<p>${inlineMarkup(trimmed).replace(/^([^:]{2,90})\s*:\s*/, '<strong>$1 :</strong> ').replaceAll('\n','<br>')}</p>`;
   };
   const loadLessonContent=async()=>{
-    const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('order_index',chapterIndex).maybeSingle();
+    const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('is_visible',true).eq('order_index',chapterIndex).maybeSingle();
     if(!dbChapter)return;
-    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes').eq('chapter_id',dbChapter.id).eq('order_index',moduleIndex).maybeSingle();
+    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes').eq('chapter_id',dbChapter.id).eq('is_visible',true).eq('order_index',moduleIndex).maybeSingle();
     if(!dbModule)return;
     const {data:sections}=await supabase.from('subchapters').select('id,title,content,order_index').eq('module_id',dbModule.id).order('order_index');
     if(!sections?.length)return;
@@ -256,11 +287,11 @@ if (document.querySelector('#lesson-content')) {
     quizElement.querySelector('.lesson-quiz-footer p').textContent=`${score} bonne${score>1?'s':''} réponse${score>1?'s':''} sur ${fields.length}.`;
   });
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
-  const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
+  const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${module.id||id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
   notes.addEventListener('input',()=>{document.querySelector('#note-status').textContent=save(noteKey,notes.value)?'Notes enregistrées sur cet appareil.':'Le navigateur ne permet pas l’enregistrement.';});
   const completeButton=document.querySelector('#complete-module');
   const updateCompletion=()=>{const done=completed.has(id);completeButton.innerHTML=done?'Terminé — annuler <span>↶</span>':'Marquer comme terminé <span>✓</span>';completeButton.setAttribute('aria-pressed',String(done));};updateCompletion();
-  completeButton.addEventListener('click',()=>{completed.has(id)?completed.delete(id):completed.add(id);const saved=save('stoa-progress',[...completed]);persistModuleProgress(id,completed.has(id));updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Module terminé. Votre progression est enregistrée.':'Ce module est de nouveau à découvrir.'):'Progression modifiée pour cette session.';});
+  completeButton.addEventListener('click',()=>{completed.has(id)?completed.delete(id):completed.add(id);const saved=save(progressStorageKey,[...completed]);persistModuleProgress(id,completed.has(id));updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Module terminé. Votre progression est enregistrée.':'Ce module est de nouveau à découvrir.'):'Progression modifiée pour cette session.';});
   const nextIndex=allModules.findIndex(item=>item.id===id)+1,nextLink=document.querySelector('#next-module');
   if(nextIndex<allModules.length){const next=allModules[nextIndex];nextLink.href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;}else nextLink.innerHTML='Retour à mon académie <span>→</span>';
   syncRemoteProgress().then(()=>{renderNav();updateCompletion();});
