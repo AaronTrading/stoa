@@ -63,9 +63,11 @@ const hydrateCatalog = async () => {
     modules:(dbChapter.modules||[]).filter(module=>module.is_visible!==false).sort((a,b)=>a.order_index-b.order_index).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1}))
   }));
   rebuildModuleIndex();
+  window.dispatchEvent(new CustomEvent('stoa:catalog-ready'));
 };
 
-if (document.querySelector('#course-list, #lesson-content')) await hydrateCatalog();
+if (document.querySelector('#lesson-content')) await hydrateCatalog();
+else if (document.querySelector('#course-list')) await Promise.race([hydrateCatalog(),new Promise(resolve=>setTimeout(resolve,1800))]);
 
 document.querySelectorAll('[data-year]').forEach(element => { element.textContent = new Date().getFullYear(); });
 
@@ -137,29 +139,40 @@ dialog?.addEventListener('click',event=>{if(event.target===dialog){const bounds=
 
 const courseList = document.querySelector('#course-list');
 const normalizeSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
 function renderCourses(search='') {
   if (!courseList) return;
   const tokens=normalizeSearch(search).split(/\s+/).filter(Boolean);
+  const requestedChapter=Math.max(0,(Number(params.get('chapitre'))||1)-1);
+  const learningStates=window.__STOA_LEARNING_STATES__||[];
   let resultCount=0;
   const roman=['I','II','III','IV','V'];
   courseList.innerHTML = pillars.map((pillar,pillarIndex)=>{
     const pillarChapters=chapters.map((chapter,chapterIndex)=>({chapter,chapterIndex})).filter(({chapter})=>chapter.pillarId===pillar.id);
-    const renderedChapters=pillarChapters.map(({chapter,chapterIndex})=>{
+    const visibleChapters=pillarChapters.map(({chapter,chapterIndex})=>{
       const chapterNumber=chapterIndex+1;
       const chapterText=normalizeSearch(`${pillar.name} ${chapter.name} ${chapter.description}`);
       const matchingModules=chapter.modules.map((module,moduleIndex)=>({module,moduleIndex})).filter(({module})=>{
         const haystack=normalizeSearch(`${chapterText} ${module.title} ${module.description}`);
         return !tokens.length || tokens.every(token=>haystack.includes(token));
       });
-      if(!matchingModules.length)return '';
+      if(!matchingModules.length)return null;
       resultCount+=matchingModules.length;
       const finished=chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterNumber}-${moduleIndex+1}`)).length;
-      return `<section class="course-chapter"><div class="course-chapter-title"><img class="module-thumbnail" src="${imagePath(chapter)}" alt="" loading="lazy"><div><span class="eyebrow">CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h3>${chapter.name}</h3><p>${chapter.description}</p></div><span class="chapter-completion">${finished} / ${chapter.modules.length}</span></div><div class="module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}" class="module-row"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span class="module-label"><strong>${module.title}</strong>${module.description?`<small>${module.description}</small>`:''}</span><span class="module-state">${module.duration} min · ${done?'Terminé':'À découvrir'}</span><span aria-hidden="true">↗</span></a>`;}).join('')}</div></section>`;
-    }).filter(Boolean).join('');
-    if(!renderedChapters)return '';
+      const percentage=chapter.modules.length?Math.round(finished/chapter.modules.length*100):0;
+      return {chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage};
+    }).filter(Boolean);
+    if(!visibleChapters.length)return '';
     const moduleTotal=pillarChapters.reduce((sum,item)=>sum+item.chapter.modules.length,0);
-    return `<details class="academy-pillar" ${!tokens.length&&pillarIndex===0?'open':''}${tokens.length?' open':''}><summary class="academy-pillar-heading"><span class="pillar-number">PILIER ${roman[pillarIndex]||number(pillarIndex+1)}</span><h2>${pillar.name}</h2><span class="pillar-meta">${pillarChapters.length} chapitres · ${moduleTotal} modules</span><i aria-hidden="true"></i></summary><div class="pillar-chapters">${renderedChapters}</div></details>`;
+    const pillarFinished=pillarChapters.reduce((sum,{chapter,chapterIndex})=>sum+chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterIndex+1}-${moduleIndex+1}`)).length,0);
+    const pillarPercentage=moduleTotal?Math.round(pillarFinished/moduleTotal*100):0;
+    const state=learningStates.find(item=>pillarChapters.some(({chapter})=>chapter.modules.some(module=>module.id===item.module_id)));
+    const continueItem=state?allModules.find(item=>item.chapter.modules[item.moduleIndex]?.id===state.module_id):null;
+    continueItem ||= allModules.find(item=>item.chapter.pillarId===pillar.id&&!completed.has(item.id))||allModules.find(item=>item.chapter.pillarId===pillar.id);
+    const description={NOURRIR:'Alimentation, hydratation et cuisine.',CORPS:'Mouvement, récupération et santé.',PROTÉGER:'Expositions, sécurité et résilience.',VIVRE:'Organisation, ressources et relations.','SE CONSTRUIRE':'Autonomie, sens et temps long.'}[pillar.name]||'Un parcours pour construire des fondations durables.';
+    const hasRequested=pillarChapters.some(item=>item.chapterIndex===requestedChapter);
+    return `<article class="academy-pillar-card ${hasRequested?'is-focused':''}" id="pilier-${pillarIndex+1}"><header><div class="pillar-card-symbol">${roman[pillarIndex]||number(pillarIndex+1)}</div><div><span class="eyebrow">PILIER ${roman[pillarIndex]||number(pillarIndex+1)}</span><h2>${escapeHtml(pillar.name)}</h2><p>${description}</p></div><div class="pillar-card-progress"><strong>${pillarPercentage}%</strong><span>complété</span></div></header><div class="pillar-progress-track"><i style="--progress:${pillarPercentage}%"></i></div><div class="pillar-card-meta"><span>${pillarChapters.length} chapitres · ${moduleTotal} leçons</span>${state?'<strong>Dernière lecture disponible</strong>':'<span>Parcours à découvrir</span>'}</div><div class="pillar-card-chapters">${visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} modules · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('')}</div>${continueItem?`<a class="pillar-continue" href="/module?chapitre=${continueItem.chapterIndex+1}&module=${continueItem.moduleIndex+1}${state?'&reprendre=1':''}"><span>${state?'Continuer votre dernière lecture':'Commencer ce pilier'}</span><strong>${escapeHtml(continueItem.title)}</strong><i>→</i></a>`:''}</article>`;
   }).join('');
   if(!resultCount) courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucun module trouvé.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';
   const status=document.querySelector('#module-search-status');
@@ -171,7 +184,7 @@ if (courseList) {
   const searchInput=document.querySelector('#module-search');
   const clearSearch=document.querySelector('#module-search-clear');
   if(params.get('recherche')) searchInput.value=params.get('recherche');
-  else if(chapters[Number(requested)-1]) searchInput.value=chapters[Number(requested)-1].name;
+  else if(chapters[Number(requested)-1]) searchInput.value='';
   renderCourses(searchInput.value);
   searchInput.addEventListener('input',()=>{renderCourses(searchInput.value);clearSearch.hidden=!searchInput.value;const url=new URL(location);url.searchParams.delete('chapitre');searchInput.value?url.searchParams.set('recherche',searchInput.value):url.searchParams.delete('recherche');history.replaceState(null,'',url);});
   clearSearch.hidden=!searchInput.value;
@@ -188,6 +201,8 @@ if (courseList) {
     document.querySelector('#progress-count').textContent=completed.size;
     const progress=document.querySelector('#total-progress');progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;
   });
+  window.addEventListener('stoa:learning-state',()=>renderCourses(searchInput.value));
+  window.addEventListener('stoa:catalog-ready',()=>renderCourses(searchInput.value));
 }
 
 if (document.querySelector('#lesson-content')) {
@@ -270,7 +285,7 @@ if (document.querySelector('#lesson-content')) {
       }).join('');
       const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(imageMarkup).join('');
       const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
-      return `<section class="lesson-subchapter" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
+      return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
     window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
     renderLessonQuizzes();

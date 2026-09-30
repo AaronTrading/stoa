@@ -6,6 +6,7 @@ const firstNameInput = document.querySelector('#profile-first-name');
 const lastNameInput = document.querySelector('#profile-last-name');
 const usernameInput = document.querySelector('#profile-username');
 const departmentInput = document.querySelector('#profile-department');
+const bioInput = document.querySelector('#profile-bio');
 attachDepartmentPicker(departmentInput);
 const emailInput = document.querySelector('#profile-email');
 const fileInput = document.querySelector('#profile-avatar-input');
@@ -148,7 +149,7 @@ const initializeProfile = async () => {
   const [profileResult, identitiesResult, publicProfileResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('full_name, first_name, last_name, username, avatar_url, department, role, created_at')
+      .select('full_name, first_name, last_name, username, avatar_url, department, bio, role, created_at')
       .eq('id', user.id)
       .single(),
     supabase.auth.getUserIdentities(),
@@ -173,6 +174,7 @@ const initializeProfile = async () => {
   lastNameInput.value = lastName;
   usernameInput.value = username;
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
+  bioInput.value = profile.bio || '';
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
@@ -186,6 +188,24 @@ const initializeProfile = async () => {
   });
   const identities = identitiesResult.data?.identities || user.identities || [];
   setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
+  hydrateLearningOverview();
+};
+
+const escapeHtml = (value = '') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const hydrateLearningOverview = async () => {
+  const [{ data: chapters }, { data: progress }, { data: states }] = await Promise.all([
+    supabase.from('chapters').select('id,title,order_index,pillar_id,modules(id,title,order_index,is_visible)').eq('is_visible', true).order('order_index'),
+    supabase.from('user_progress').select('module_id').eq('user_id', user.id).eq('status', 'completed').is('subchapter_id', null),
+    supabase.from('user_learning_state').select('module_id,url_path,progress_ratio,last_read_at').eq('user_id', user.id).order('last_read_at', { ascending: false }).limit(5),
+  ]);
+  const visibleModules=(chapters||[]).flatMap(chapter=>(chapter.modules||[]).filter(module=>module.is_visible!==false).map(module=>({...module,chapter})));
+  const completedIds=new Set((progress||[]).map(item=>item.module_id));
+  const engaged=new Set(visibleModules.filter(module=>completedIds.has(module.id)||(states||[]).some(state=>state.module_id===module.id)).map(module=>module.chapter.pillar_id));
+  document.querySelector('#profile-completed-count').textContent=completedIds.size;
+  document.querySelector('#profile-pillar-count').textContent=engaged.size;
+  document.querySelector('#profile-global-progress').textContent=`${visibleModules.length?Math.round(completedIds.size/visibleModules.length*100):0}%`;
+  const recent=document.querySelector('#profile-recent-learning');
+  recent.innerHTML=(states||[]).map(state=>{const module=visibleModules.find(item=>item.id===state.module_id);if(!module)return '';const separator=String(state.url_path||'').includes('?')?'&':'?';return `<a href="${escapeHtml(state.url_path)}${separator}reprendre=1"><span>${escapeHtml(module.chapter.title)}</span><strong>${escapeHtml(module.title)}</strong><small>${Math.round(Number(state.progress_ratio||0)*100)}% lu · Reprendre →</small></a>`;}).join('')||'<p>Votre activité récente apparaîtra ici.</p>';
 };
 
 fileInput.addEventListener('change', () => {
@@ -283,6 +303,7 @@ form.addEventListener('submit', async (event) => {
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
   const username = usernameInput.value.trim();
+  const bio = bioInput.value.trim();
   const department = departmentCode(departmentInput.value);
   const fullName = `${firstName} ${lastName}`.trim();
   if (!firstName || !lastName) {
@@ -320,7 +341,7 @@ form.addEventListener('submit', async (event) => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
@@ -342,7 +363,7 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, firstName);
