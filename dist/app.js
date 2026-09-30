@@ -140,6 +140,7 @@ dialog?.addEventListener('click',event=>{if(event.target===dialog){const bounds=
 const courseList = document.querySelector('#course-list');
 const normalizeSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+let selectedPillarId=chapters[Math.max(0,(Number(params.get('chapitre'))||1)-1)]?.pillarId||pillars[0]?.id;
 
 function renderCourses(search='') {
   if (!courseList) return;
@@ -148,7 +149,7 @@ function renderCourses(search='') {
   const learningStates=window.__STOA_LEARNING_STATES__||[];
   let resultCount=0;
   const roman=['I','II','III','IV','V'];
-  courseList.innerHTML = pillars.map((pillar,pillarIndex)=>{
+  const pillarData=pillars.map((pillar,pillarIndex)=>{
     const pillarChapters=chapters.map((chapter,chapterIndex)=>({chapter,chapterIndex})).filter(({chapter})=>chapter.pillarId===pillar.id);
     const visibleChapters=pillarChapters.map(({chapter,chapterIndex})=>{
       const chapterNumber=chapterIndex+1;
@@ -163,7 +164,6 @@ function renderCourses(search='') {
       const percentage=chapter.modules.length?Math.round(finished/chapter.modules.length*100):0;
       return {chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage};
     }).filter(Boolean);
-    if(!visibleChapters.length)return '';
     const moduleTotal=pillarChapters.reduce((sum,item)=>sum+item.chapter.modules.length,0);
     const pillarFinished=pillarChapters.reduce((sum,{chapter,chapterIndex})=>sum+chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterIndex+1}-${moduleIndex+1}`)).length,0);
     const pillarPercentage=moduleTotal?Math.round(pillarFinished/moduleTotal*100):0;
@@ -171,10 +171,15 @@ function renderCourses(search='') {
     let continueItem=state?allModules.find(item=>item.chapter.modules[item.moduleIndex]?.id===state.module_id):null;
     continueItem ||= allModules.find(item=>item.chapter.pillarId===pillar.id&&!completed.has(item.id))||allModules.find(item=>item.chapter.pillarId===pillar.id);
     const description={NOURRIR:'Alimentation, hydratation et cuisine.',CORPS:'Mouvement, récupération et santé.',PROTÉGER:'Expositions, sécurité et résilience.',VIVRE:'Organisation, ressources et relations.','SE CONSTRUIRE':'Autonomie, sens et temps long.'}[pillar.name]||'Un parcours pour construire des fondations durables.';
-    const hasRequested=pillarChapters.some(item=>item.chapterIndex===requestedChapter);
-    return `<article class="academy-pillar-card ${hasRequested?'is-focused':''}" id="pilier-${pillarIndex+1}"><header><div class="pillar-card-symbol">${roman[pillarIndex]||number(pillarIndex+1)}</div><div><span class="eyebrow">PILIER ${roman[pillarIndex]||number(pillarIndex+1)}</span><h2>${escapeHtml(pillar.name)}</h2><p>${description}</p></div><div class="pillar-card-progress"><strong>${pillarPercentage}%</strong><span>complété</span></div></header><div class="pillar-progress-track"><i style="--progress:${pillarPercentage}%"></i></div><div class="pillar-card-meta"><span>${pillarChapters.length} chapitres · ${moduleTotal} leçons</span>${state?'<strong>Dernière lecture disponible</strong>':'<span>Parcours à découvrir</span>'}</div><div class="pillar-card-chapters">${visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} modules · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('')}</div>${continueItem?`<a class="pillar-continue" href="/module?chapitre=${continueItem.chapterIndex+1}&module=${continueItem.moduleIndex+1}${state?'&reprendre=1':''}"><span>${state?'Continuer votre dernière lecture':'Commencer ce pilier'}</span><strong>${escapeHtml(continueItem.title)}</strong><i>→</i></a>`:''}</article>`;
-  }).join('');
-  if(!resultCount) courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucun module trouvé.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';
+    return {pillar,pillarIndex,pillarChapters,visibleChapters,moduleTotal,pillarFinished,pillarPercentage,state,continueItem,description,image:pillarChapters[0]?.chapter?.slug||'alimentation'};
+  });
+  const available=pillarData.filter(item=>item.visibleChapters.length);
+  if(tokens.length&&!available.some(item=>item.pillar.id===selectedPillarId))selectedPillarId=available[0]?.pillar.id;
+  const selected=pillarData.find(item=>item.pillar.id===selectedPillarId)||available[0]||pillarData[0];
+  if(!resultCount||!selected){courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucun module trouvé.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';return;}
+  const gateways=pillarData.map(item=>`<button class="pillar-gateway ${item.pillar.id===selected.pillar.id?'active':''}" type="button" data-pillar-select="${escapeHtml(item.pillar.id)}" aria-pressed="${item.pillar.id===selected.pillar.id}"><span class="pillar-roman">${roman[item.pillarIndex]||number(item.pillarIndex+1)}</span><span class="pillar-shaft" aria-hidden="true"><i></i></span><strong>${escapeHtml(item.pillar.name)}</strong><small>${item.pillarPercentage}%</small></button>`).join('');
+  const focusChapters=selected.visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} modules · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('');
+  courseList.innerHTML=`<section class="academy-colonnade"><div class="pillar-gateways" aria-label="Choisir un pilier">${gateways}</div><article class="pillar-focus-panel"><div class="pillar-focus-visual" style="--pillar-image:url('/assets/categories/${escapeHtml(selected.image)}.jpg')"><span>PILIER ${roman[selected.pillarIndex]}</span><strong>${escapeHtml(selected.pillar.name)}</strong></div><div class="pillar-focus-content"><header><div><span class="eyebrow">PILIER ${roman[selected.pillarIndex]}</span><h2>${escapeHtml(selected.pillar.name)}</h2><p>${selected.description}</p></div><div class="pillar-card-progress"><strong>${selected.pillarPercentage}%</strong><span>complété</span></div></header><div class="pillar-progress-track"><i style="--progress:${selected.pillarPercentage}%"></i></div><div class="pillar-card-meta"><span>${selected.pillarChapters.length} chapitres · ${selected.moduleTotal} leçons</span>${selected.state?'<strong>Dernière lecture disponible</strong>':'<span>Parcours à découvrir</span>'}</div><div class="pillar-card-chapters">${focusChapters}</div>${selected.continueItem?`<a class="pillar-continue" href="/module?chapitre=${selected.continueItem.chapterIndex+1}&module=${selected.continueItem.moduleIndex+1}${selected.state?'&reprendre=1':''}"><span>${selected.state?'Continuer votre dernière lecture':'Commencer ce pilier'}</span><strong>${escapeHtml(selected.continueItem.title)}</strong><i>→</i></a>`:''}</div></article></section>`;
   const status=document.querySelector('#module-search-status');
   if(status) status.textContent=tokens.length?`${resultCount} module${resultCount>1?'s':''} trouvé${resultCount>1?'s':''}`:'';
 }
@@ -186,6 +191,7 @@ if (courseList) {
   if(params.get('recherche')) searchInput.value=params.get('recherche');
   else if(chapters[Number(requested)-1]) searchInput.value='';
   renderCourses(searchInput.value);
+  courseList.addEventListener('click',event=>{const button=event.target.closest('[data-pillar-select]');if(!button)return;selectedPillarId=button.dataset.pillarSelect;renderCourses(searchInput.value);courseList.querySelector('.pillar-focus-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
   searchInput.addEventListener('input',()=>{renderCourses(searchInput.value);clearSearch.hidden=!searchInput.value;const url=new URL(location);url.searchParams.delete('chapitre');searchInput.value?url.searchParams.set('recherche',searchInput.value):url.searchParams.delete('recherche');history.replaceState(null,'',url);});
   clearSearch.hidden=!searchInput.value;
   clearSearch.addEventListener('click',()=>{searchInput.value='';clearSearch.hidden=true;renderCourses();searchInput.focus();history.replaceState(null,'',location.pathname);});

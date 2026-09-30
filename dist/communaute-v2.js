@@ -11,6 +11,7 @@ const svg = {
   share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
   reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8-5 4 5 4"/><path d="M5 12h8c3.3 0 6 2 6 6"/></svg>',
   pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 6 0-.5 5 3 3v2H6v-2l3-3-.5-5M12 14v6"/></svg>',
+  more: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
 };
 const $ = (s) => document.querySelector(s);
 const els = {
@@ -108,7 +109,8 @@ const iconButton = (action, icon, label, cls = '') => `<button class="message-ac
 function tools(message) {
   if (message.deleted_at) return '';
   const own = message.user_id === user.id;
-  return `<div class="message-tools">${iconButton('reply', 'reply', 'Répondre')}${own ? iconButton('edit', 'edit', 'Modifier') : ''}${iconButton('share', 'share', 'Partager')}<button class="message-action reaction-toggle" type="button" aria-label="Ajouter une réaction" title="Réagir" aria-expanded="false">${svg.smile}</button>${isAdmin() ? iconButton('pin', 'pin', message.pinned_at ? 'Désépingler' : 'Épingler', message.pinned_at ? 'is-pinned' : '') : ''}${isAdmin() || own ? iconButton('delete', 'trash', 'Supprimer', 'message-delete') : ''}<div class="reaction-picker" hidden>${REACTIONS.map((e) => `<button type="button" data-reaction="${e}" aria-label="Réagir avec ${e}">${e}</button>`).join('')}</div></div>`;
+  const actions=`${iconButton('reply', 'reply', 'Répondre')}${own ? iconButton('edit', 'edit', 'Modifier') : ''}${iconButton('share', 'share', 'Partager')}<button class="message-action reaction-toggle" type="button" aria-label="Ajouter une réaction" title="Réagir" aria-expanded="false">${svg.smile}</button>${isAdmin() ? iconButton('pin', 'pin', message.pinned_at ? 'Désépingler' : 'Épingler', message.pinned_at ? 'is-pinned' : '') : ''}${isAdmin() || own ? iconButton('delete', 'trash', 'Supprimer', 'message-delete') : ''}`;
+  return `<div class="message-tools"><button class="message-action message-more" type="button" aria-label="Afficher les actions" aria-expanded="false">${svg.more}</button><div class="message-action-menu">${actions}</div><div class="reaction-picker" hidden>${REACTIONS.map((e) => `<button type="button" data-reaction="${e}" aria-label="Réagir avec ${e}">${e}</button>`).join('')}</div></div>`;
 }
 const deletedLabel = (m) => m.deleted_at ? `<span class="deleted-label">${isAdmin() ? 'Supprimé · visible pour la modération' : 'Message supprimé'}</span>` : '';
 function messageMarkup(m, index = -1) {
@@ -254,7 +256,7 @@ async function toggleReaction(id, emoji) {
   if (found) { const { error } = await supabase.from('message_reactions').delete().eq('id', found.id); if (!error) applyReaction({ eventType: 'DELETE', old: found }); }
   else { const { data, error } = await supabase.from('message_reactions').insert({ message_id: id, user_id: user.id, emoji }).select('id,message_id,user_id,emoji').single(); if (!error) applyReaction({ eventType: 'INSERT', new: data }); }
 }
-function closePickers(except) { document.querySelectorAll('.reaction-picker:not([hidden])').forEach((p) => { if (p !== except) { p.hidden = true; p.closest('.message-tools')?.querySelector('.reaction-toggle')?.setAttribute('aria-expanded', 'false'); } }); }
+function closePickers(except) { document.querySelectorAll('.reaction-picker:not([hidden])').forEach((p) => { if (p !== except) { p.hidden = true; p.closest('.message-tools')?.querySelector('.reaction-toggle')?.setAttribute('aria-expanded', 'false'); } });document.querySelectorAll('.message-tools.actions-open').forEach(tools=>{if(tools!==except){tools.classList.remove('actions-open');tools.querySelector('.message-more')?.setAttribute('aria-expanded','false');}}); }
 function openPicker(entry) { const picker = entry?.querySelector('.reaction-picker'), toggle = entry?.querySelector('.reaction-toggle'); if (!picker) return; closePickers(picker); picker.hidden = false; toggle.setAttribute('aria-expanded', 'true'); }
 function showProfile(id) {
   const p = profile(id); els.profile.innerHTML = `${avatar(p, 'community-profile-avatar')}<span class="eyebrow">PROFIL MEMBRE</span><h2 id="community-profile-name">${esc(p.display_name)}</h2>${p.username ? `<p class="community-profile-username">@${esc(p.username)}</p>` : ''}${p.bio?`<p class="community-profile-bio">${esc(p.bio)}</p>`:''}<div class="community-profile-level"><strong>Niveau ${Number(p.level_number) || 1}</strong><span>${esc(p.level_label || 'Initié')} · ${Number(p.completed_modules) || 0} module${Number(p.completed_modules) > 1 ? 's' : ''} terminé${Number(p.completed_modules) > 1 ? 's' : ''}</span></div><div class="community-profile-meta"><span>${esc(roleLabels[p.role] || roleLabels.member)}</span>${p.department ? `<span>${esc(departmentLabel(p.department))}</span>` : ''}<span>Membre depuis ${memberSince(p.created_at)}</span></div>`; els.profileDialog.showModal();
@@ -339,6 +341,8 @@ els.list.addEventListener('click', async (e) => {
   const channel = e.target.closest('[data-channel-slug]'); if (channel) return switchChannel(channel.dataset.channelSlug);
   const profileButton = e.target.closest('[data-profile-id]'); if (profileButton) return showProfile(profileButton.dataset.profileId);
   const entry = e.target.closest('[data-message-id]'); if (!entry) return; const action = e.target.closest('[data-message-action]')?.dataset.messageAction;
+  const more = e.target.closest('.message-more'); if (more) { const tools=more.closest('.message-tools'),opening=!tools.classList.contains('actions-open');closePickers(opening?tools:null);tools.classList.toggle('actions-open',opening);more.setAttribute('aria-expanded',String(opening));return; }
+  if(action)closePickers();
   if (action === 'reply') return startReply(entry.dataset.messageId); if (action === 'edit') return startEdit(entry.dataset.messageId); if (action === 'share') return openShare(entry.dataset.messageId); if (action === 'pin') return togglePin(entry.dataset.messageId); if (action === 'delete') return removeMessage(entry.dataset.messageId);
   const toggle = e.target.closest('.reaction-toggle'); if (toggle) { const picker = entry.querySelector('.reaction-picker'); return picker.hidden ? openPicker(entry) : closePickers(); }
   const reaction = e.target.closest('[data-reaction]'); if (reaction) { toggleReaction(entry.dataset.messageId, reaction.dataset.reaction); closePickers(); }
