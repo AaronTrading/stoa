@@ -168,7 +168,7 @@ function renderCourses(search='') {
     const pillarFinished=pillarChapters.reduce((sum,{chapter,chapterIndex})=>sum+chapter.modules.filter((_,moduleIndex)=>completed.has(`${chapterIndex+1}-${moduleIndex+1}`)).length,0);
     const pillarPercentage=moduleTotal?Math.round(pillarFinished/moduleTotal*100):0;
     const state=learningStates.find(item=>pillarChapters.some(({chapter})=>chapter.modules.some(module=>module.id===item.module_id)));
-    const continueItem=state?allModules.find(item=>item.chapter.modules[item.moduleIndex]?.id===state.module_id):null;
+    let continueItem=state?allModules.find(item=>item.chapter.modules[item.moduleIndex]?.id===state.module_id):null;
     continueItem ||= allModules.find(item=>item.chapter.pillarId===pillar.id&&!completed.has(item.id))||allModules.find(item=>item.chapter.pillarId===pillar.id);
     const description={NOURRIR:'Alimentation, hydratation et cuisine.',CORPS:'Mouvement, récupération et santé.',PROTÉGER:'Expositions, sécurité et résilience.',VIVRE:'Organisation, ressources et relations.','SE CONSTRUIRE':'Autonomie, sens et temps long.'}[pillar.name]||'Un parcours pour construire des fondations durables.';
     const hasRequested=pillarChapters.some(item=>item.chapterIndex===requestedChapter);
