@@ -104,14 +104,60 @@ const restoreOriginal = () => {
   leaveEditMode();
 };
 
+const addSubchapter = () => {
+  if (!editing) return;
+  const title = window.prompt('Titre du nouveau sous-chapitre :', 'Nouveau sous-chapitre');
+  if (title === null) return;
+  const cleanTitle = title.trim();
+  if (!cleanTitle) { setStatus('Le titre du sous-chapitre ne peut pas être vide.', 'error'); return; }
+
+  const copy = document.querySelector('#lesson-copy');
+  const section = document.createElement('section');
+  section.className = 'lesson-subchapter';
+  section.dataset.newSubchapter = 'true';
+
+  const number = document.createElement('span');
+  number.className = 'eyebrow';
+  number.textContent = String(copy.querySelectorAll('.lesson-subchapter').length + 1).padStart(2, '0');
+
+  const heading = document.createElement('h2');
+  heading.dataset.subchapterTitle = '';
+  heading.textContent = cleanTitle;
+  heading.contentEditable = 'true';
+  heading.spellcheck = true;
+
+  const content = document.createElement('div');
+  content.className = 'lesson-subchapter-content';
+  content.contentEditable = 'true';
+  content.spellcheck = true;
+  content.innerHTML = '<p><br></p>';
+
+  section.append(number, heading, content);
+  copy.append(section);
+  activeEditor = content;
+  section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  requestAnimationFrame(() => content.focus());
+  setStatus('Sous-chapitre ajouté. Enregistrez pour le publier.');
+};
+
 const saveLesson = async () => {
   const title = document.querySelector('#lesson-title').textContent.trim();
   const description = document.querySelector('[data-module-description]')?.textContent.trim() || '';
   if (!title) { setStatus('Le titre ne peut pas être vide.', 'error'); return; }
+  const newSections = [...document.querySelectorAll('[data-new-subchapter]')];
+  if (newSections.some((section) => !section.querySelector('[data-subchapter-title]')?.textContent.trim())) {
+    setStatus('Chaque sous-chapitre doit avoir un titre.', 'error'); return;
+  }
   const quizEditors = [...document.querySelectorAll('.lesson-quiz[data-quiz]')];
   const quizzes = quizEditors.map(readQuizEditor);
   const invalidQuiz = quizzes.find((quiz) => !quiz.questions.length || quiz.questions.some((question) => !question.question || question.answers.length < 2 || question.answers.some((answer) => !answer) || question.correct < 0 || question.correct >= question.answers.length));
   if (invalidQuiz) { setStatus('Complétez chaque question, avec au moins deux réponses et une bonne réponse.', 'error'); return; }
+  let nextOrder = 0;
+  if (newSections.length) {
+    const { data: lastSection, error: orderError } = await supabase.from('subchapters').select('order_index').eq('module_id', lessonData.moduleId).order('order_index', { ascending: false }).limit(1).maybeSingle();
+    if (orderError) { setStatus(`Échec : ${orderError.message}`, 'error'); return; }
+    nextOrder = (lastSection?.order_index ?? -1) + 1;
+  }
   quizEditors.forEach((element, index) => { element.dataset.quiz = JSON.stringify(quizzes[index]); element.replaceChildren(); });
   setStatus('Enregistrement…');
   const promises = [supabase.from('modules').update({ title, description }).eq('id', lessonData.moduleId)];
@@ -122,9 +168,29 @@ const saveLesson = async () => {
     const content = cleanHtml(section.querySelector('.lesson-subchapter-content').innerHTML);
     promises.push(supabase.from('subchapters').update({ title: sectionTitle, content }).eq('id', section.dataset.subchapterId));
   });
+  const insertOffset = promises.length;
+  newSections.forEach((section, index) => {
+    const sectionTitle = section.querySelector('[data-subchapter-title]').textContent.trim();
+    const content = cleanHtml(section.querySelector('.lesson-subchapter-content').innerHTML);
+    promises.push(supabase.from('subchapters').insert({ module_id: lessonData.moduleId, title: sectionTitle, content, order_index: nextOrder + index }).select('id,title,order_index').single());
+  });
   const results = await Promise.all(promises);
   const error = results.find((result) => result.error)?.error;
-  if (error) { setStatus(`Échec : ${error.message}`, 'error'); return; }
+  if (error) {
+    quizEditors.forEach((element, index) => renderQuizEditor(element, quizzes[index]));
+    setStatus(`Échec : ${error.message}`, 'error'); return;
+  }
+  newSections.forEach((section, index) => {
+    const created = results[insertOffset + index].data;
+    section.dataset.subchapterId = created.id;
+    section.removeAttribute('data-new-subchapter');
+    section.id = `lesson-${created.id}`;
+    lessonData.sections.push({ id: created.id, title: created.title });
+  });
+  document.querySelectorAll('[data-subchapter-id]').forEach((section) => {
+    const known = lessonData.sections.find((item) => item.id === section.dataset.subchapterId);
+    if (known) known.title = section.querySelector('[data-subchapter-title]')?.textContent.trim() || known.title;
+  });
   await supabase.from('subchapter_images').delete().in('subchapter_id', lessonData.sections.map((item) => item.id));
   document.querySelectorAll('.lesson-subchapter-content').forEach((element) => { element.innerHTML = cleanHtml(element.innerHTML); });
   document.querySelectorAll('.lesson-quiz[data-quiz]').forEach(renderQuizForReader);
@@ -149,6 +215,7 @@ if (window.__STOA_LESSON_DATA__) initialize();
 pencil?.addEventListener('click', enterEditMode);
 document.querySelector('#lesson-edit-cancel')?.addEventListener('click', restoreOriginal);
 document.querySelector('#lesson-edit-save')?.addEventListener('click', saveLesson);
+document.querySelector('#lesson-subchapter-add')?.addEventListener('click', addSubchapter);
 
 document.addEventListener('selectionchange', () => {
   if (!editing) return;
