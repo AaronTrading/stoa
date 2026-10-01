@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { loadMemberSnapshot } from './member-data.js';
+import './support-widget.js';
 
 const body=document.body;
 
