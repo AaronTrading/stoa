@@ -6,6 +6,7 @@ const bar = document.querySelector('#lesson-editor-bar');
 const status = document.querySelector('#lesson-editor-status');
 const imageInput = document.querySelector('#lesson-image-input');
 const imageButton = document.querySelector('label[for="lesson-image-input"]');
+const fontSelect = document.querySelector('#lesson-font-select');
 let lessonData;
 let editing = false;
 let original = {};
@@ -27,13 +28,24 @@ const normalizeQuiz = (value) => {
 const cleanHtml = (html) => {
   const template = document.createElement('template');
   template.innerHTML = html;
-  const allowed = new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','A','OL','UL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION']);
+  template.content.querySelectorAll('font[face]').forEach((font) => {
+    const face = (font.getAttribute('face') || '').toLowerCase();
+    const kind = face.includes('cormorant') ? 'serif' : face.includes('segoe') ? 'sans' : '';
+    if (!kind) { font.replaceWith(...font.childNodes); return; }
+    const span = document.createElement('span');
+    span.dataset.font = kind;
+    span.append(...font.childNodes);
+    font.replaceWith(span);
+  });
+  const allowed = new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','A','OL','UL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','SPAN']);
   [...template.content.querySelectorAll('*')].forEach((element) => {
     if (!allowed.has(element.tagName)) { element.replaceWith(...element.childNodes); return; }
     const source = element.tagName === 'IMG' ? element.getAttribute('src') || '' : '';
     const href = element.tagName === 'A' ? element.getAttribute('href') || '' : '';
     const quiz = element.tagName === 'SECTION' ? normalizeQuiz(element.getAttribute('data-quiz')) : null;
+    const font = element.tagName === 'SPAN' ? element.getAttribute('data-font') || '' : '';
     if (element.tagName === 'SECTION' && !quiz.questions.length) { element.remove(); return; }
+    if (element.tagName === 'SPAN' && !['sans','serif'].includes(font)) { element.replaceWith(...element.childNodes); return; }
     [...element.attributes].forEach((attribute) => element.removeAttribute(attribute.name));
     if (element.tagName === 'IMG') {
       if (source.startsWith('https://') || source.startsWith('/')) element.setAttribute('src', source);
@@ -48,6 +60,7 @@ const cleanHtml = (html) => {
     }
     if (element.tagName === 'FIGURE') element.className = 'lesson-inline-image';
     if (element.tagName === 'SECTION') { element.className = 'lesson-quiz'; element.dataset.quiz = JSON.stringify(quiz); element.replaceChildren(); }
+    if (element.tagName === 'SPAN') element.dataset.font = font;
   });
   return template.innerHTML.trim();
 };
@@ -96,6 +109,7 @@ const leaveEditMode = () => {
   editableAreas().forEach((element) => element.removeAttribute('contenteditable'));
   document.querySelectorAll('.editor-image-selected').forEach((element) => element.classList.remove('editor-image-selected'));
   prepareFigures(); savedRange = undefined; activeEditor = undefined;
+  if (fontSelect) fontSelect.value = '';
 };
 
 const restoreOriginal = () => {
@@ -165,6 +179,25 @@ bar?.addEventListener('click', (event) => {
   if (commandButton) document.execCommand(commandButton.dataset.editCommand, false);
   if (blockButton) document.execCommand('formatBlock', false, blockButton.dataset.editBlock);
   activeEditor?.focus();
+});
+
+fontSelect?.addEventListener('change', () => {
+  const font = fontSelect.value;
+  if (!font) return;
+  if (!activeEditor || !savedRange || !activeEditor.contains(savedRange.commonAncestorContainer)) {
+    setStatus('Sélectionnez d’abord le texte à modifier.', 'error');
+    fontSelect.value = '';
+    return;
+  }
+  activeEditor.focus();
+  const selection = getSelection();
+  selection.removeAllRanges();
+  selection.addRange(savedRange.cloneRange());
+  document.execCommand('styleWithCSS', false, false);
+  document.execCommand('fontName', false, font);
+  if (selection.rangeCount) savedRange = selection.getRangeAt(0).cloneRange();
+  setStatus(`Police ${font === 'Segoe UI' ? 'Segoe UI' : 'Cormorant'} appliquée.`);
+  fontSelect.value = '';
 });
 
 document.querySelector('#lesson-quiz-add')?.addEventListener('click', () => {

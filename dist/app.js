@@ -236,13 +236,20 @@ if (document.querySelector('#lesson-content')) {
   };
   const sanitizeStoredHtml=(html)=>{
     const template=document.createElement('template'); template.innerHTML=html;
-    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','A']);
+    template.content.querySelectorAll('font[face]').forEach(font=>{
+      const face=(font.getAttribute('face')||'').toLowerCase(),kind=face.includes('cormorant')?'serif':face.includes('segoe')?'sans':'';
+      if(!kind){font.replaceWith(...font.childNodes);return;}
+      const span=document.createElement('span');span.dataset.font=kind;span.append(...font.childNodes);font.replaceWith(span);
+    });
+    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','A','SPAN']);
     [...template.content.querySelectorAll('*')].forEach(element=>{
       if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
       const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
       const linkTarget=element.tagName==='A'?(element.getAttribute('href')||''):'';
       const quiz=element.tagName==='SECTION'?normalizeQuiz(element.getAttribute('data-quiz')):null;
+      const font=element.tagName==='SPAN'?(element.getAttribute('data-font')||''):'';
       if(element.tagName==='SECTION'&&!quiz){element.replaceWith(...element.childNodes);return;}
+      if(element.tagName==='SPAN'&&!['sans','serif'].includes(font)){element.replaceWith(...element.childNodes);return;}
       [...element.attributes].forEach(attribute=>element.removeAttribute(attribute.name));
       if(element.tagName==='IMG'){
         if(imageSource.startsWith('https://')||imageSource.startsWith('/')) element.setAttribute('src',imageSource); else element.remove();
@@ -254,6 +261,7 @@ if (document.querySelector('#lesson-content')) {
       }
       if(element.tagName==='FIGURE') element.className='lesson-inline-image';
       if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
+      if(element.tagName==='SPAN') element.dataset.font=font;
     });
     return template.innerHTML;
   };
