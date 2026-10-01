@@ -178,7 +178,7 @@ const initializeProfile = async () => {
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
-  document.querySelector('#profile-level').textContent = publicProfile ? `Niveau ${publicProfile.level_number} · ${publicProfile.level_label} (${publicProfile.completed_modules} module${Number(publicProfile.completed_modules) > 1 ? 's' : ''})` : 'Niveau 1 · Initié';
+  document.querySelector('#profile-level').textContent = publicProfile ? `Niveau ${publicProfile.level_number} · ${publicProfile.level_label} (${publicProfile.completed_modules} leçon${Number(publicProfile.completed_modules) > 1 ? 's' : ''})` : 'Niveau 1 · Initié';
   document.querySelector('#profile-created-at').textContent = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at));
   document.querySelector('#profile-provider').textContent = user.app_metadata?.provider === 'discord' ? 'Connecté avec Discord' : 'Connecté par email';
   showAvatar(avatarUrl, firstName || user.email);
@@ -188,24 +188,6 @@ const initializeProfile = async () => {
   });
   const identities = identitiesResult.data?.identities || user.identities || [];
   setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
-  hydrateLearningOverview();
-};
-
-const escapeHtml = (value = '') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const hydrateLearningOverview = async () => {
-  const [{ data: chapters }, { data: progress }, { data: states }] = await Promise.all([
-    supabase.from('chapters').select('id,title,order_index,pillar_id,modules(id,title,order_index,is_visible)').eq('is_visible', true).order('order_index'),
-    supabase.from('user_progress').select('module_id').eq('user_id', user.id).eq('status', 'completed').is('subchapter_id', null),
-    supabase.from('user_learning_state').select('module_id,url_path,progress_ratio,last_read_at').eq('user_id', user.id).order('last_read_at', { ascending: false }).limit(5),
-  ]);
-  const visibleModules=(chapters||[]).flatMap(chapter=>(chapter.modules||[]).filter(module=>module.is_visible!==false).map(module=>({...module,chapter})));
-  const completedIds=new Set((progress||[]).map(item=>item.module_id));
-  const engaged=new Set(visibleModules.filter(module=>completedIds.has(module.id)||(states||[]).some(state=>state.module_id===module.id)).map(module=>module.chapter.pillar_id));
-  document.querySelector('#profile-completed-count').textContent=completedIds.size;
-  document.querySelector('#profile-pillar-count').textContent=engaged.size;
-  document.querySelector('#profile-global-progress').textContent=`${visibleModules.length?Math.round(completedIds.size/visibleModules.length*100):0}%`;
-  const recent=document.querySelector('#profile-recent-learning');
-  recent.innerHTML=(states||[]).map(state=>{const module=visibleModules.find(item=>item.id===state.module_id);if(!module)return '';const separator=String(state.url_path||'').includes('?')?'&':'?';return `<a href="${escapeHtml(state.url_path)}${separator}reprendre=1"><span>${escapeHtml(module.chapter.title)}</span><strong>${escapeHtml(module.title)}</strong><small>${Math.round(Number(state.progress_ratio||0)*100)}% lu · Reprendre →</small></a>`;}).join('')||'<p>Votre activité récente apparaîtra ici.</p>';
 };
 
 fileInput.addEventListener('change', () => {

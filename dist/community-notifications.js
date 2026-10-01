@@ -24,6 +24,7 @@ const authorName = async (id) => { const { data } = await supabase.rpc('get_comm
 
 const show = async (item) => {
   if (!item || !notification) return;
+  if (location.pathname.replace(/\.html$/, '') === '/module') return;
   currentNotificationId = item.id;
   const author = await authorName(item.actor_id);
   const titles = { reply: `${author} vous a répondu`, mention: `${author} vous a mentionné`, reply_mention: `${author} vous a répondu et mentionné` };

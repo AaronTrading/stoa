@@ -176,12 +176,12 @@ function renderCourses(search='') {
   const available=pillarData.filter(item=>item.visibleChapters.length);
   if(tokens.length&&!available.some(item=>item.pillar.id===selectedPillarId))selectedPillarId=available[0]?.pillar.id;
   const selected=pillarData.find(item=>item.pillar.id===selectedPillarId)||available[0]||pillarData[0];
-  if(!resultCount||!selected){courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucun module trouvé.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';return;}
+  if(!resultCount||!selected){courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucune leçon trouvée.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';return;}
   const gateways=pillarData.map(item=>`<button class="pillar-gateway ${item.pillar.id===selected.pillar.id?'active':''}" type="button" data-pillar-select="${escapeHtml(item.pillar.id)}" aria-pressed="${item.pillar.id===selected.pillar.id}"><span class="pillar-roman">${roman[item.pillarIndex]||number(item.pillarIndex+1)}</span><span class="pillar-shaft" aria-hidden="true"><i></i></span><strong>${escapeHtml(item.pillar.name)}</strong><small>${item.pillarPercentage}%</small></button>`).join('');
-  const focusChapters=selected.visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} modules · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('');
+  const focusChapters=selected.visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} leçons · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('');
   courseList.innerHTML=`<section class="academy-colonnade"><div class="pillar-gateways" aria-label="Choisir un pilier">${gateways}</div><article class="pillar-focus-panel"><div class="pillar-focus-visual" style="--pillar-image:url('/assets/categories/${escapeHtml(selected.image)}.jpg')"><span>PILIER ${roman[selected.pillarIndex]}</span><strong>${escapeHtml(selected.pillar.name)}</strong></div><div class="pillar-focus-content"><header><div><span class="eyebrow">PILIER ${roman[selected.pillarIndex]}</span><h2>${escapeHtml(selected.pillar.name)}</h2><p>${selected.description}</p></div><div class="pillar-card-progress"><strong>${selected.pillarPercentage}%</strong><span>complété</span></div></header><div class="pillar-progress-track"><i style="--progress:${selected.pillarPercentage}%"></i></div><div class="pillar-card-meta"><span>${selected.pillarChapters.length} chapitres · ${selected.moduleTotal} leçons</span>${selected.state?'<strong>Dernière lecture disponible</strong>':'<span>Parcours à découvrir</span>'}</div><div class="pillar-card-chapters">${focusChapters}</div>${selected.continueItem?`<a class="pillar-continue" href="/module?chapitre=${selected.continueItem.chapterIndex+1}&module=${selected.continueItem.moduleIndex+1}${selected.state?'&reprendre=1':''}"><span>${selected.state?'Continuer votre dernière lecture':'Commencer ce pilier'}</span><strong>${escapeHtml(selected.continueItem.title)}</strong><i>→</i></a>`:''}</div></article></section>`;
   const status=document.querySelector('#module-search-status');
-  if(status) status.textContent=tokens.length?`${resultCount} module${resultCount>1?'s':''} trouvé${resultCount>1?'s':''}`:'';
+  if(status) status.textContent=tokens.length?`${resultCount} leçon${resultCount>1?'s':''} trouvée${resultCount>1?'s':''}`:'';
 }
 
 if (courseList) {
@@ -195,17 +195,17 @@ if (courseList) {
   searchInput.addEventListener('input',()=>{renderCourses(searchInput.value);clearSearch.hidden=!searchInput.value;const url=new URL(location);url.searchParams.delete('chapitre');searchInput.value?url.searchParams.set('recherche',searchInput.value):url.searchParams.delete('recherche');history.replaceState(null,'',url);});
   clearSearch.hidden=!searchInput.value;
   clearSearch.addEventListener('click',()=>{searchInput.value='';clearSearch.hidden=true;renderCourses();searchInput.focus();history.replaceState(null,'',location.pathname);});
-  document.querySelector('#progress-count').textContent=completed.size;
-  document.querySelector('#progress-total').textContent=`/ ${allModules.length} modules`;
-  const progress=document.querySelector('#total-progress');progress.max=allModules.length;progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;
-  document.querySelector('#library-count').textContent=`${pillars.length} piliers · ${chapters.length} chapitres · ${allModules.length} modules`;
-  if(completed.size)document.querySelector('#progress-caption').textContent=completed.size===allModules.length?'Vos fondations sont posées. Continuez à les cultiver.':'Chaque module compte. Continuez à votre rythme.';
+  const progressCount=document.querySelector('#progress-count');if(progressCount)progressCount.textContent=completed.size;
+  const progressTotal=document.querySelector('#progress-total');if(progressTotal)progressTotal.textContent=`/ ${allModules.length} leçons`;
+  const progress=document.querySelector('#total-progress');if(progress){progress.max=allModules.length;progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;}
+  document.querySelector('#library-count').textContent=`${pillars.length} piliers · ${chapters.length} chapitres · ${allModules.length} leçons`;
+  const progressCaption=document.querySelector('#progress-caption');if(completed.size&&progressCaption)progressCaption.textContent=completed.size===allModules.length?'Vos fondations sont posées. Continuez à les cultiver.':'Chaque leçon compte. Continuez à votre rythme.';
   const next=allModules.find(module=>!completed.has(module.id));
-  if(next){const pillar=pillars.find(item=>item.id===next.chapter.pillarId);document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`${pillar?.name||''} · CHAPITRE ${number(next.chapter.pillarChapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
+  if(next&&document.querySelector('#continue-title')){const pillar=pillars.find(item=>item.id===next.chapter.pillarId);document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`${pillar?.name||''} · CHAPITRE ${number(next.chapter.pillarChapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
   syncRemoteProgress().then(()=>{
     renderCourses(searchInput.value);
-    document.querySelector('#progress-count').textContent=completed.size;
-    const progress=document.querySelector('#total-progress');progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;
+    const count=document.querySelector('#progress-count');if(count)count.textContent=completed.size;
+    const progress=document.querySelector('#total-progress');if(progress){progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;}
   });
   window.addEventListener('stoa:learning-state',()=>renderCourses(searchInput.value));
   window.addEventListener('stoa:catalog-ready',()=>renderCourses(searchInput.value));
@@ -219,12 +219,12 @@ if (document.querySelector('#lesson-content')) {
   const lessonPillar=pillars.find(item=>item.id===chapter.pillarId);
   document.title=`${module.title} — STOA`;
   document.querySelector('#lesson-title').textContent=module.title;
-  document.querySelector('#lesson-kicker').textContent=`PILIER ${lessonPillar?.name||''} / CHAPITRE ${number(chapter.pillarChapterIndex+1)} — ${chapter.name.toUpperCase()} / MODULE ${number(moduleIndex+1)}`;
+  document.querySelector('#lesson-kicker').textContent=`PILIER ${lessonPillar?.name||''} / CHAPITRE ${number(chapter.pillarChapterIndex+1)} — ${chapter.name.toUpperCase()} / LEÇON ${number(moduleIndex+1)}`;
   const artwork=document.querySelector('#lesson-artwork');artwork.src=imagePath(chapter);artwork.alt=`Illustration du chapitre ${chapter.name}`;
   document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">${lessonPillar?.name||''} · CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
-  document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Ce module pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu définitif sera servi depuis Supabase sous forme de sous-chapitres ordonnés. Cette page montre la structure de lecture et de progression.</p>`;
+  document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Cette leçon pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu est servi depuis Supabase sous forme de sections ordonnées.</p>`;
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
   const normalizeQuiz=(value)=>{
@@ -298,10 +298,12 @@ if (document.querySelector('#lesson-content')) {
         return `${renderContentBlock(paragraph)}${placed}`;
       }).join('');
       const remaining=sectionImages.filter(image=>image.position_index>paragraphs.length).map(imageMarkup).join('');
-      const heading=section.title==='Cours'?'':`<span class="eyebrow">${number(sectionIndex+1)}</span><h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
+      const heading=section.title==='Cours'?'':`<h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
       return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
     window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
+    const summary=document.querySelector('#lesson-summary');
+    summary.innerHTML=sections.filter(section=>section.title!=='Cours').map(section=>`<a href="#lesson-${section.id}">${escapeContent(section.title)}</a>`).join('');
     renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };
@@ -315,13 +317,19 @@ if (document.querySelector('#lesson-content')) {
     let score=0; fields.forEach((field,index)=>{const selected=field.querySelector('.selected'),answerIndex=Number(selected.dataset.quizAnswer),correct=quiz.questions[index].correct;if(answerIndex===correct){score++;selected.classList.add('correct');}else{selected.classList.add('incorrect');field.querySelector(`[data-quiz-answer="${correct}"]`)?.classList.add('correct');}});
     quizElement.querySelector('.lesson-quiz-footer p').textContent=`${score} bonne${score>1?'s':''} réponse${score>1?'s':''} sur ${fields.length}.`;
   });
+  const summaryToggle=document.querySelector('#lesson-summary-toggle'),summary=document.querySelector('#lesson-summary');
+  summaryToggle.addEventListener('click',()=>{const open=summaryToggle.getAttribute('aria-expanded')!=='true';summaryToggle.setAttribute('aria-expanded',String(open));summaryToggle.querySelector('span').textContent=open?'−':'＋';summary.hidden=!open;});
+  summary.addEventListener('click',event=>{if(event.target.closest('a')&&matchMedia('(max-width: 760px)').matches){summary.hidden=true;summaryToggle.setAttribute('aria-expanded','false');summaryToggle.querySelector('span').textContent='＋';}});
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
-  const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${module.id||id}`,savedNote=readSaved(noteKey,'');notes.value=typeof savedNote==='string'?savedNote:'';
-  notes.addEventListener('input',()=>{document.querySelector('#note-status').textContent=save(noteKey,notes.value)?'Notes enregistrées sur cet appareil.':'Le navigateur ne permet pas l’enregistrement.';});
+  const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${module.id||id}`,noteStatus=document.querySelector('#note-status'),savedNote=readSaved(noteKey,''),lessonUuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(module.id||'')?module.id:null;notes.value=typeof savedNote==='string'?savedNote:'';
+  const noteSession=(await supabase.auth.getSession()).data.session;
+  if(noteSession&&lessonUuid){const {data:remoteNote}=await supabase.from('user_lesson_notes').select('content').eq('user_id',noteSession.user.id).eq('module_id',lessonUuid).maybeSingle();if(remoteNote){notes.value=remoteNote.content||'';save(noteKey,notes.value);}noteStatus.textContent='Notes synchronisées avec votre compte.';}else noteStatus.textContent='Notes enregistrées sur cet appareil.';
+  let noteTimer;notes.addEventListener('input',()=>{save(noteKey,notes.value);noteStatus.textContent=noteSession&&lessonUuid?'Enregistrement…':'Notes enregistrées sur cet appareil.';clearTimeout(noteTimer);if(noteSession&&lessonUuid)noteTimer=setTimeout(async()=>{const {error}=await supabase.from('user_lesson_notes').upsert({user_id:noteSession.user.id,module_id:lessonUuid,content:notes.value,updated_at:new Date().toISOString()},{onConflict:'user_id,module_id'});noteStatus.textContent=error?'La note reste enregistrée sur cet appareil.':'Notes synchronisées avec votre compte.';},650);});
   const completeButton=document.querySelector('#complete-module');
   const updateCompletion=()=>{const done=completed.has(id);completeButton.innerHTML=done?'Terminé — annuler <span>↶</span>':'Marquer comme terminé <span>✓</span>';completeButton.setAttribute('aria-pressed',String(done));};updateCompletion();
-  completeButton.addEventListener('click',()=>{completed.has(id)?completed.delete(id):completed.add(id);const saved=save(progressStorageKey,[...completed]);persistModuleProgress(id,completed.has(id));updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Module terminé. Votre progression est enregistrée.':'Ce module est de nouveau à découvrir.'):'Progression modifiée pour cette session.';});
-  const nextIndex=allModules.findIndex(item=>item.id===id)+1,nextLink=document.querySelector('#next-module');
-  if(nextIndex<allModules.length){const next=allModules[nextIndex];nextLink.href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;}else nextLink.innerHTML='Retour à mon académie <span>→</span>';
+  completeButton.addEventListener('click',()=>{completed.has(id)?completed.delete(id):completed.add(id);const saved=save(progressStorageKey,[...completed]);persistModuleProgress(id,completed.has(id));updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Leçon terminée. Votre progression est enregistrée.':'Cette leçon est de nouveau à découvrir.'):'Progression modifiée pour cette session.';});
+  const currentIndex=allModules.findIndex(item=>item.id===id),previousLink=document.querySelector('#previous-module'),nextLink=document.querySelector('#next-module');
+  if(currentIndex>0){const previous=allModules[currentIndex-1];previousLink.href=`/module?chapitre=${previous.chapterIndex+1}&module=${previous.moduleIndex+1}`;}else{previousLink.href='/academie';previousLink.innerHTML='<span>←</span> Académie';}
+  if(currentIndex+1<allModules.length){const next=allModules[currentIndex+1];nextLink.href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;}else nextLink.innerHTML='Retour à l’Académie <span>→</span>';
   syncRemoteProgress().then(()=>{renderNav();updateCompletion();});
 }

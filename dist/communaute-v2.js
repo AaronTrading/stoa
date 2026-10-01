@@ -210,7 +210,7 @@ async function switchChannel(id) {
   const next = channels.find((c) => c.id === id || c.slug === id); if (!next || switching || active?.id === next.id) return;
   switching = true; await unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.name.textContent = next.name; els.description.textContent = next.description || ''; els.typing.hidden = true; els.pinned.hidden = true;
   els.form.hidden = next.kind === 'polls' || (next.kind === 'announcements' && !isAdmin());
-  els.pollForm.hidden = next.kind !== 'polls' || !isAdmin(); els.guidance.hidden = true;
+  els.pollForm.hidden = true; els.form.hidden = true; els.guidance.hidden = true;
   if (next.kind === 'announcements' && isAdmin()) { els.guidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
   resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.set('canal', next.slug); window.history.replaceState(null, '', url);
   await loadMessages(); subscribe(next); switching = false;

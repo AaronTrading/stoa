@@ -165,7 +165,7 @@ const publicCardMarkup = (product, index) => `
       <h2>${escapeHtml(product.nom)}</h2>
       <p>${escapeHtml(product.description)}</p>
       ${selectionMarkup(product)}
-      <div class="product-card-bottom"><strong data-product-price>${price(product.selections?.[0]?.price ?? product.prix)}</strong><button class="button dark" type="button" data-order-product="${escapeHtml(product.id)}">Commander <span>↗</span></button></div>
+      <div class="product-card-bottom"><strong data-product-price>${price(product.selections?.[0]?.price ?? product.prix)}</strong><button class="button dark" type="button" data-order-product="${escapeHtml(product.id)}">Faire une demande <span>↗</span></button></div>
     </div>
   </article>`;
 
@@ -182,8 +182,9 @@ const fromDatabase = (row) => ({
 const loadProducts = async () => {
   const { data } = await supabase.from('shop_products').select('*').eq('active', true).order('order_index');
   if (data?.length) {
-    products = data.map(fromDatabase);
-    persistedIds = new Set(data.map((row) => row.id));
+    const availableRows=data.filter((row)=>!/pas encore dispo|indisponible/i.test(`${row.name||''} ${row.description||''}`));
+    products = availableRows.map(fromDatabase);
+    persistedIds = new Set(availableRows.map((row) => row.id));
   }
   renderProducts();
 };

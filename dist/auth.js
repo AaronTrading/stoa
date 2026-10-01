@@ -35,7 +35,7 @@ dialog.innerHTML = `
   </div>
   <div class="auth-member-view" hidden>
     <p>Vous êtes connecté avec <strong data-auth-email></strong>.</p>
-    <a class="button dark" href="/academie">Ouvrir mon académie <span>↗</span></a>
+    <a class="button dark" href="/accueil">Ouvrir mon espace <span>↗</span></a>
     <a class="button profile-button" href="/profil">Gérer mon profil <span>↗</span></a>
     <button class="auth-secondary" type="button" data-auth-action="signout">Se déconnecter</button>
   </div>
@@ -84,8 +84,8 @@ const updateAuthUI = (session, profile = currentProfile) => {
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
-    link.href = user ? '/academie' : '#connexion';
-    const label = user ? (firstName ? `Bonjour ${firstName}` : 'Mon académie') : 'Espace membre';
+    link.href = user ? '/accueil' : '#connexion';
+    const label = user ? 'Accéder à l’Académie' : 'Espace membre';
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
     link.replaceChildren(document.createTextNode(`${label} `), arrow);
@@ -140,7 +140,7 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('/academie', siteUrl).href;
+const redirectTo = new URL('/accueil', siteUrl).href;
 
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
@@ -184,7 +184,7 @@ const initializeAuth = async () => {
     updateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
-    if (location.pathname === '/' || location.pathname === '/index') location.assign('/academie');
+    if (location.pathname === '/' || location.pathname === '/index') location.assign('/accueil');
   });
 
   dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {

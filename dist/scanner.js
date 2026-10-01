@@ -1,3 +1,5 @@
+import { supabase } from './supabase.js';
+
 const startButton = document.querySelector('#scanner-start');
 const stopButton = document.querySelector('#scanner-stop');
 const video = document.querySelector('#scanner-video');
@@ -9,6 +11,9 @@ const emptyPanel = document.querySelector('#scanner-empty');
 let controls;
 let reader;
 let analysing = false;
+const scannerUser=(await supabase.auth.getSession()).data.session?.user;
+const scanCountKey='stoa-public-scan-count';
+const publicScanCount=()=>Number(localStorage.getItem(scanCountKey)||0);
 document.querySelectorAll('[data-year]').forEach((element) => { element.textContent = new Date().getFullYear(); });
 
 const escapeHtml = (value = '') => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -65,6 +70,7 @@ const renderProduct = (product, code) => {
 };
 
 const analyse = async (rawCode) => {
+  if(!scannerUser&&publicScanCount()>=3){status.innerHTML='Vous avez utilisé vos 3 analyses gratuites. <a href="/#connexion">Connectez-vous à l’Académie pour continuer →</a>';startButton.disabled=true;return;}
   const code = normalizeCode(rawCode);
   if (!code) { status.textContent = 'Aucun code-barres alimentaire valide détecté.'; return; }
   if (analysing) return;
@@ -75,7 +81,7 @@ const analyse = async (rawCode) => {
     if (!response.ok) throw new Error('Service indisponible');
     const payload = await response.json();
     if (payload.status !== 1 || !payload.product) { resultPanel.hidden = true; emptyPanel.hidden = false; status.textContent = 'Produit inconnu dans Open Food Facts.'; return; }
-    renderProduct(payload.product, code); status.textContent = 'Analyse terminée.'; navigator.vibrate?.(80);
+    renderProduct(payload.product, code); if(!scannerUser)localStorage.setItem(scanCountKey,String(publicScanCount()+1));status.textContent = scannerUser?'Analyse terminée.':`Analyse terminée · ${Math.max(0,3-publicScanCount())} gratuite${3-publicScanCount()>1?'s':''} restante${3-publicScanCount()>1?'s':''}.`; navigator.vibrate?.(80);
   } catch { status.textContent = 'Impossible de récupérer les informations du produit.'; }
   finally { analysing = false; }
 };

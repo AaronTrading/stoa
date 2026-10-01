@@ -51,7 +51,8 @@
         <div class="message-list" id="message-list" aria-live="polite" aria-relevant="additions text"></div>
       </div>
 
-      <form class="message-composer" id="message-form">
+      <aside class="community-archive-note"><span class="eyebrow">ARCHIVES</span><p>Ces anciennes conversations restent consultables. Pour publier ou répondre, utilisez désormais le fil Communauté.</p><a href="/posts">Ouvrir le fil →</a></aside>
+      <form class="message-composer" id="message-form" hidden>
         <div class="reply-context" id="reply-context" hidden>
           <span id="composer-context-label">Réponse à <strong id="reply-author"></strong></span>
           <button id="reply-cancel" type="button" aria-label="Annuler la réponse">×</button>
@@ -65,7 +66,7 @@
         </div>
         <button type="submit" aria-label="Envoyer le message">Envoyer <span aria-hidden="true">↗</span></button>
       </form>
-      <form class="message-composer poll-composer" id="poll-form" hidden>
+      <form class="message-composer poll-composer" id="poll-form" hidden data-archive-disabled>
         <p class="composer-guidance">Créez un sondage visible pendant 10 minutes.</p>
         <div class="poll-fields">
           <label for="poll-question">Question</label>
