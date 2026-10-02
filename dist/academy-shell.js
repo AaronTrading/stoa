@@ -99,8 +99,9 @@ async function hydrate(){
 
 function setupGlobalSearch(){
   const form=shell.querySelector('.academy-global-search'),input=form.querySelector('input'),results=form.querySelector('.academy-search-results');
-  const lessons=catalog.flatMap(chapter=>(chapter.modules||[]).map(module=>({module,chapter})));
+  if(form.dataset.searchReady)return;form.dataset.searchReady='true';
   const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const matches=(value,tokens)=>{const haystack=normalize(value);return tokens.every(token=>haystack.includes(token));};
   const destinations=[
     {title:'Mon parcours',meta:'Progression, dernières lectures et cours terminés',href:'/parcours',keywords:'progression parcours avancement cours lecons terminees derniere lecture'},
     {title:'Carte du lait cru',meta:'Producteurs et points de vente autour de moi',href:'/carte?membre=1',keywords:'lait cru carte ferme producteur autour de moi geolocalisation'},
@@ -111,7 +112,7 @@ function setupGlobalSearch(){
     {title:'Mon profil',meta:'Compte, pseudo, département et bio',href:'/profil',keywords:'profil compte pseudo departement bio discord email'},
     {title:'Glossaire',meta:'Définitions et notions STOA',href:'/glossaire',keywords:'glossaire definition notions mots vocabulaire'}
   ];
-  const search=()=>{const raw=input.value.trim(),query=normalize(raw);if(query.length<2){results.hidden=true;results.replaceChildren();return;}const lessonMatches=lessons.filter(({module,chapter})=>normalize(`${module.title} ${module.description||''} ${chapter.title} ${chapter.description||''} ${chapter.pillar?.title||''}`).includes(query)).slice(0,5).map(({module,chapter})=>({title:module.title,meta:`${chapter.pillar?.title||'Académie'} · ${chapter.title}`,href:`/module?chapitre=${chapter.order_index+1}&module=${module.order_index+1}`}));const pageMatches=destinations.filter(item=>normalize(`${item.title} ${item.meta} ${item.keywords}`).includes(query));const found=[...lessonMatches,...pageMatches].slice(0,7);results.innerHTML=found.length?found.map(item=>`<a href="${item.href}"><strong>${esc(item.title)}</strong><span>${esc(item.meta)}</span></a>`).join(''):`<p class="academy-search-empty">Aucun résultat pour « ${esc(raw)} ».</p>`;results.hidden=false;};
+  const search=()=>{const raw=input.value.trim(),query=normalize(raw),tokens=query.split(/\s+/).filter(Boolean);if(query.length<2){results.hidden=true;results.replaceChildren();return;}const lessons=catalog.flatMap(chapter=>(chapter.modules||[]).map(module=>({module,chapter})));const lessonMatches=lessons.filter(({module,chapter})=>matches(`${module.title} ${module.description||''} ${chapter.title} ${chapter.description||''} ${chapter.pillar?.title||''}`,tokens)).slice(0,5).map(({module,chapter})=>({title:module.title,meta:`${chapter.pillar?.title||'Académie'} · ${chapter.title}`,href:`/module?chapitre=${chapter.order_index+1}&module=${module.order_index+1}`}));const pageMatches=destinations.filter(item=>matches(`${item.title} ${item.meta} ${item.keywords}`,tokens));const found=[...lessonMatches,...pageMatches].slice(0,7);results.innerHTML=found.length?found.map(item=>`<a href="${item.href}"><strong>${esc(item.title)}</strong><span>${esc(item.meta)}</span></a>`).join(''):`<p class="academy-search-empty">Aucun résultat pour « ${esc(raw)} ».</p>`;results.hidden=false;};
   input.addEventListener('input',search);
   form.addEventListener('submit',event=>{event.preventDefault();const first=results.querySelector('a');if(first)location.href=first.href;else search();});
   document.addEventListener('click',event=>{if(!form.contains(event.target))results.hidden=true;});
@@ -131,4 +132,5 @@ function setupReadingState(){
   saveState(true);
 }
 
+setupGlobalSearch();
 hydrate();

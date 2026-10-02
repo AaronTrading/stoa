@@ -10,6 +10,7 @@ const svg = {
   share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
   reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8-5 4 5 4"/><path d="M5 12h8c3.3 0 6 2 6 6"/></svg>',
   pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 6 0-.5 5 3 3v2H6v-2l3-3-.5-5M12 14v6"/></svg>',
+  ban: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/></svg>',
   more: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
 };
 const $ = (s) => document.querySelector(s);
@@ -26,9 +27,12 @@ const els = {
   typing: $('#typing-indicator'), pinned: $('#pinned-summary'), pollForm: $('#poll-form'), pollQuestion: $('#poll-question'),
   pollPopup: $('#poll-popup'), pollPopupQuestion: $('#poll-popup-question'), pollPopupOptions: $('#poll-popup-options'), pollPopupTime: $('#poll-popup-time'),
   pollPopupClose: $('#poll-popup-close'),
+  restrictionDialog: $('#chat-restriction-dialog'), restrictionForm: $('#chat-restriction-form'),
+  restrictionMember: $('#chat-restriction-member'), restrictionDuration: $('#chat-restriction-duration'), restrictionStatus: $('#chat-restriction-status'),
 };
 let user, ownProfile, channels = [], allChannels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
 let oldest, historyEnded = false, switching = false, replyId, editId, shareId, longPressTimer, allProfilesLoaded = false;
+let chatRestriction, restrictionTargetId;
 const profiles = new Map();
 let notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || {};
 const isAdmin = () => ownProfile?.role === 'admin';
@@ -107,7 +111,7 @@ const iconButton = (action, icon, label, cls = '') => `<button class="message-ac
 function tools(message) {
   if (message.deleted_at) return '';
   const own = message.user_id === user.id;
-  const actions=`${iconButton('reply', 'reply', 'Répondre')}${own ? iconButton('edit', 'edit', 'Modifier') : ''}${iconButton('share', 'share', 'Partager')}<button class="message-action reaction-toggle" type="button" aria-label="Ajouter une réaction" title="Réagir" aria-expanded="false">${svg.smile}</button>${isAdmin() ? iconButton('pin', 'pin', message.pinned_at ? 'Désépingler' : 'Épingler', message.pinned_at ? 'is-pinned' : '') : ''}${isAdmin() || own ? iconButton('delete', 'trash', 'Supprimer', 'message-delete') : ''}`;
+  const actions=`${iconButton('reply', 'reply', 'Répondre')}${own ? iconButton('edit', 'edit', 'Modifier') : ''}${iconButton('share', 'share', 'Partager')}<button class="message-action reaction-toggle" type="button" aria-label="Ajouter une réaction" title="Réagir" aria-expanded="false">${svg.smile}</button>${isAdmin() ? iconButton('pin', 'pin', message.pinned_at ? 'Désépingler' : 'Épingler', message.pinned_at ? 'is-pinned' : '') : ''}${isAdmin() && !own ? iconButton('restrict', 'ban', 'Exclure du chat') : ''}${isAdmin() || own ? iconButton('delete', 'trash', 'Supprimer', 'message-delete') : ''}`;
   return `<div class="message-tools"><button class="message-action message-more" type="button" aria-label="Afficher les actions" aria-expanded="false">${svg.more}</button><div class="message-action-menu">${actions}</div><div class="reaction-picker" hidden>${REACTIONS.map((e) => `<button type="button" data-reaction="${e}" aria-label="Réagir avec ${e}">${e}</button>`).join('')}</div></div>`;
 }
 const deletedLabel = (m) => m.deleted_at ? `<span class="deleted-label">${isAdmin() ? 'Supprimé · visible pour la modération' : 'Message supprimé'}</span>` : '';
@@ -218,7 +222,41 @@ async function loadMore() {
   els.more.disabled = false; els.more.textContent = error ? 'Réessayer de charger' : 'Charger les messages précédents'; els.more.hidden = historyEnded;
 }
 function errorMessage(text) { els.guidance.textContent = text; els.guidance.dataset.tone = 'error'; els.guidance.hidden = false; }
+const restrictionActive = (restriction = chatRestriction) => Boolean(restriction && (restriction.restricted_until === null || new Date(restriction.restricted_until) > new Date()));
+const restrictionLabel = (restriction = chatRestriction) => restriction?.restricted_until === null ? 'Votre accès au chat est suspendu définitivement.' : `Votre accès au chat est suspendu jusqu’au ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(restriction.restricted_until))}.`;
+function applyOwnRestriction() {
+  const activeRestriction = restrictionActive();
+  const submit = els.form.querySelector('[type="submit"]');
+  els.input.disabled = activeRestriction; submit.disabled = activeRestriction;
+  if (activeRestriction) { els.guidance.textContent = restrictionLabel(); els.guidance.dataset.tone = 'error'; els.guidance.hidden = false; }
+}
+async function loadOwnRestriction() {
+  const { data, error } = await supabase.from('chat_restrictions').select('restricted_until').eq('user_id', user.id).maybeSingle();
+  chatRestriction = error ? null : data;
+  applyOwnRestriction();
+}
+async function openRestriction(id) {
+  if (!isAdmin() || id === user.id) return;
+  restrictionTargetId = id; await loadProfiles([id]);
+  els.restrictionMember.textContent = profile(id).display_name;
+  els.restrictionDuration.value = 'day'; els.restrictionStatus.textContent = '';
+  const { data } = await supabase.from('chat_restrictions').select('restricted_until').eq('user_id', id).maybeSingle();
+  if (data) els.restrictionStatus.textContent = data.restricted_until === null ? 'Ce membre est actuellement exclu définitivement.' : `Exclusion active jusqu’au ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(data.restricted_until))}.`;
+  els.restrictionDialog.showModal();
+}
+async function applyRestriction(event) {
+  event.preventDefault(); if (!isAdmin() || !restrictionTargetId) return;
+  const submit = event.currentTarget.querySelector('[type="submit"]'); submit.disabled = true; els.restrictionStatus.textContent = 'Application…';
+  const duration = els.restrictionDuration.value;
+  const { error } = await supabase.rpc('set_chat_restriction', { p_user_id: restrictionTargetId, p_duration: duration });
+  submit.disabled = false;
+  if (error) { els.restrictionStatus.textContent = `L’exclusion n’a pas été appliquée : ${error.message}`; return; }
+  els.restrictionStatus.textContent = duration === 'lift' ? 'L’exclusion a été levée.' : 'L’exclusion est active.';
+  setTimeout(() => els.restrictionDialog.close(), 550);
+}
 async function send() {
+  if (chatRestriction && !restrictionActive()) { chatRestriction = null; applyOwnRestriction(); }
+  if (restrictionActive()) return errorMessage(restrictionLabel());
   const content = els.input.value.trim(); if (!content || !active || (active.kind === 'announcements' && !isAdmin())) return;
   if (!editId && active.kind === 'questions' && !replyId && !content.endsWith('?')) { errorMessage('Ajoutez « ? » à la fin pour publier votre question.'); return els.input.focus(); }
   const submit = els.form.querySelector('[type="submit"]'); submit.disabled = els.input.disabled = true;
@@ -338,12 +376,13 @@ els.list.addEventListener('click', async (e) => {
   const entry = e.target.closest('[data-message-id]'); if (!entry) return; const action = e.target.closest('[data-message-action]')?.dataset.messageAction;
   const more = e.target.closest('.message-more'); if (more) { const tools=more.closest('.message-tools'),opening=!tools.classList.contains('actions-open');closePickers(opening?tools:null);tools.classList.toggle('actions-open',opening);more.setAttribute('aria-expanded',String(opening));return; }
   if(action)closePickers();
-  if (action === 'reply') return startReply(entry.dataset.messageId); if (action === 'edit') return startEdit(entry.dataset.messageId); if (action === 'share') return openShare(entry.dataset.messageId); if (action === 'pin') return togglePin(entry.dataset.messageId); if (action === 'delete') return removeMessage(entry.dataset.messageId);
+  if (action === 'reply') return startReply(entry.dataset.messageId); if (action === 'edit') return startEdit(entry.dataset.messageId); if (action === 'share') return openShare(entry.dataset.messageId); if (action === 'pin') return togglePin(entry.dataset.messageId); if (action === 'restrict') { const message = messages.find((item) => item.id === entry.dataset.messageId); return message && openRestriction(message.user_id); } if (action === 'delete') return removeMessage(entry.dataset.messageId);
   const toggle = e.target.closest('.reaction-toggle'); if (toggle) { const picker = entry.querySelector('.reaction-picker'); return picker.hidden ? openPicker(entry) : closePickers(); }
   const reaction = e.target.closest('[data-reaction]'); if (reaction) { toggleReaction(entry.dataset.messageId, reaction.dataset.reaction); closePickers(); }
 });
 els.list.addEventListener('click', (e) => { const remove = e.target.closest('[data-delete-poll]'); if (remove) return deletePoll(remove.dataset.deletePoll); const option = e.target.closest('[data-poll-option]'); if (option) votePoll(option.closest('[data-poll-id]').dataset.pollId, option.dataset.pollOption); const jump = e.target.closest('[data-jump-message]'); if (jump) { const target = document.querySelector(`[data-message-id="${CSS.escape(jump.dataset.jumpMessage)}"]`); target?.scrollIntoView({ behavior: 'smooth', block: 'center' }); target?.classList.add('message-highlight'); setTimeout(() => target?.classList.remove('message-highlight'), 1600); } });
 $('#reply-cancel').addEventListener('click', resetComposer); $('#community-profile-close').addEventListener('click', () => els.profileDialog.close()); $('#share-dialog-close').addEventListener('click', () => els.shareDialog.close()); $('#external-link-close').addEventListener('click', () => els.externalDialog.close()); $('#external-link-cancel').addEventListener('click', () => els.externalDialog.close()); els.externalContinue.addEventListener('click', () => els.externalDialog.close());
+$('#chat-restriction-close').addEventListener('click', () => els.restrictionDialog.close()); els.restrictionForm.addEventListener('submit', applyRestriction);
 els.shareList.addEventListener('click', (e) => { const b = e.target.closest('[data-share-channel]'); if (b) shareMessage(b.dataset.shareChannel); });
 els.pollForm.addEventListener('submit', createPoll);
 els.pollPopupOptions.addEventListener('click', (e) => { const option = e.target.closest('[data-poll-option]'); if (option) votePoll(option.dataset.popupPoll, option.dataset.pollOption); });
@@ -353,7 +392,7 @@ els.pinned.addEventListener('click', () => { const target = document.querySelect
 els.list.addEventListener('pointerdown', (e) => { if (e.target.closest('.message-content')) longPressTimer = setTimeout(() => openPicker(e.target.closest('[data-message-id]')), 480); }); ['pointerup', 'pointercancel', 'pointermove'].forEach((name) => els.list.addEventListener(name, () => clearTimeout(longPressTimer)));
 document.addEventListener('click', (e) => { if (!e.target.closest('.message-tools')) closePickers(); if (!e.target.closest('.composer-input-wrap')) els.suggestions.hidden = true; });
 window.addEventListener('stoa:community-notifications', async (event) => { notificationCounts = event.detail || {}; if (active?.id && notificationCounts[active.id]) { await window.STOACommunityNotifications?.markChannelRead(active.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; } renderChannels(); });
-[els.profileDialog, els.shareDialog, els.externalDialog].forEach((dialog) => dialog.addEventListener('click', (e) => { if (e.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); }));
+[els.profileDialog, els.shareDialog, els.externalDialog, els.restrictionDialog].forEach((dialog) => dialog.addEventListener('click', (e) => { if (e.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); }));
 window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(room); if (announcementRoom) supabase.removeChannel(announcementRoom); if (pollRoom) supabase.removeChannel(pollRoom); clearTimeout(announcementTimer); clearTimeout(pollTimer); clearTimeout(typingTimer); });
 
 async function subscribeAnnouncements() {
@@ -366,6 +405,6 @@ async function init() {
   const { data: session } = await supabase.auth.getSession(); user = session.session?.user; if (!user) return location.replace('/#connexion');
   await loadProfiles([user.id]); ownProfile = profile(user.id); const { data, error } = await supabase.from('channels').select('id,slug,kind,name,description,order_index').order('order_index');
   if (error) return void (els.state.textContent = `La communauté ne peut pas être ouverte : ${error.message}`); allChannels = data || []; channels = allChannels.filter((channel) => channel.kind === 'chat' || norm(channel.slug) === 'general' || norm(channel.name) === 'general').slice(0, 1); if (!channels.length) return void (els.state.textContent = 'Le chat général est momentanément indisponible.');
-  const requested = new URLSearchParams(location.search).get('canal'); await Promise.all([subscribeAnnouncements(), subscribePolls()]); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id);
+  const requested = new URLSearchParams(location.search).get('canal'); await Promise.all([subscribeAnnouncements(), subscribePolls()]); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id); await loadOwnRestriction();
 }
 init();

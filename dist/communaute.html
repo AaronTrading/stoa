@@ -102,6 +102,24 @@
       <a class="button primary" id="external-link-continue" href="#" target="_blank" rel="noopener noreferrer">Continuer</a>
     </div>
   </dialog>
+  <dialog class="community-action-dialog chat-restriction-dialog" id="chat-restriction-dialog" aria-labelledby="chat-restriction-title">
+    <button class="auth-close" id="chat-restriction-close" type="button" aria-label="Fermer">×</button>
+    <span class="eyebrow">MODÉRATION DU CHAT</span>
+    <h2 id="chat-restriction-title">Exclure du chat</h2>
+    <p>Choisissez la durée d’exclusion de <strong id="chat-restriction-member"></strong>. La lecture restera possible, mais l’envoi de messages sera bloqué en base.</p>
+    <form id="chat-restriction-form">
+      <label for="chat-restriction-duration">Durée</label>
+      <select id="chat-restriction-duration" required>
+        <option value="day">Un jour</option>
+        <option value="week">Une semaine</option>
+        <option value="month">Un mois</option>
+        <option value="permanent">Définitive</option>
+        <option value="lift">Lever l’exclusion</option>
+      </select>
+      <p id="chat-restriction-status" role="status"></p>
+      <button class="button dark" type="submit">Appliquer</button>
+    </form>
+  </dialog>
   <aside class="announcement-popup community-live-popup" id="announcement-popup" role="status" aria-live="assertive" hidden>
     <button class="live-popup-close" id="announcement-close" type="button" aria-label="Fermer l’annonce">×</button>
     <span class="eyebrow">ANNONCE STOA</span>
