@@ -7,6 +7,7 @@ const body=document.body;
 const icon=(name)=>({home:'<path d="M4 11 12 4l8 7v9h-6v-6h-4v6H4Z"/>',route:'<path d="M6 19c4-1 1-7 6-7s2-6 6-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/>',academy:'<path d="M4 5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4Zm16 0h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4Z"/>',community:'<path d="M16 18c2.5 0 4-1.2 4-3s-1.5-3-4-3-4 1.2-4 3 1.5 3 4 3ZM8 12c2.2 0 3.5-1.2 3.5-3S10.2 6 8 6 4.5 7.2 4.5 9 5.8 12 8 12Zm0 2c-3.3 0-6 1.7-6 4v1h9"/>',shop:'<path d="M5 8h14l-1 12H6Zm3 0V6a4 4 0 0 1 8 0v2"/>',map:'<path d="m3 6 5-2 8 3 5-2v13l-5 2-8-3-5 2Zm5-2v13m8-10v13"/>',scanner:'<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4M8 12h8"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/>',moon:'<path d="M20 15.5A8 8 0 0 1 8.5 4 8 8 0 1 0 20 15.5Z"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.5-5 3-7 8-7s7.5 2 8 7"/>',chevron:'<path d="m9 6 6 6-6 6"/>',menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',collapse:'<path d="m14 7-5 5 5 5"/>',back:'<path d="m15 18-6-6 6-6"/>'}[name]||'');
 const svg=(name)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icon(name)}</svg>`;
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const sentenceCase=(value='')=>{const text=String(value).trim().toLocaleLowerCase('fr-FR');return text?text[0].toLocaleUpperCase('fr-FR')+text.slice(1):text;};
 const path=location.pathname.replace(/\.html$/,'')||'/';
 const chapterParam=Math.max(1,Number(new URLSearchParams(location.search).get('chapitre'))||1);
 const moduleParam=Math.max(1,Number(new URLSearchParams(location.search).get('module'))||1);
@@ -54,10 +55,9 @@ let sessionUser,profile,catalog=[],learningStates=[];
 const roman=['I','II','III','IV','V'];
 const renderBreadcrumb=()=>{
   const chapter=catalog[chapterParam-1],pillar=chapter?.pillar;
-  const breadcrumbCase=(value='')=>{const text=String(value).trim().toLocaleLowerCase('fr-FR');return text?text[0].toLocaleUpperCase('fr-FR')+text.slice(1):text;};
   const bits=path==='/accueil'?[['/accueil','Accueil']]:[['/academie','Académie']];
-  if(path==='/module'&&chapter){bits.push([`/academie?chapitre=${chapterParam}`,breadcrumbCase(pillar?.title||'Pilier')],[`/academie?chapitre=${chapterParam}`,chapter.title],[location.href,chapter.modules?.[moduleParam-1]?.title||'Leçon']);}
-  else if(path==='/academie'&&new URLSearchParams(location.search).has('chapitre')&&chapter){bits.push([`/academie?chapitre=${chapterParam}`,breadcrumbCase(pillar?.title||'Pilier')],[`/academie?chapitre=${chapterParam}`,chapter.title]);}
+  if(path==='/module'&&chapter){bits.push([`/academie?chapitre=${chapterParam}`,sentenceCase(pillar?.title||'Pilier')],[`/academie?chapitre=${chapterParam}`,chapter.title],[location.href,chapter.modules?.[moduleParam-1]?.title||'Leçon']);}
+  else if(path==='/academie'&&new URLSearchParams(location.search).has('chapitre')&&chapter){bits.push([`/academie?chapitre=${chapterParam}`,sentenceCase(pillar?.title||'Pilier')],[`/academie?chapitre=${chapterParam}`,chapter.title]);}
   else if(path==='/posts')bits.push(['/posts','Communauté'],['/posts','Posts']);
   else if(path==='/communaute')bits.push(['/posts','Communauté'],['/communaute','Discussion']);
   else if(path==='/profil')bits.push(['/profil','Profil & compte']);
@@ -75,7 +75,7 @@ const renderTree=()=>{
   const groups=[...new Map(catalog.map(chapter=>[chapter.pillar?.id,chapter.pillar])).values()].filter(Boolean).sort((a,b)=>a.order_index-b.order_index);
   tree.innerHTML=groups.map((pillar,index)=>{
     const chapters=catalog.filter(chapter=>chapter.pillar_id===pillar.id),active=chapters.some(chapter=>chapter.order_index===chapterParam-1)&&(path==='/module'||path==='/academie');
-    return `<details class="academy-tree-pillar" ${active?'open':''}><summary><span>${roman[index]||index+1}</span><strong>${esc(pillar.title)}</strong>${svg('chevron')}</summary><div>${chapters.map(chapter=>`<a href="/academie?chapitre=${chapter.order_index+1}" class="${active&&chapter.order_index===chapterParam-1?'active':''}"><i></i><span>${esc(chapter.title)}</span></a>`).join('')}</div></details>`;
+    return `<details class="academy-tree-pillar" ${active?'open':''}><summary><span>${roman[index]||index+1}</span><strong>${esc(sentenceCase(pillar.title))}</strong>${svg('chevron')}</summary><div>${chapters.map(chapter=>`<a href="/academie?chapitre=${chapter.order_index+1}" class="${active&&chapter.order_index===chapterParam-1?'active':''}"><i></i><span>${esc(chapter.title)}</span></a>`).join('')}</div></details>`;
   }).join('');
 };
 

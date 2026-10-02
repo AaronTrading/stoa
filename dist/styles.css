@@ -567,8 +567,8 @@ html.stoa-dark .academy-global-search,html.stoa-dark .academy-search-results,htm
 /* Interface member polish — navigation, profiles, support and tools */
 .member-welcome{display:flex;align-items:baseline;gap:.42em;margin:0 0 12px;font-family:var(--font);font-size:16px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink)}
 .member-welcome strong{font:inherit;font-weight:700;color:var(--ink)}
-.academy-tree-pillar summary strong,.academy-tree-pillar>div a,.academy-primary-nav,.academy-resources,.academy-shop-link,.academy-profile-compact,.lesson-sidebar,.lesson-summary,.pillar-module-list,.academy-experience .channel-button strong,.academy-experience .message-author,.academy-experience .lesson-sidebar h2,.academy-experience .lesson-sidebar h3,.member-card-head h2{font-family:var(--font)!important}
-.academy-tree-pillar summary strong{font-weight:700;letter-spacing:.045em}.academy-tree-pillar>div a{font-weight:500}.pillar-module-list a strong,.lesson-sidebar a{font-family:var(--font)!important}
+.academy-tree-pillar>div a,.academy-primary-nav,.academy-resources,.academy-shop-link,.academy-profile-compact,.lesson-sidebar,.lesson-summary,.pillar-module-list,.academy-experience .channel-button strong,.academy-experience .message-author,.academy-experience .lesson-sidebar h2,.academy-experience .lesson-sidebar h3,.member-card-head h2{font-family:var(--font)!important}
+.academy-tree-pillar summary strong{font-family:var(--font);font-weight:600;letter-spacing:0;text-transform:none}.academy-tree-pillar>div a{font-weight:500}.pillar-module-list a strong,.lesson-sidebar a{font-family:var(--font)!important}
 .academy-search-empty{padding:12px 10px;color:var(--muted);font-size:10px;line-height:1.45}
 .academy-resources{margin:7px 4px;padding:8px 6px;border-top:1px solid rgba(70,75,64,.09)}
 .academy-resources-title{padding:0 5px 7px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.16em}
