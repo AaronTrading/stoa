@@ -585,3 +585,188 @@ html.stoa-dark .member-card-dialog,html.stoa-dark .support-panel{background:rgba
 @media(max-width:1120px){.academy-sidebar-collapsed .academy-global-search{display:flex}.academy-sidebar-collapsed .academy-resources{display:block}.academy-sidebar-collapsed .academy-shop-link{justify-content:flex-start}.academy-sidebar-collapsed .academy-shop-link span,.academy-sidebar-collapsed .academy-shop-link svg:last-child{display:block}.academy-primary-nav>a,.academy-shop-link,.academy-profile-compact,.academy-tree-pillar summary{min-height:44px}.academy-resources a{min-height:44px}}
 
 /* Private staff help */
+
+/* Dark mode contrast and surface consistency */
+html.stoa-dark{
+  --ivory:#20261f;
+  --stone:#30382e;
+  --marble:#283027;
+  --ink:#f1f3ec;
+  --muted:#bac0b4;
+  --line:#495246;
+  --white:#31392f;
+  --dark-surface:rgba(47,55,44,.92);
+  --dark-surface-raised:rgba(56,65,52,.94);
+  --dark-surface-soft:rgba(255,255,255,.055);
+  --dark-border:rgba(239,242,233,.12);
+  --dark-hover:rgba(255,255,255,.09);
+}
+html.stoa-dark body.academy-experience{color:var(--ink)}
+html.stoa-dark ::placeholder{color:#9ca498;opacity:1}
+
+html.stoa-dark .academy-theme-toggle,
+html.stoa-dark .academy-sidebar-close,
+html.stoa-dark .member-card-close{background:var(--dark-surface-soft);color:var(--ink);border-color:var(--dark-border)}
+html.stoa-dark .academy-theme-toggle:hover,
+html.stoa-dark .academy-sidebar-close:hover,
+html.stoa-dark .member-card-close:hover{background:rgba(255,255,255,.13)}
+html.stoa-dark .academy-tree-guest,
+html.stoa-dark .academy-profile-compact,
+html.stoa-dark .academy-return-reading,
+html.stoa-dark .academy-profile-compact.active{background:var(--dark-surface-soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--dark-border)}
+html.stoa-dark .academy-profile-compact:hover,
+html.stoa-dark .academy-return-reading:hover{background:var(--dark-hover)}
+html.stoa-dark .academy-tree-pillar summary{color:#d8ddd2}
+html.stoa-dark .academy-tree-pillar>div a{color:var(--muted)}
+html.stoa-dark .academy-tree-pillar>div a:hover,
+html.stoa-dark .academy-tree-pillar>div a.active,
+html.stoa-dark .academy-community-subnav a:hover,
+html.stoa-dark .academy-community-subnav a.active,
+html.stoa-dark .academy-resources a:hover,
+html.stoa-dark .academy-shop-link:hover,
+html.stoa-dark .academy-shop-link.active{background:var(--dark-hover);color:var(--ink)}
+html.stoa-dark .academy-community-subnav{background:rgba(255,255,255,.035)}
+html.stoa-dark .academy-global-search,
+html.stoa-dark .academy-search-results{background:rgba(38,45,36,.97);border-color:var(--dark-border)}
+html.stoa-dark .academy-search-results a:hover{background:var(--dark-hover)}
+html.stoa-dark .academy-resources{border-color:var(--dark-border)}
+
+html.stoa-dark h1>span,
+html.stoa-dark .tool-heading h1 span,
+html.stoa-dark .shop-heading h1 span{color:#adb5a8}
+html.stoa-dark #lesson-copy p,
+html.stoa-dark #lesson-copy li,
+html.stoa-dark #lesson-copy blockquote,
+html.stoa-dark .practice>p,
+html.stoa-dark .post-copy p,
+html.stoa-dark .post-thread-original p{color:#c9cec4}
+html.stoa-dark .pillar-card-meta strong,
+html.stoa-dark .pillar-module-list>a.last-read small,
+html.stoa-dark .replied-message strong,
+html.stoa-dark .pinned-label,
+html.stoa-dark .post-pinned-label{color:#c3cabb}
+
+html.stoa-dark .continue-card,
+html.stoa-dark .academy-pillar-card,
+html.stoa-dark .academy-pillar,
+html.stoa-dark .pillar-gateways,
+html.stoa-dark .pillar-focus-panel,
+html.stoa-dark .journey-continue,
+html.stoa-dark .journey-pillar,
+html.stoa-dark .journey-recent>a,
+html.stoa-dark .home-resume-card,
+html.stoa-dark .home-summary,
+html.stoa-dark .home-grid article,
+html.stoa-dark .profile-card,
+html.stoa-dark .account-card,
+html.stoa-dark .profile-learning-overview,
+html.stoa-dark .profile-journey-link,
+html.stoa-dark .post-composer,
+html.stoa-dark .post-card,
+html.stoa-dark .posts-empty,
+html.stoa-dark .scanner-camera-card,
+html.stoa-dark .scanner-empty,
+html.stoa-dark .product-analysis,
+html.stoa-dark .product-card,
+html.stoa-dark .academy-experience.shop-page .shop-hero,
+html.stoa-dark .lesson-quiz,
+html.stoa-dark .quiz-editor-question,
+html.stoa-dark .academy-experience .practice{
+  background:linear-gradient(145deg,var(--dark-surface-raised),rgba(38,45,36,.9));
+  border-color:var(--dark-border);
+  box-shadow:0 22px 64px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.05);
+}
+html.stoa-dark .academy-pillar-heading,
+html.stoa-dark .profile-learning-stats article,
+html.stoa-dark .profile-recent-learning>a,
+html.stoa-dark .pillar-focus-content .pillar-card-chapters,
+html.stoa-dark .post-image-upload{background:var(--dark-surface-soft);border-color:var(--dark-border)}
+html.stoa-dark .pillar-chapter-row summary:hover,
+html.stoa-dark .pillar-module-list>a:hover,
+html.stoa-dark .profile-recent-learning>a:hover,
+html.stoa-dark .journey-pillar:hover,
+html.stoa-dark .journey-recent>a:hover,
+html.stoa-dark .post-admin-actions button:hover,
+html.stoa-dark .lesson-summary a:hover,
+html.stoa-dark .post-image-upload:hover{background:var(--dark-hover)}
+html.stoa-dark .pillar-module-list>a.last-read{background:rgba(166,177,143,.14)}
+html.stoa-dark .pillar-progress-track{background:rgba(255,255,255,.09)}
+
+html.stoa-dark .academy-experience .chat-panel,
+html.stoa-dark .chat-heading,
+html.stoa-dark .academy-experience .message-composer,
+html.stoa-dark .academy-experience .channel-sidebar{background:rgba(40,47,38,.9);border-color:var(--dark-border)}
+html.stoa-dark .community-mode-nav{background:rgba(255,255,255,.05);border-color:var(--dark-border)}
+html.stoa-dark .community-mode-nav a.active,
+html.stoa-dark .channel-button:hover,
+html.stoa-dark .channel-button.active{background:var(--dark-hover);color:var(--ink);box-shadow:none}
+html.stoa-dark .reaction-picker,
+html.stoa-dark .mention-suggestions,
+html.stoa-dark .question-thread,
+html.stoa-dark .poll-card,
+html.stoa-dark .shared-message{background:rgba(43,50,40,.98);border-color:var(--dark-border);color:var(--ink)}
+html.stoa-dark .poll-options button,
+html.stoa-dark .poll-popup form button{background:var(--dark-surface-soft);border-color:var(--dark-border);color:var(--ink)}
+html.stoa-dark .poll-options button:hover,
+html.stoa-dark .poll-popup form button:hover{background:var(--dark-hover);border-color:rgba(255,255,255,.2)}
+html.stoa-dark .profile-mention{background:rgba(112,145,95,.24);color:#cce0c1}
+html.stoa-dark .channel-mention{background:rgba(143,108,155,.25);color:#dec9e5}
+html.stoa-dark .external-link{color:#c5d6b8;text-decoration-color:rgba(197,214,184,.45)}
+html.stoa-dark .message-entry.pinned,
+html.stoa-dark .question-thread.pinned{background:linear-gradient(90deg,rgba(166,177,143,.12),transparent 70%)}
+
+html.stoa-dark .community-live-popup{
+  border-color:rgba(255,255,255,.15)!important;
+  background:linear-gradient(135deg,rgba(59,68,54,.92),rgba(36,43,34,.84))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.12),0 26px 72px rgba(0,0,0,.38)!important;
+  color:var(--ink)!important;
+}
+html.stoa-dark .community-live-popup::before{background:radial-gradient(circle at 12% -15%,rgba(255,255,255,.16),transparent 48%),linear-gradient(118deg,rgba(255,255,255,.06),transparent 42%)}
+html.stoa-dark .community-live-popup .eyebrow,
+html.stoa-dark .community-live-popup time{color:var(--muted)!important}
+html.stoa-dark .community-live-popup>strong,
+html.stoa-dark .community-live-popup p{color:var(--ink)!important}
+html.stoa-dark .live-popup-close{color:var(--ink)}
+
+html.stoa-dark input,
+html.stoa-dark textarea,
+html.stoa-dark select,
+html.stoa-dark dialog{background:#30382e!important;color:var(--ink)!important;border-color:var(--dark-border)!important}
+html.stoa-dark .order-dialog,
+html.stoa-dark .academy-module-dialog,
+html.stoa-dark .post-thread-dialog,
+html.stoa-dark .community-profile-dialog{background:linear-gradient(145deg,rgba(52,61,48,.98),rgba(34,41,32,.98))!important;border-color:var(--dark-border)!important}
+html.stoa-dark .lesson-edit-pencil,
+html.stoa-dark .lesson-editor-bar{background:rgba(45,53,42,.95);border-color:var(--dark-border);color:var(--ink);box-shadow:0 16px 42px rgba(0,0,0,.28)}
+html.stoa-dark .lesson-edit-pencil:hover,
+html.stoa-dark .lesson-format-tools button:hover,
+html.stoa-dark .lesson-format-tools label:hover{background:var(--dark-hover)}
+html.stoa-dark .lesson-editing [contenteditable=true]:focus,
+html.stoa-dark .shop-product-editing [contenteditable=true]:focus{background:rgba(255,255,255,.06);box-shadow:0 0 0 3px rgba(190,202,177,.14)}
+html.stoa-dark .lesson-quiz [data-quiz-answer]{background:var(--dark-surface-soft);border-color:var(--dark-border);color:#d0d5ca}
+html.stoa-dark .lesson-quiz [data-quiz-answer]:hover,
+html.stoa-dark .lesson-quiz [data-quiz-answer].selected{background:var(--dark-hover);color:var(--ink)}
+html.stoa-dark .lesson-quiz [data-quiz-answer].correct{background:rgba(80,126,73,.22);border-color:#65815e}
+html.stoa-dark .lesson-quiz [data-quiz-answer].incorrect{background:rgba(150,79,66,.22);border-color:#9b675c}
+
+html.stoa-dark .map-glass-panel{background:rgba(43,50,40,.91);border-color:var(--dark-border);box-shadow:0 16px 42px rgba(0,0,0,.3)}
+html.stoa-dark .leaflet-popup-content-wrapper,
+html.stoa-dark .leaflet-popup-tip{background:#30382e;color:var(--ink)}
+html.stoa-dark .stoa-map-popup,
+html.stoa-dark .stoa-map-popup strong,
+html.stoa-dark .stoa-map-popup p{color:var(--ink)}
+html.stoa-dark .stoa-map-popup small{color:var(--muted)}
+
+html.stoa-dark .member-card-dialog,
+html.stoa-dark .support-panel{background:rgba(40,47,38,.97);border-color:var(--dark-border)}
+html.stoa-dark .member-card-contact>a,
+html.stoa-dark .member-card-stats span,
+html.stoa-dark .support-thread-member,
+html.stoa-dark .support-form,
+html.stoa-dark .support-conversation-open{background:var(--dark-surface-soft);border-color:var(--dark-border)}
+html.stoa-dark .support-form button{color:var(--ivory)}
+
+@media(max-width:900px){
+  html.stoa-dark .academy-experience .dashboard-heading{background:linear-gradient(180deg,rgba(32,38,31,.88),rgba(32,38,31,.97)),url('/assets/categories/longevite.jpg') center/cover}
+  html.stoa-dark .journey-hero{background:linear-gradient(180deg,rgba(32,38,31,.88),rgba(32,38,31,.97)),url('/assets/categories/autonomie.jpg') center/cover}
+}
