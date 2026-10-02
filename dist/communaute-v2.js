@@ -1,9 +1,8 @@
 import { supabase } from './supabase.js';
-import { departmentLabel } from './departments.js';
+import { openMemberProfile } from './member-profile-card.js';
 
 const REACTIONS = ['❤️', '👍', '👏', '💡'];
 const PAGE_SIZE = 50;
-const roleLabels = { member: 'Membre de l’Académie', coaching: 'Membre accompagné', admin: 'Équipe STOA' };
 const svg = {
   smile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8M9 9.5h.01M15 9.5h.01"/></svg>',
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.1-1 10.6-10.6a2 2 0 0 0-2.8-2.8L5.3 16.2 4 20Z"/><path d="m14.5 7 2.8 2.8"/></svg>',
@@ -28,7 +27,7 @@ const els = {
   pollPopup: $('#poll-popup'), pollPopupQuestion: $('#poll-popup-question'), pollPopupOptions: $('#poll-popup-options'), pollPopupTime: $('#poll-popup-time'),
   pollPopupClose: $('#poll-popup-close'),
 };
-let user, ownProfile, channels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
+let user, ownProfile, channels = [], allChannels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
 let oldest, historyEnded = false, switching = false, replyId, editId, shareId, longPressTimer, allProfilesLoaded = false;
 const profiles = new Map();
 let notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || {};
@@ -46,7 +45,6 @@ const time = (v) => {
   const calendarDate = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
   return `${calendarDate} à ${clock(date)}`;
 };
-const memberSince = (v) => new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(v));
 const sameMinute = (a, b) => Math.floor(new Date(a) / 60000) === Math.floor(new Date(b) / 60000);
 const fallback = (id) => ({ id, display_name: 'Membre STOA', username: null, avatar_url: null, role: 'member', created_at: new Date().toISOString(), completed_modules: 0, level_number: 1, level_label: 'Initié' });
 const profile = (id) => profiles.get(id) || fallback(id);
@@ -209,8 +207,7 @@ function resetComposer() {
 async function switchChannel(id) {
   const next = channels.find((c) => c.id === id || c.slug === id); if (!next || switching || active?.id === next.id) return;
   switching = true; await unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.name.textContent = next.name; els.description.textContent = next.description || ''; els.typing.hidden = true; els.pinned.hidden = true;
-  els.form.hidden = next.kind === 'polls' || (next.kind === 'announcements' && !isAdmin());
-  els.pollForm.hidden = true; els.form.hidden = true; els.guidance.hidden = true;
+  els.pollForm.hidden = true; els.form.hidden = false; els.guidance.hidden = true;
   if (next.kind === 'announcements' && isAdmin()) { els.guidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
   resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.set('canal', next.slug); window.history.replaceState(null, '', url);
   await loadMessages(); subscribe(next); switching = false;
@@ -258,9 +255,7 @@ async function toggleReaction(id, emoji) {
 }
 function closePickers(except) { document.querySelectorAll('.reaction-picker:not([hidden])').forEach((p) => { if (p !== except) { p.hidden = true; p.closest('.message-tools')?.querySelector('.reaction-toggle')?.setAttribute('aria-expanded', 'false'); } });document.querySelectorAll('.message-tools.actions-open').forEach(tools=>{if(tools!==except){tools.classList.remove('actions-open');tools.querySelector('.message-more')?.setAttribute('aria-expanded','false');}}); }
 function openPicker(entry) { const picker = entry?.querySelector('.reaction-picker'), toggle = entry?.querySelector('.reaction-toggle'); if (!picker) return; closePickers(picker); picker.hidden = false; toggle.setAttribute('aria-expanded', 'true'); }
-function showProfile(id) {
-  const p = profile(id); els.profile.innerHTML = `${avatar(p, 'community-profile-avatar')}<span class="eyebrow">PROFIL MEMBRE</span><h2 id="community-profile-name">${esc(p.display_name)}</h2>${p.username ? `<p class="community-profile-username">@${esc(p.username)}</p>` : ''}${p.bio?`<p class="community-profile-bio">${esc(p.bio)}</p>`:''}<div class="community-profile-level"><strong>Niveau ${Number(p.level_number) || 1}</strong><span>${esc(p.level_label || 'Initié')} · ${Number(p.completed_modules) || 0} module${Number(p.completed_modules) > 1 ? 's' : ''} terminé${Number(p.completed_modules) > 1 ? 's' : ''}</span></div><div class="community-profile-meta"><span>${esc(roleLabels[p.role] || roleLabels.member)}</span>${p.department ? `<span>${esc(departmentLabel(p.department))}</span>` : ''}<span>Membre depuis ${memberSince(p.created_at)}</span></div>`; els.profileDialog.showModal();
-}
+function showProfile(id) { openMemberProfile(id); }
 function openShare(id) {
   const m = messages.find((item) => item.id === id); if (!m || m.deleted_at) return; shareId = id;
   els.shareList.innerHTML = channels.filter((c) => c.kind !== 'polls' && (c.kind !== 'announcements' || isAdmin())).map((c) => `<button type="button" data-share-channel="${c.id}"><span>#</span><strong>${esc(c.name)}</strong><small>${esc(c.description || '')}</small></button>`).join(''); els.shareDialog.showModal();
@@ -362,7 +357,7 @@ window.addEventListener('stoa:community-notifications', async (event) => { notif
 window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(room); if (announcementRoom) supabase.removeChannel(announcementRoom); if (pollRoom) supabase.removeChannel(pollRoom); clearTimeout(announcementTimer); clearTimeout(pollTimer); clearTimeout(typingTimer); });
 
 async function subscribeAnnouncements() {
-  const channel = channels.find((c) => c.kind === 'announcements'); if (!channel) return;
+  const channel = allChannels.find((c) => c.kind === 'announcements'); if (!channel) return;
   const show = async (m) => { const end = new Date(m.announcement_expires_at || new Date(m.created_at).getTime() + 600000), remaining = end - Date.now(); if (remaining <= 0 || m.deleted_at || sessionStorage.getItem(`stoa-dismissed-announcement:${m.id}`)) return; await loadProfiles([m.user_id]); els.announcement.dataset.messageId = m.id; els.announcementAuthor.textContent = profile(m.user_id).display_name; els.announcementContent.textContent = m.content; els.announcementTime.textContent = `Publié à ${clock(m.created_at)}`; showLivePopup(els.announcement); clearTimeout(announcementTimer); announcementTimer = setTimeout(() => hideLivePopup(els.announcement), remaining); };
   const { data } = await supabase.from('messages').select('id,user_id,content,created_at,deleted_at,announcement_expires_at').eq('channel_id', channel.id).is('deleted_at', null).gt('announcement_expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle(); if (data) show(data);
   announcementRoom = supabase.channel(`community-announcements:${channel.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` }, (payload) => show(payload.new)).subscribe();
@@ -370,7 +365,7 @@ async function subscribeAnnouncements() {
 async function init() {
   const { data: session } = await supabase.auth.getSession(); user = session.session?.user; if (!user) return location.replace('/#connexion');
   await loadProfiles([user.id]); ownProfile = profile(user.id); const { data, error } = await supabase.from('channels').select('id,slug,kind,name,description,order_index').order('order_index');
-  if (error) return void (els.state.textContent = `La communauté ne peut pas être ouverte : ${error.message}`); channels = data; if (!channels.length) return void (els.state.textContent = 'Aucun canal n’est encore disponible.');
+  if (error) return void (els.state.textContent = `La communauté ne peut pas être ouverte : ${error.message}`); allChannels = data || []; channels = allChannels.filter((channel) => channel.kind === 'chat' || norm(channel.slug) === 'general' || norm(channel.name) === 'general').slice(0, 1); if (!channels.length) return void (els.state.textContent = 'Le chat général est momentanément indisponible.');
   const requested = new URLSearchParams(location.search).get('canal'); await Promise.all([subscribeAnnouncements(), subscribePolls()]); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id);
 }
 init();

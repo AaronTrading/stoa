@@ -382,5 +382,11 @@ form.addEventListener('submit', (event) => {
     `Adresse de livraison : ${String(data.get('address')).trim()}`, '',
     'Merci de me confirmer la disponibilité, le montant final et le délai de livraison.',
   ].filter(Boolean).join('\n');
-  window.location.href = `mailto:${RECIPIENT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const encodedSubject=encodeURIComponent(subject),encodedBody=encodeURIComponent(body);
+  const mailto=`mailto:${RECIPIENT}?subject=${encodedSubject}&body=${encodedBody}`;
+  const isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if(isMobile){window.location.href=mailto;return;}
+  const gmail=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(RECIPIENT)}&su=${encodedSubject}&body=${encodedBody}`;
+  const compose=window.open(gmail,'_blank','noopener,noreferrer');
+  if(!compose)window.location.href=mailto;
 });

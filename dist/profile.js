@@ -174,7 +174,7 @@ const initializeProfile = async () => {
   lastNameInput.value = lastName;
   usernameInput.value = username;
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
-  bioInput.value = profile.bio || '';
+  bioInput.value = (profile.bio || '').slice(0, 200);
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
@@ -298,6 +298,10 @@ form.addEventListener('submit', async (event) => {
   }
   if (!department) {
     setMessage('Renseignez un numéro de département valide, par exemple 31, 2A ou 974.', 'error');
+    return;
+  }
+  if (bio.length > 200) {
+    setMessage('La bio est limitée à 200 caractères.', 'error');
     return;
   }
 
