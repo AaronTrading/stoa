@@ -8,3 +8,4 @@ artwork/category-originals/
 dist/assets/modules/
 .sites-runtime-*.tar
 supabase/.temp/
+.vercel/
