@@ -31,6 +31,20 @@ La page `/communaute` utilise les changements PostgreSQL de Supabase Realtime po
 
 Le Coaching Privé utilise un droit séparé dans `coaching_clients` : un compte Académie ne reçoit donc jamais cet accès par son seul rôle. Le futur webhook Stripe devra activer ce droit côté serveur avec `access_source = 'stripe'` et l’identifiant d’abonnement. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille. Les notes privées ne sont jamais lisibles par le client.
 
+## Email Center
+
+La page `/email-center` est réservée aux administrateurs. Les campagnes, brouillons et historiques sont stockés dans Supabase avec RLS. L’envoi passe exclusivement par la fonction serveur Vercel `/api/email-center-send`, sans identifiant Google dans le navigateur.
+
+Configurer les secrets de la fonction avant le premier envoi :
+
+- `GMAIL_CLIENT_ID`
+- `GMAIL_CLIENT_SECRET`
+- `GMAIL_REFRESH_TOKEN` avec le scope `https://www.googleapis.com/auth/gmail.send`
+- `GMAIL_SENDER_EMAIL=coaching.stoa@gmail.com`
+- `SITE_URL=https://stoa-coaching.fr`
+
+La première version ne mesure pas les ouvertures ou les clics : Gmail API ne fournit pas nativement ces statistiques sans mécanisme de suivi supplémentaire.
+
 ## Portée
 
 Les modules contiennent encore des textes à finaliser. Le paiement Stripe n’est pas encore relié au droit Coaching : l’activation peut être faite par un administrateur dans l’espace coach, et la colonne `stripe_subscription_id` est prête pour le webhook futur.

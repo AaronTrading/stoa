@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "outputDirectory": "dist",
+  "functions": {
+    "api/email-center-send.mjs": {
+      "maxDuration": 60
+    }
+  },
   "cleanUrls": true,
   "trailingSlash": false
 }
