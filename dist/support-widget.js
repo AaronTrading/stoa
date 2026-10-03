@@ -35,7 +35,7 @@ async function initialize(user) {
   const supportAvatar = '<span class="support-avatar support-avatar-staff" aria-hidden="true">?</span>';
   const loadProfiles = async (ids) => { const missing = [...new Set(ids)].filter((id) => id && !profiles.has(id)); if (!missing.length) return; const { data } = await supabase.rpc('get_community_profiles', { profile_ids: missing }); (data || []).forEach((item) => profiles.set(item.id, item)); };
   const incoming = (item) => isAdmin ? item.sender_id === item.member_id : item.sender_id !== item.member_id;
-  const setUnread = () => { const count = messages.filter((item) => !item.read_at && incoming(item)).length, badge = trigger.querySelector('b'); badge.textContent = count > 9 ? '9+' : String(count); badge.hidden = !count; };
+  const setUnread = () => { const count = messages.filter((item) => !item.read_at && incoming(item)).length, badge = trigger.querySelector('b'); badge.textContent = count ? (count > 9 ? '9+' : String(count)) : ''; badge.hidden = count === 0; trigger.classList.toggle('has-unread', count > 0); };
   const markRead = async () => { if (panel.hidden || !activeMember) return; const ids = messages.filter((item) => item.member_id === activeMember && !item.read_at && incoming(item)).map((item) => item.id); if (!ids.length) return; await supabase.from('support_messages').update({ read_at: new Date().toISOString() }).in('id', ids); messages.forEach((item) => { if (ids.includes(item.id)) item.read_at = new Date().toISOString(); }); setUnread(); };
 
   const renderThread = async () => {
@@ -78,7 +78,17 @@ async function initialize(user) {
 
   const render = () => isAdmin && !activeMember ? renderConversations() : renderThread();
   const load = async () => { let query = supabase.from('support_messages').select('*').order('created_at'); if (!isAdmin) query = query.eq('member_id', user.id); const { data, error } = await query; if (error) { content.innerHTML = `<p class="support-empty">Le support est momentanément indisponible.<br>${esc(error.message)}</p>`; return; } messages = data || []; setUnread(); await render(); };
-  const toggle = (open) => { panel.hidden = !open; trigger.setAttribute('aria-expanded', String(open)); widget.classList.toggle('support-open', open); if (open) render(); };
+  const fitMobileViewport = () => {
+    if (panel.hidden || !matchMedia('(max-width: 760px)').matches) { panel.classList.remove('support-viewport-fit'); panel.style.removeProperty('top'); panel.style.removeProperty('height'); return; }
+    const viewport = window.visualViewport;
+    const viewportHeight = viewport?.height || innerHeight;
+    const keyboardOpen = viewportHeight < document.documentElement.clientHeight - 120;
+    panel.classList.add('support-viewport-fit');
+    panel.style.top = `${(viewport?.offsetTop || 0) + 8}px`;
+    panel.style.height = `${Math.max(280, viewportHeight - (keyboardOpen ? 16 : 84))}px`;
+    if (keyboardOpen) requestAnimationFrame(() => { content.scrollTop = content.scrollHeight; });
+  };
+  const toggle = (open) => { panel.hidden = !open; trigger.setAttribute('aria-expanded', String(open)); widget.classList.toggle('support-open', open); if (open) { render(); requestAnimationFrame(fitMobileViewport); } else fitMobileViewport(); };
 
   trigger.addEventListener('click', () => toggle(panel.hidden));
   widget.querySelector('[data-support-close]').addEventListener('click', () => toggle(false));
@@ -88,9 +98,13 @@ async function initialize(user) {
   form.addEventListener('submit', async (event) => { event.preventDefault(); const textarea = form.querySelector('textarea'), value = textarea.value.trim(); if (!value || !activeMember) return; const button = form.querySelector('button'); button.disabled = true; const { error } = await supabase.from('support_messages').insert({ member_id: activeMember, sender_id: user.id, content: value }); button.disabled = false; status.textContent = error ? error.message : ''; if (!error) { textarea.value = ''; textarea.style.height = ''; await load(); } });
   form.querySelector('textarea').addEventListener('input', (event) => { event.currentTarget.style.height = ''; event.currentTarget.style.height = `${Math.min(96, event.currentTarget.scrollHeight)}px`; });
   form.querySelector('textarea').addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit(); } });
+  form.querySelector('textarea').addEventListener('focus', () => setTimeout(fitMobileViewport, 120));
+  form.querySelector('textarea').addEventListener('blur', () => setTimeout(fitMobileViewport, 120));
+  window.visualViewport?.addEventListener('resize', fitMobileViewport);
+  window.visualViewport?.addEventListener('scroll', fitMobileViewport);
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !panel.hidden) toggle(false); });
 
   await load();
   channel = supabase.channel(`support:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'support_messages' }, load).subscribe();
-  addEventListener('pagehide', () => { if (channel) supabase.removeChannel(channel); }, { once: true });
+  addEventListener('pagehide', () => { if (channel) supabase.removeChannel(channel); window.visualViewport?.removeEventListener('resize', fitMobileViewport); window.visualViewport?.removeEventListener('scroll', fitMobileViewport); }, { once: true });
 }

@@ -142,9 +142,9 @@ const normalizeSearch = value => String(value || '').normalize('NFD').replace(/[
 const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 let selectedPillarId=chapters[Math.max(0,(Number(params.get('chapitre'))||1)-1)]?.pillarId||pillars[0]?.id;
 
-function renderCourses(search='') {
+function renderCourses() {
   if (!courseList) return;
-  const tokens=normalizeSearch(search).split(/\s+/).filter(Boolean);
+  const tokens=[];
   const requestedChapter=Math.max(0,(Number(params.get('chapitre'))||1)-1);
   const learningStates=window.__STOA_LEARNING_STATES__||[];
   let resultCount=0;
@@ -174,27 +174,16 @@ function renderCourses(search='') {
     return {pillar,pillarIndex,pillarChapters,visibleChapters,moduleTotal,pillarFinished,pillarPercentage,state,continueItem,description,image:pillarChapters[0]?.chapter?.slug||'alimentation'};
   });
   const available=pillarData.filter(item=>item.visibleChapters.length);
-  if(tokens.length&&!available.some(item=>item.pillar.id===selectedPillarId))selectedPillarId=available[0]?.pillar.id;
   const selected=pillarData.find(item=>item.pillar.id===selectedPillarId)||available[0]||pillarData[0];
   if(!resultCount||!selected){courseList.innerHTML='<div class="search-empty"><span>⌕</span><h3>Aucune leçon trouvée.</h3><p>Essayez un thème plus large ou un autre mot.</p></div>';return;}
   const gateways=pillarData.map(item=>`<button class="pillar-gateway ${item.pillar.id===selected.pillar.id?'active':''}" type="button" data-pillar-select="${escapeHtml(item.pillar.id)}" aria-pressed="${item.pillar.id===selected.pillar.id}"><span class="pillar-roman">${roman[item.pillarIndex]||number(item.pillarIndex+1)}</span><span class="pillar-shaft" aria-hidden="true"><i></i></span><strong>${escapeHtml(item.pillar.name)}</strong><small>${item.pillarPercentage}%</small></button>`).join('');
   const focusChapters=selected.visibleChapters.map(({chapter,chapterIndex,chapterNumber,matchingModules,finished,percentage})=>`<details class="pillar-chapter-row" ${tokens.length||chapterIndex===requestedChapter?'open':''}><summary><span>${number(chapter.pillarChapterIndex+1)}</span><div><strong>${escapeHtml(chapter.name)}</strong><small>${finished}/${chapter.modules.length} leçons · ${percentage}%</small></div><i></i></summary><div class="pillar-module-list">${matchingModules.map(({module,moduleIndex})=>{const id=`${chapterNumber}-${moduleIndex+1}`,done=completed.has(id),last=learningStates.some(item=>item.module_id===module.id);return `<a href="/module?chapitre=${chapterNumber}&module=${moduleIndex+1}${last?'&reprendre=1':''}" class="${last?'last-read':''}"><span class="module-number ${done?'done':''}">${done?'✓':number(moduleIndex+1)}</span><span><strong>${escapeHtml(module.title)}</strong><small>${last?'Dernière lecture · Reprendre exactement ici':`${module.duration} min · ${done?'Terminé':'À découvrir'}`}</small></span><b>→</b></a>`;}).join('')}</div></details>`).join('');
   courseList.innerHTML=`<section class="academy-colonnade"><div class="pillar-gateways" aria-label="Choisir un pilier">${gateways}</div><article class="pillar-focus-panel"><div class="pillar-focus-visual" style="--pillar-image:url('/assets/categories/${escapeHtml(selected.image)}.jpg')"><span>PILIER ${roman[selected.pillarIndex]}</span><strong>${escapeHtml(selected.pillar.name)}</strong></div><div class="pillar-focus-content"><header><div><span class="eyebrow">PILIER ${roman[selected.pillarIndex]}</span><h2>${escapeHtml(selected.pillar.name)}</h2><p>${selected.description}</p></div><div class="pillar-card-progress"><strong>${selected.pillarPercentage}%</strong><span>complété</span></div></header><div class="pillar-progress-track"><i style="--progress:${selected.pillarPercentage}%"></i></div><div class="pillar-card-meta"><span>${selected.pillarChapters.length} chapitres · ${selected.moduleTotal} leçons</span>${selected.state?'<strong>Dernière lecture disponible</strong>':'<span>Parcours à découvrir</span>'}</div><div class="pillar-card-chapters">${focusChapters}</div>${selected.continueItem?`<a class="pillar-continue" href="/module?chapitre=${selected.continueItem.chapterIndex+1}&module=${selected.continueItem.moduleIndex+1}${selected.state?'&reprendre=1':''}"><span>${selected.state?'Continuer votre dernière lecture':'Commencer ce pilier'}</span><strong>${escapeHtml(selected.continueItem.title)}</strong><i>→</i></a>`:''}</div></article></section>`;
-  const status=document.querySelector('#module-search-status');
-  if(status) status.textContent=tokens.length?`${resultCount} leçon${resultCount>1?'s':''} trouvée${resultCount>1?'s':''}`:'';
 }
 
 if (courseList) {
-  const requested=params.get('chapitre');
-  const searchInput=document.querySelector('#module-search');
-  const clearSearch=document.querySelector('#module-search-clear');
-  if(params.get('recherche')) searchInput.value=params.get('recherche');
-  else if(chapters[Number(requested)-1]) searchInput.value='';
-  renderCourses(searchInput.value);
-  courseList.addEventListener('click',event=>{const button=event.target.closest('[data-pillar-select]');if(!button)return;selectedPillarId=button.dataset.pillarSelect;renderCourses(searchInput.value);courseList.querySelector('.pillar-focus-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
-  searchInput.addEventListener('input',()=>{renderCourses(searchInput.value);clearSearch.hidden=!searchInput.value;const url=new URL(location);url.searchParams.delete('chapitre');searchInput.value?url.searchParams.set('recherche',searchInput.value):url.searchParams.delete('recherche');history.replaceState(null,'',url);});
-  clearSearch.hidden=!searchInput.value;
-  clearSearch.addEventListener('click',()=>{searchInput.value='';clearSearch.hidden=true;renderCourses();searchInput.focus();history.replaceState(null,'',location.pathname);});
+  renderCourses();
+  courseList.addEventListener('click',event=>{const button=event.target.closest('[data-pillar-select]');if(!button)return;selectedPillarId=button.dataset.pillarSelect;renderCourses();courseList.querySelector('.pillar-focus-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
   const progressCount=document.querySelector('#progress-count');if(progressCount)progressCount.textContent=completed.size;
   const progressTotal=document.querySelector('#progress-total');if(progressTotal)progressTotal.textContent=`/ ${allModules.length} leçons`;
   const progress=document.querySelector('#total-progress');if(progress){progress.max=allModules.length;progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;}
@@ -203,12 +192,12 @@ if (courseList) {
   const next=allModules.find(module=>!completed.has(module.id));
   if(next&&document.querySelector('#continue-title')){const pillar=pillars.find(item=>item.id===next.chapter.pillarId);document.querySelector('#continue-title').textContent=next.title;document.querySelector('#continue-chapter').textContent=`${pillar?.name||''} · CHAPITRE ${number(next.chapter.pillarChapterIndex+1)} — ${next.chapter.name.toUpperCase()}`;document.querySelector('.continue-icon').textContent=next.chapter.icon;document.querySelector('#continue-link').href=`/module?chapitre=${next.chapterIndex+1}&module=${next.moduleIndex+1}`;if(completed.size){document.querySelector('#continue-link').innerHTML='Continuer <span>↗</span>';document.querySelector('#continue-description').textContent='La prochaine étape de votre parcours.';}}
   syncRemoteProgress().then(()=>{
-    renderCourses(searchInput.value);
+    renderCourses();
     const count=document.querySelector('#progress-count');if(count)count.textContent=completed.size;
     const progress=document.querySelector('#total-progress');if(progress){progress.value=completed.size;progress.textContent=`${completed.size} sur ${allModules.length}`;}
   });
-  window.addEventListener('stoa:learning-state',()=>renderCourses(searchInput.value));
-  window.addEventListener('stoa:catalog-ready',()=>renderCourses(searchInput.value));
+  window.addEventListener('stoa:learning-state',()=>renderCourses());
+  window.addEventListener('stoa:catalog-ready',()=>renderCourses());
 }
 
 if (document.querySelector('#lesson-content')) {

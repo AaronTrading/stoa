@@ -26,7 +26,8 @@ body.classList.add('academy-experience');
 const themeButton=shell.querySelector('.academy-theme-toggle');
 const setTheme=(dark)=>{document.documentElement.classList.toggle('stoa-dark',dark);themeButton.setAttribute('aria-pressed',String(dark));themeButton.setAttribute('aria-label',dark?'Activer le thème clair':'Activer le thème sombre');};
 setTheme(localStorage.getItem('stoa-theme')==='dark');
-themeButton.addEventListener('click',async()=>{const dark=!document.documentElement.classList.contains('stoa-dark'),preference=dark?'dark':'light';localStorage.setItem('stoa-theme',preference);setTheme(dark);const current=(await supabase.auth.getSession()).data.session?.user;if(current)await supabase.from('profiles').update({theme_preference:preference}).eq('id',current.id);});
+const persistTheme=async(preference,userId)=>{const savedAt=new Date().toISOString();localStorage.setItem('stoa-theme',preference);localStorage.setItem('stoa-theme-updated-at',savedAt);setTheme(preference==='dark');const id=userId||(await supabase.auth.getSession()).data.session?.user?.id;if(!id)return null;const {error}=await supabase.rpc('set_theme_preference',{p_theme:preference});if(!error)return null;const fallback=await supabase.from('profiles').update({theme_preference:preference}).eq('id',id);return fallback.error;};
+themeButton.addEventListener('click',async()=>{const preference=document.documentElement.classList.contains('stoa-dark')?'light':'dark';const error=await persistTheme(preference,sessionUser?.id);if(error)console.warn('La préférence de thème sera resynchronisée à la prochaine ouverture.',error.message);});
 
 const sidebar=shell.querySelector('.academy-sidebar'),backdrop=shell.querySelector('.academy-sidebar-backdrop'),menu=shell.querySelector('.academy-mobile-menu');
 const setMobile=(open)=>{body.classList.toggle('academy-menu-open',open);menu.setAttribute('aria-expanded',String(open));};
@@ -51,7 +52,7 @@ updateCommunityBadge(window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__||{});window.a
 const breadcrumb=document.createElement('nav');breadcrumb.className='academy-breadcrumbs';breadcrumb.setAttribute('aria-label','Fil d’Ariane');
 const main=document.querySelector('main');if(main)main.prepend(breadcrumb);
 
-let sessionUser,profile,catalog=[],learningStates=[];
+let sessionUser,profile,catalog=[],learningStates=[],searchSections=[];
 const roman=['I','II','III','IV','V'];
 const renderBreadcrumb=()=>{
   const chapter=catalog[chapterParam-1],pillar=chapter?.pillar;
@@ -84,12 +85,15 @@ const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.di
 async function hydrate(){
   sessionUser=(await supabase.auth.getSession()).data.session?.user;
   if(!sessionUser){shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#connexion">Connectez-vous pour ouvrir vos piliers →</a>';shell.querySelector('.academy-profile-compact').href='/#connexion';shell.querySelector('[data-shell-profile-name]').textContent='Espace membre';setupGlobalSearch();return;}
-  const [{data:profileRow},{data:themeRow},snapshot]=await Promise.all([
+  const [{data:profileRow},{data:themeRow},snapshot,{data:sectionRows}]=await Promise.all([
     supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role').eq('id',sessionUser.id).maybeSingle(),
-    supabase.from('profiles').select('theme_preference').eq('id',sessionUser.id).maybeSingle(),
-    loadMemberSnapshot(sessionUser.id)
+    supabase.from('profiles').select('theme_preference,theme_updated_at').eq('id',sessionUser.id).maybeSingle(),
+    loadMemberSnapshot(sessionUser.id),
+    supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index')
   ]);
-  profile={...profileRow,theme_preference:themeRow?.theme_preference};if(profile.theme_preference){localStorage.setItem('stoa-theme',profile.theme_preference);setTheme(profile.theme_preference==='dark');}catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;
+  const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(themeRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(themeRow?.theme_preference||localTheme||'light');
+  profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(themeRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',themeRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==themeRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
+  catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;searchSections=sectionRows||[];
   renderTree();renderBreadcrumb();publishState();
   const name=profile?.username||profile?.first_name||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
   shell.querySelector('[data-shell-profile-meta]').textContent='Profil & parcours';
@@ -103,19 +107,43 @@ function setupGlobalSearch(){
   if(form.dataset.searchReady)return;form.dataset.searchReady='true';
   const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=(value,tokens)=>{const haystack=normalize(value);return tokens.every(token=>haystack.includes(token));};
+  const plainText=value=>{const node=document.createElement('div');node.innerHTML=String(value||'');return(node.textContent||'').replace(/\s+/g,' ').trim();};
+  const excerpt=(value,query,tokens)=>{const text=plainText(value),normalized=normalize(text);let index=normalized.indexOf(query);if(index<0)index=Math.min(...tokens.map(token=>normalized.indexOf(token)).filter(position=>position>=0));if(!Number.isFinite(index))index=0;const start=Math.max(0,index-58),end=Math.min(text.length,index+query.length+92);return`${start?'…':''}${text.slice(start,end).trim()}${end<text.length?'…':''}`;};
   const destinations=[
-    {title:'Mon parcours',meta:'Progression, dernières lectures et cours terminés',href:'/parcours',keywords:'progression parcours avancement cours lecons terminees derniere lecture'},
-    {title:'Carte du lait cru',meta:'Producteurs et points de vente autour de moi',href:'/carte?membre=1',keywords:'lait cru carte ferme producteur autour de moi geolocalisation'},
-    {title:'Scanner un produit',meta:'Code-barres et lecture nutritionnelle',href:'/scanner?membre=1',keywords:'scanner produit code barre nutrition note ingredients'},
-    {title:'Communauté',meta:'Publications, annonces, questions et ressources',href:'/posts',keywords:'communaute posts publications annonces questions reussites ressources'},
-    {title:'Chat général',meta:'Discussion libre entre les membres',href:'/communaute',keywords:'chat general discussion message parler membres'},
-    {title:'Boutique',meta:'Produits sélectionnés par STOA',href:'/boutique',keywords:'boutique produits huile viande commande'},
-    {title:'Mon profil',meta:'Compte, pseudo, département et bio',href:'/profil',keywords:'profil compte pseudo departement bio discord email'},
-    {title:'Glossaire',meta:'Définitions et notions STOA',href:'/glossaire',keywords:'glossaire definition notions mots vocabulaire'}
+    {title:'Carte du lait cru',meta:'Outil · Producteurs autour de moi',href:'/carte?membre=1',keywords:'lait cru carte ferme producteur fromagerie autour de moi geolocalisation adresse'},
+    {title:'Scanner un produit',meta:'Outil · Code-barres et lecture nutritionnelle',href:'/scanner?membre=1',keywords:'scanner scan produit code barre qr code nutrition note ingredients aliment'},
+    {title:'Mode sombre',meta:'Profil · Apparence par défaut',href:'/profil#apparence',keywords:'sombre dark darkmode mode nuit theme apparence couleur affichage interface clair light'},
+    {title:'Photo de profil',meta:'Profil · Modifier mon avatar',href:'/profil#photo',keywords:'photo profil avatar image televerser recadrer visage'},
+    {title:'Pseudo et identité',meta:'Profil · Prénom, nom et pseudo',href:'/profil#profile-first-name',keywords:'profil pseudo prenom nom identite utilisateur compte modifier informations personnelles'},
+    {title:'Département',meta:'Profil · Modifier ma localisation',href:'/profil#profile-department',keywords:'profil departement localisation lieu ville adresse region'},
+    {title:'Bio',meta:'Profil · Modifier ma présentation',href:'/profil#profile-bio',keywords:'profil bio biographie presentation description'},
+    {title:'Associer Discord',meta:'Profil · Connexion Discord',href:'/profil#discord',keywords:'profil discord associer lier connecter compte oauth'},
+    {title:'Mon parcours',meta:'Progression, dernières lectures et cours terminés',href:'/parcours',keywords:'progression parcours avancement cours lecons terminees derniere lecture reprendre niveau'},
+    {title:'Académie',meta:'Piliers, chapitres et leçons',href:'/academie',keywords:'academie cours modules lecons piliers chapitres apprendre formation'},
+    {title:'Communauté',meta:'Publications, annonces, questions et ressources',href:'/posts',keywords:'communaute posts publications annonces questions reussites ressources forum social'},
+    {title:'Chat général',meta:'Discussion libre entre les membres',href:'/communaute',keywords:'chat general discussion message parler membres salon conversation'},
+    {title:'Boutique',meta:'Produits sélectionnés par STOA',href:'/boutique',keywords:'boutique magasin produits huile viande commande acheter prix'},
+    {title:'Glossaire',meta:'Définitions et notions STOA',href:'/glossaire',keywords:'glossaire definition notions mots vocabulaire'},
+    {title:'Accueil',meta:'Tableau de bord de votre espace',href:'/accueil',keywords:'accueil tableau bord home bonjour resume prochaine etape'}
   ];
-  const search=()=>{const raw=input.value.trim(),query=normalize(raw),tokens=query.split(/\s+/).filter(Boolean);if(query.length<2){results.hidden=true;results.replaceChildren();return;}const lessons=catalog.flatMap(chapter=>(chapter.modules||[]).map(module=>({module,chapter})));const lessonMatches=lessons.filter(({module,chapter})=>matches(`${module.title} ${module.description||''} ${chapter.title} ${chapter.description||''} ${chapter.pillar?.title||''}`,tokens)).slice(0,5).map(({module,chapter})=>({title:module.title,meta:`${chapter.pillar?.title||'Académie'} · ${chapter.title}`,href:`/module?chapitre=${chapter.order_index+1}&module=${module.order_index+1}`}));const pageMatches=destinations.filter(item=>matches(`${item.title} ${item.meta} ${item.keywords}`,tokens));const found=[...lessonMatches,...pageMatches].slice(0,7);results.innerHTML=found.length?found.map(item=>`<a href="${item.href}"><strong>${esc(item.title)}</strong><span>${esc(item.meta)}</span></a>`).join(''):`<p class="academy-search-empty">Aucun résultat pour « ${esc(raw)} ».</p>`;results.hidden=false;};
+  const score=(item,query,tokens)=>{const title=normalize(item.title),haystack=normalize(`${item.title} ${item.meta} ${item.keywords||''}`);return(title===query?120:title.startsWith(query)?95:title.includes(query)?80:0)+tokens.reduce((total,token)=>total+(title.includes(token)?18:haystack.includes(token)?5:0),0);};
+  const renderGroup=(label,items)=>items.length?`<span class="academy-search-group">${label}</span>${items.map(item=>`<a href="${item.href}"><strong>${esc(item.title)}</strong><span>${esc(item.meta)}</span>${item.excerpt?`<small>${esc(item.excerpt)}</small>`:''}</a>`).join('')}`:'';
+  const search=()=>{
+    const raw=input.value.trim(),query=normalize(raw),tokens=query.split(/\s+/).filter(Boolean);
+    if(query.length<2){results.hidden=true;results.replaceChildren();return;}
+    const quickMatches=destinations.filter(item=>matches(`${item.title} ${item.meta} ${item.keywords}`,tokens)).map(item=>({...item,score:score(item,query,tokens)})).sort((a,b)=>b.score-a.score).slice(0,4);
+    const lessonMatches=catalog.flatMap(chapter=>(chapter.modules||[]).map(module=>{
+      const sections=searchSections.filter(section=>section.module_id===module.id),base=`${module.title} ${module.description||''} ${chapter.title} ${chapter.description||''} ${chapter.pillar?.title||''}`,matchingSection=sections.find(section=>matches(`${section.title} ${plainText(section.content)}`,tokens)),fullText=`${base} ${sections.map(section=>`${section.title} ${plainText(section.content)}`).join(' ')}`;
+      if(!matches(fullText,tokens))return null;
+      const source=matchingSection?.content||module.description||'',href=`/module?chapitre=${chapter.order_index+1}&module=${module.order_index+1}${matchingSection?`#lesson-${matchingSection.id}`:''}`;
+      return{title:module.title,meta:`Leçon · ${chapter.pillar?.title||'Académie'} · ${chapter.title}`,href,excerpt:source?excerpt(source,query,tokens):'',score:score({title:module.title,meta:base},query,tokens)};
+    })).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,6);
+    results.innerHTML=quickMatches.length||lessonMatches.length?`${renderGroup('Navigation rapide',quickMatches)}${renderGroup('Dans les leçons',lessonMatches)}`:`<p class="academy-search-empty">Aucun résultat pour « ${esc(raw)} ».</p>`;
+    results.hidden=false;
+  };
   input.addEventListener('input',search);
   form.addEventListener('submit',event=>{event.preventDefault();const first=results.querySelector('a');if(first)location.href=first.href;else search();});
+  input.addEventListener('keydown',event=>{if(event.key==='Escape'){input.value='';results.hidden=true;input.blur();}});
   document.addEventListener('click',event=>{if(!form.contains(event.target))results.hidden=true;});
 }
 
@@ -125,7 +153,7 @@ function setupReadingState(){
   const key=`stoa-reading-${module.id}`;
   const remote=learningStates.find(state=>state.module_id===module.id);let local;try{local=JSON.parse(localStorage.getItem(key)||'null')}catch{}
   const state=remote&&(!local||new Date(remote.last_read_at).getTime()>Number(local.savedAt||0))?remote:local;
-  const restore=()=>{if(restored)return;const content=document.querySelector('#lesson-copy');if(!content||!content.children.length)return;restored=true;requestAnimationFrame(()=>{const anchor=state?.anchor_id&&document.getElementById(state.anchor_id);if(anchor)window.scrollTo({top:Math.max(0,anchor.offsetTop+Number(state.anchor_offset||0)),behavior:'instant'});else if(state?.scroll_y)window.scrollTo({top:Number(state.scroll_y),behavior:'instant'});});};
+  const restore=()=>{if(restored)return;const content=document.querySelector('#lesson-copy');if(!content||!content.children.length)return;restored=true;requestAnimationFrame(()=>{const searched=location.hash&&document.getElementById(decodeURIComponent(location.hash.slice(1)));if(searched){searched.scrollIntoView({block:'start',behavior:'instant'});return;}const anchor=state?.anchor_id&&document.getElementById(state.anchor_id);if(anchor)window.scrollTo({top:Math.max(0,anchor.offsetTop+Number(state.anchor_offset||0)),behavior:'instant'});else if(state?.scroll_y)window.scrollTo({top:Number(state.scroll_y),behavior:'instant'});});};
   window.addEventListener('stoa:lesson-ready',restore,{once:true});setTimeout(restore,900);
   const snapshot=()=>{const max=Math.max(1,document.documentElement.scrollHeight-innerHeight),sections=[...document.querySelectorAll('.lesson-subchapter')];let anchor=sections[0];for(const section of sections){if(section.getBoundingClientRect().top<=150)anchor=section;else break;}return{user_id:sessionUser.id,module_id:module.id,url_path:location.pathname+location.search,scroll_y:Math.max(0,Math.round(scrollY)),progress_ratio:Math.min(1,Math.max(0,scrollY/max)),anchor_id:anchor?.id||null,anchor_offset:anchor?Math.round(scrollY-anchor.offsetTop):0,last_read_at:new Date().toISOString()};};
   const saveState=async(force=false)=>{const state=snapshot();localStorage.setItem(key,JSON.stringify({...state,savedAt:Date.now()}));localStorage.setItem('stoa-last-lesson',JSON.stringify({moduleId:module.id,url:state.url_path,title:module.title,chapter:chapter.title,savedAt:Date.now()}));if(!force&&Date.now()-lastSave<7000)return;lastSave=Date.now();await supabase.from('user_learning_state').upsert(state,{onConflict:'user_id,module_id'});};

@@ -33,6 +33,7 @@ const els = {
 let user, ownProfile, channels = [], allChannels = [], active, messages = [], polls = [], room, announcementRoom, pollRoom, announcementTimer, pollTimer, typingTimer;
 let oldest, historyEnded = false, switching = false, replyId, editId, shareId, longPressTimer, allProfilesLoaded = false;
 let chatRestriction, restrictionTargetId;
+let hiddenDeletedMessages = new Set();
 const profiles = new Map();
 let notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || {};
 const isAdmin = () => ownProfile?.role === 'admin';
@@ -109,7 +110,7 @@ function replied(message) {
 }
 const iconButton = (action, icon, label, cls = '') => `<button class="message-action ${cls}" type="button" data-message-action="${action}" aria-label="${label}" title="${label}">${svg[icon]}</button>`;
 function tools(message) {
-  if (message.deleted_at) return '';
+  if (message.deleted_at) return isAdmin()?`<div class="message-tools"><button class="message-action message-more" type="button" aria-label="Afficher les actions" aria-expanded="false">${svg.more}</button><div class="message-action-menu">${iconButton('hide-deleted','trash','Masquer de ma vue')}</div></div>`:'';
   const own = message.user_id === user.id;
   const actions=`${iconButton('reply', 'reply', 'Répondre')}${own ? iconButton('edit', 'edit', 'Modifier') : ''}${iconButton('share', 'share', 'Partager')}<button class="message-action reaction-toggle" type="button" aria-label="Ajouter une réaction" title="Réagir" aria-expanded="false">${svg.smile}</button>${isAdmin() ? iconButton('pin', 'pin', message.pinned_at ? 'Désépingler' : 'Épingler', message.pinned_at ? 'is-pinned' : '') : ''}${isAdmin() && !own ? iconButton('restrict', 'ban', 'Exclure du chat') : ''}${isAdmin() || own ? iconButton('delete', 'trash', 'Supprimer', 'message-delete') : ''}`;
   return `<div class="message-tools"><button class="message-action message-more" type="button" aria-label="Afficher les actions" aria-expanded="false">${svg.more}</button><div class="message-action-menu">${actions}</div><div class="reaction-picker" hidden>${REACTIONS.map((e) => `<button type="button" data-reaction="${e}" aria-label="Réagir avec ${e}">${e}</button>`).join('')}</div></div>`;
@@ -122,7 +123,7 @@ function messageMarkup(m, index = -1) {
   return `<article class="message-entry${grouped ? ' grouped' : ''}${m.user_id === user.id ? ' mine' : ''}${m.deleted_at ? ' deleted' : ''}${m.pinned_at ? ' pinned' : ''}" data-message-id="${m.id}"><button class="profile-trigger message-profile" type="button" data-profile-id="${m.user_id}" aria-label="Voir le profil de ${esc(author.display_name)}">${avatar(author)}</button><div class="message-column"><header class="message-meta"><button class="profile-trigger message-author" type="button" data-profile-id="${m.user_id}">${esc(author.display_name)}</button><time datetime="${esc(m.created_at)}">${time(m.created_at)}</time>${m.pinned_at ? '<span class="pinned-label">Épinglé</span>' : ''}</header>${replied(m)}${shared(m)}${m.deleted_at && !isAdmin() ? '' : `<div class="message-content">${rich(m.content)}</div>`}${deletedLabel(m)}${m.edited_at && !m.deleted_at ? '<span class="edited-label">modifié</span>' : ''}${m.deleted_at ? '' : reactions(m)}</div>${tools(m)}</article>`;
 }
 function questionMarkup(q) {
-  const author = profile(q.user_id), replies = messages.filter((m) => m.parent_message_id === q.id);
+  const author = profile(q.user_id), replies = messages.filter((m) => m.parent_message_id === q.id && !hiddenDeletedMessages.has(m.id));
   return `<article class="question-thread${q.pinned_at ? ' pinned' : ''}"><div class="message-entry question-root${q.deleted_at ? ' deleted' : ''}" data-message-id="${q.id}"><button class="profile-trigger message-profile" type="button" data-profile-id="${q.user_id}">${avatar(author)}</button><div class="message-column"><header class="message-meta"><button class="profile-trigger message-author" type="button" data-profile-id="${q.user_id}">${esc(author.display_name)}</button><time datetime="${esc(q.created_at)}">${time(q.created_at)}</time>${q.pinned_at ? '<span class="pinned-label">Épinglé</span>' : ''}</header>${replied(q)}${shared(q)}${q.deleted_at && !isAdmin() ? '' : `<div class="message-content question-content">${rich(q.content)}</div>`}${deletedLabel(q)}${q.edited_at && !q.deleted_at ? '<span class="edited-label">modifié</span>' : ''}${q.deleted_at ? '' : reactions(q)}<span class="answer-count">${replies.length} réponse${replies.length > 1 ? 's' : ''}</span></div>${tools(q)}</div>${replies.length ? `<div class="question-replies">${replies.map((m) => messageMarkup(m)).join('')}</div>` : '<p class="no-answer">Soyez le premier à répondre.</p>'}</article>`;
 }
 function pollMarkup(poll) {
@@ -139,10 +140,11 @@ function renderPolls() {
 function renderMessages() {
   els.pinned.hidden = true;
   if (active?.kind === 'polls') return renderPolls();
-  if (!messages.length) { els.list.innerHTML = ''; els.state.hidden = false; els.state.textContent = 'Le canal est calme. Posez la première pierre.'; return; }
+  const visibleMessages=messages.filter((message)=>!hiddenDeletedMessages.has(message.id));
+  if (!visibleMessages.length) { els.list.innerHTML = ''; els.state.hidden = false; els.state.textContent = 'Le canal est calme. Posez la première pierre.'; return; }
   els.state.hidden = true;
-  els.list.innerHTML = active?.kind === 'questions' ? messages.filter((m) => !m.parent_message_id).map(questionMarkup).join('') : messages.map(messageMarkup).join('');
-  const pinned = messages.filter((m) => m.pinned_at && !m.deleted_at);
+  els.list.innerHTML = active?.kind === 'questions' ? visibleMessages.filter((m) => !m.parent_message_id).map(questionMarkup).join('') : visibleMessages.map(messageMarkup).join('');
+  const pinned = visibleMessages.filter((m) => m.pinned_at && !m.deleted_at);
   els.pinned.hidden = !pinned.length;
   els.pinned.innerHTML = pinned.length ? `${svg.pin}<span>${pinned.length}</span>` : '';
 }
@@ -280,6 +282,7 @@ async function removeMessage(id) {
   if (!confirm('Supprimer ce message ? Il restera disponible pour la modération.')) return;
   const { error } = await supabase.rpc('soft_delete_message', { p_message_id: id }); if (error) return errorMessage(`Le message n’a pas pu être supprimé : ${error.message}`); await loadMessages({ preserve: true });
 }
+function hideDeletedMessage(id){const message=messages.find((item)=>item.id===id);if(!isAdmin()||!message?.deleted_at)return;hiddenDeletedMessages.add(id);localStorage.setItem(`stoa-hidden-deleted:${user.id}`,JSON.stringify([...hiddenDeletedMessages]));renderMessages();}
 async function togglePin(id) {
   const m = messages.find((item) => item.id === id); if (!m || !isAdmin()) return;
   const { error } = await supabase.rpc('toggle_message_pin', { p_message_id: id, p_pinned: !m.pinned_at });
@@ -376,7 +379,7 @@ els.list.addEventListener('click', async (e) => {
   const entry = e.target.closest('[data-message-id]'); if (!entry) return; const action = e.target.closest('[data-message-action]')?.dataset.messageAction;
   const more = e.target.closest('.message-more'); if (more) { const tools=more.closest('.message-tools'),opening=!tools.classList.contains('actions-open');closePickers(opening?tools:null);tools.classList.toggle('actions-open',opening);more.setAttribute('aria-expanded',String(opening));return; }
   if(action)closePickers();
-  if (action === 'reply') return startReply(entry.dataset.messageId); if (action === 'edit') return startEdit(entry.dataset.messageId); if (action === 'share') return openShare(entry.dataset.messageId); if (action === 'pin') return togglePin(entry.dataset.messageId); if (action === 'restrict') { const message = messages.find((item) => item.id === entry.dataset.messageId); return message && openRestriction(message.user_id); } if (action === 'delete') return removeMessage(entry.dataset.messageId);
+  if (action === 'reply') return startReply(entry.dataset.messageId); if (action === 'edit') return startEdit(entry.dataset.messageId); if (action === 'share') return openShare(entry.dataset.messageId); if (action === 'pin') return togglePin(entry.dataset.messageId); if (action === 'restrict') { const message = messages.find((item) => item.id === entry.dataset.messageId); return message && openRestriction(message.user_id); } if (action === 'delete') return removeMessage(entry.dataset.messageId); if(action==='hide-deleted')return hideDeletedMessage(entry.dataset.messageId);
   const toggle = e.target.closest('.reaction-toggle'); if (toggle) { const picker = entry.querySelector('.reaction-picker'); return picker.hidden ? openPicker(entry) : closePickers(); }
   const reaction = e.target.closest('[data-reaction]'); if (reaction) { toggleReaction(entry.dataset.messageId, reaction.dataset.reaction); closePickers(); }
 });
@@ -403,6 +406,7 @@ async function subscribeAnnouncements() {
 }
 async function init() {
   const { data: session } = await supabase.auth.getSession(); user = session.session?.user; if (!user) return location.replace('/#connexion');
+  try{hiddenDeletedMessages=new Set(JSON.parse(localStorage.getItem(`stoa-hidden-deleted:${user.id}`)||'[]'));}catch{hiddenDeletedMessages=new Set();}
   await loadProfiles([user.id]); ownProfile = profile(user.id); const { data, error } = await supabase.from('channels').select('id,slug,kind,name,description,order_index').order('order_index');
   if (error) return void (els.state.textContent = `La communauté ne peut pas être ouverte : ${error.message}`); allChannels = data || []; channels = allChannels.filter((channel) => channel.kind === 'chat' || norm(channel.slug) === 'general' || norm(channel.name) === 'general').slice(0, 1); if (!channels.length) return void (els.state.textContent = 'Le chat général est momentanément indisponible.');
   const requested = new URLSearchParams(location.search).get('canal'); await Promise.all([subscribeAnnouncements(), subscribePolls()]); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id); await loadOwnRestriction();

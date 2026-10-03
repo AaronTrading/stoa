@@ -34,6 +34,9 @@ let cropBaseScale = 1;
 let cropOffsetX = 0;
 let cropOffsetY = 0;
 let dragStart;
+let saveTimer;
+let saveInFlight = false;
+let saveAgain = false;
 
 const setMessage = (text, tone = 'info') => {
   message.textContent = text;
@@ -41,7 +44,7 @@ const setMessage = (text, tone = 'info') => {
 };
 
 const setBusy = (busy) => {
-  saveButton.disabled = busy;
+  if (saveButton) saveButton.disabled = busy;
   fileInput.disabled = busy;
   removeButton.disabled = busy;
 };
@@ -163,7 +166,7 @@ const initializeProfile = async () => {
       .single(),
     supabase.auth.getUserIdentities(),
     supabase.rpc('get_community_profiles', { profile_ids: [user.id] }).maybeSingle(),
-    supabase.from('profiles').select('theme_preference').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('theme_preference,theme_updated_at').eq('id', user.id).maybeSingle(),
   ]);
 
   const { data, error } = profileResult;
@@ -173,7 +176,12 @@ const initializeProfile = async () => {
     return;
   }
 
-  profile = { ...data, theme_preference: themeResult.data?.theme_preference || localStorage.getItem('stoa-theme') || 'light' };
+  const localTheme = localStorage.getItem('stoa-theme');
+  const localThemeDate = Date.parse(localStorage.getItem('stoa-theme-updated-at') || 0);
+  const remoteThemeDate = Date.parse(themeResult.data?.theme_updated_at || 0);
+  const preferredTheme = localTheme && localThemeDate > remoteThemeDate ? localTheme : (themeResult.data?.theme_preference || localTheme || 'light');
+  profile = { ...data, theme_preference: preferredTheme };
+  if (themeResult.data?.theme_updated_at) localStorage.setItem('stoa-theme-updated-at', themeResult.data.theme_updated_at);
   const fullName = profile.full_name || user.user_metadata?.full_name || user.user_metadata?.name || '';
   const [fallbackFirstName = '', ...fallbackLastName] = fullName.trim().split(/\s+/).filter(Boolean);
   const firstName = profile.first_name || user.user_metadata?.first_name || fallbackFirstName;
@@ -186,6 +194,9 @@ const initializeProfile = async () => {
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
   bioInput.value = (profile.bio || '').slice(0, 200);
   applyThemePreference(profile.theme_preference);
+  if (localTheme && localThemeDate > remoteThemeDate && localTheme !== themeResult.data?.theme_preference) {
+    supabase.rpc('set_theme_preference', { p_theme: localTheme });
+  }
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
@@ -203,12 +214,13 @@ const initializeProfile = async () => {
 
 themeInputs.forEach((input) => input.addEventListener('change', async () => {
   if (!input.checked || !user) return;
-  const previous = profile?.theme_preference === 'dark' ? 'dark' : 'light';
+  const savedAt = new Date().toISOString();
+  localStorage.setItem('stoa-theme-updated-at', savedAt);
   applyThemePreference(input.value);
-  const { error } = await supabase.from('profiles').update({ theme_preference: input.value }).eq('id', user.id);
+  let { error } = await supabase.rpc('set_theme_preference', { p_theme: input.value });
+  if (error) ({ error } = await supabase.from('profiles').update({ theme_preference: input.value }).eq('id', user.id));
   if (error) {
-    applyThemePreference(previous);
-    setMessage(`Le thème n’a pas pu être enregistré : ${error.message}`, 'error');
+    setMessage('Le thème reste actif sur cet appareil et sera resynchronisé automatiquement.', 'error');
     return;
   }
   profile = { ...profile, theme_preference: input.value };
@@ -289,7 +301,8 @@ cropApply.addEventListener('click', () => {
     fileInput.value = '';
     cropDialog.close();
     releaseCropSource();
-    setMessage('Recadrage prêt. Enregistrez les modifications pour l’appliquer.', 'success');
+    setMessage('Photo prête, enregistrement…');
+    queueAutoSave(0);
   }, 'image/webp', 0.9);
 });
 
@@ -305,31 +318,21 @@ cropDialog.addEventListener('click', (event) => {
   if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) cancelCrop();
 });
 
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
+const saveProfile = async () => {
+  if (!user) return;
+  if (saveInFlight) { saveAgain = true; return; }
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
   const username = usernameInput.value.trim();
   const bio = bioInput.value.trim();
   const department = departmentCode(departmentInput.value);
   const fullName = `${firstName} ${lastName}`.trim();
-  if (!firstName || !lastName) {
-    setMessage('Renseignez votre prénom et votre nom.', 'error');
-    return;
-  }
-  if (username.length < 3 || username.length > 30) {
-    setMessage('Le pseudo doit contenir entre 3 et 30 caractères.', 'error');
-    return;
-  }
-  if (!department) {
-    setMessage('Renseignez un numéro de département valide, par exemple 31, 2A ou 974.', 'error');
-    return;
-  }
-  if (bio.length > 200) {
-    setMessage('La bio est limitée à 200 caractères.', 'error');
+  if (!firstName || !lastName || username.length < 3 || username.length > 30 || !department || bio.length > 200) {
+    setMessage('Complétez les champs requis pour terminer l’enregistrement.');
     return;
   }
 
+  saveInFlight = true;
   setBusy(true);
   setMessage('Enregistrement en cours…');
   let avatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
@@ -342,6 +345,7 @@ form.addEventListener('submit', async (event) => {
       cacheControl: '3600',
     });
     if (uploadError) {
+      saveInFlight = false;
       setBusy(false);
       setMessage(`La photo n’a pas pu être envoyée : ${uploadError.message}`, 'error');
       return;
@@ -352,10 +356,11 @@ form.addEventListener('submit', async (event) => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl, theme_preference: document.querySelector('input[name="themePreference"]:checked')?.value || 'light' })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
+    saveInFlight = false;
     setBusy(false);
     if (profileError.code === '23505') {
       setMessage('Ce pseudo est déjà utilisé. Choisissez-en un autre.', 'error');
@@ -368,12 +373,6 @@ form.addEventListener('submit', async (event) => {
   const { error: userError } = await supabase.auth.updateUser({
     data: { full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl },
   });
-  setBusy(false);
-  if (userError) {
-    setMessage('Le profil est enregistré, mais l’avatar du menu sera actualisé à la prochaine connexion.', 'error');
-    return;
-  }
-
   profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
@@ -384,8 +383,23 @@ form.addEventListener('submit', async (event) => {
   document.querySelectorAll('[data-user-first-name]').forEach((element) => {
     element.textContent = firstName;
   });
-  setMessage('Votre profil a bien été mis à jour.', 'success');
+  setBusy(false);
+  saveInFlight = false;
+  setMessage(userError ? 'Profil enregistré. Le menu sera actualisé à la prochaine connexion.' : 'Tout est enregistré.', userError ? 'error' : 'success');
+  if (saveAgain) { saveAgain = false; queueAutoSave(0); }
+};
+
+const queueAutoSave = (delay = 700) => {
+  clearTimeout(saveTimer);
+  setMessage('Modifications en attente…');
+  saveTimer = setTimeout(saveProfile, delay);
+};
+
+[firstNameInput, lastNameInput, usernameInput, departmentInput, bioInput].forEach((input) => {
+  input.addEventListener('input', () => queueAutoSave());
+  input.addEventListener('change', () => queueAutoSave(150));
 });
+form.addEventListener('submit', (event) => { event.preventDefault(); queueAutoSave(0); });
 
 removeButton.addEventListener('click', async () => {
   if (!user) return;
