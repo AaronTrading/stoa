@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="env.js"></script>
   <script type="module" src="auth.js"></script>
-  <script type="module">if(new URLSearchParams(location.search).has('membre')) import('./academy-shell.js');</script>
+  <script type="module">if(new URLSearchParams(location.search).has('membre')){import('./community-notifications.js');import('./academy-shell.js');}</script>
 </head>
 <body class="tool-page map-page">
   <a class="skip" href="#main">Aller au contenu</a>

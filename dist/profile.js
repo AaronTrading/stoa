@@ -22,6 +22,7 @@ const cropZoom = document.querySelector('#avatar-crop-zoom');
 const cropApply = document.querySelector('#crop-apply');
 const discordLinkButton = document.querySelector('#discord-link-button');
 const discordLinkStatus = document.querySelector('#discord-link-status');
+const themeInputs = [...document.querySelectorAll('input[name="themePreference"]')];
 
 let user;
 let profile;
@@ -72,6 +73,14 @@ const setDiscordLinkState = (linked) => {
   discordLinkButton.textContent = linked ? 'Associé ✓' : 'Associer';
   discordLinkButton.disabled = linked;
   discordLinkButton.classList.toggle('linked', linked);
+};
+
+const applyThemePreference = (theme) => {
+  const preference = theme === 'dark' ? 'dark' : 'light';
+  localStorage.setItem('stoa-theme', preference);
+  document.documentElement.classList.toggle('stoa-dark', preference === 'dark');
+  themeInputs.forEach((input) => { input.checked = input.value === preference; });
+  document.querySelector('.academy-theme-toggle')?.setAttribute('aria-pressed', String(preference === 'dark'));
 };
 
 const cropMetrics = () => {
@@ -146,7 +155,7 @@ const initializeProfile = async () => {
     return;
   }
 
-  const [profileResult, identitiesResult, publicProfileResult] = await Promise.all([
+  const [profileResult, identitiesResult, publicProfileResult, themeResult] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, first_name, last_name, username, avatar_url, department, bio, role, created_at')
@@ -154,6 +163,7 @@ const initializeProfile = async () => {
       .single(),
     supabase.auth.getUserIdentities(),
     supabase.rpc('get_community_profiles', { profile_ids: [user.id] }).maybeSingle(),
+    supabase.from('profiles').select('theme_preference').eq('id', user.id).maybeSingle(),
   ]);
 
   const { data, error } = profileResult;
@@ -163,7 +173,7 @@ const initializeProfile = async () => {
     return;
   }
 
-  profile = data;
+  profile = { ...data, theme_preference: themeResult.data?.theme_preference || localStorage.getItem('stoa-theme') || 'light' };
   const fullName = profile.full_name || user.user_metadata?.full_name || user.user_metadata?.name || '';
   const [fallbackFirstName = '', ...fallbackLastName] = fullName.trim().split(/\s+/).filter(Boolean);
   const firstName = profile.first_name || user.user_metadata?.first_name || fallbackFirstName;
@@ -175,6 +185,7 @@ const initializeProfile = async () => {
   usernameInput.value = username;
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
   bioInput.value = (profile.bio || '').slice(0, 200);
+  applyThemePreference(profile.theme_preference);
   emailInput.value = user.email || '';
   document.querySelector('#profile-role').textContent = roleLabels[profile.role] || 'Membre';
   const publicProfile = publicProfileResult.data;
@@ -189,6 +200,20 @@ const initializeProfile = async () => {
   const identities = identitiesResult.data?.identities || user.identities || [];
   setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
 };
+
+themeInputs.forEach((input) => input.addEventListener('change', async () => {
+  if (!input.checked || !user) return;
+  const previous = profile?.theme_preference === 'dark' ? 'dark' : 'light';
+  applyThemePreference(input.value);
+  const { error } = await supabase.from('profiles').update({ theme_preference: input.value }).eq('id', user.id);
+  if (error) {
+    applyThemePreference(previous);
+    setMessage(`Le thème n’a pas pu être enregistré : ${error.message}`, 'error');
+    return;
+  }
+  profile = { ...profile, theme_preference: input.value };
+  setMessage(`Le mode ${input.value === 'dark' ? 'sombre' : 'clair'} sera utilisé à chaque connexion.`, 'success');
+}));
 
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0];
@@ -327,7 +352,7 @@ form.addEventListener('submit', async (event) => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl, theme_preference: document.querySelector('input[name="themePreference"]:checked')?.value || 'light' })
     .eq('id', user.id);
 
   if (profileError) {

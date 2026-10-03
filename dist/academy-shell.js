@@ -26,7 +26,7 @@ body.classList.add('academy-experience');
 const themeButton=shell.querySelector('.academy-theme-toggle');
 const setTheme=(dark)=>{document.documentElement.classList.toggle('stoa-dark',dark);themeButton.setAttribute('aria-pressed',String(dark));themeButton.setAttribute('aria-label',dark?'Activer le thème clair':'Activer le thème sombre');};
 setTheme(localStorage.getItem('stoa-theme')==='dark');
-themeButton.addEventListener('click',()=>{const dark=!document.documentElement.classList.contains('stoa-dark');localStorage.setItem('stoa-theme',dark?'dark':'light');setTheme(dark);});
+themeButton.addEventListener('click',async()=>{const dark=!document.documentElement.classList.contains('stoa-dark'),preference=dark?'dark':'light';localStorage.setItem('stoa-theme',preference);setTheme(dark);const current=(await supabase.auth.getSession()).data.session?.user;if(current)await supabase.from('profiles').update({theme_preference:preference}).eq('id',current.id);});
 
 const sidebar=shell.querySelector('.academy-sidebar'),backdrop=shell.querySelector('.academy-sidebar-backdrop'),menu=shell.querySelector('.academy-mobile-menu');
 const setMobile=(open)=>{body.classList.toggle('academy-menu-open',open);menu.setAttribute('aria-expanded',String(open));};
@@ -84,11 +84,12 @@ const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.di
 async function hydrate(){
   sessionUser=(await supabase.auth.getSession()).data.session?.user;
   if(!sessionUser){shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#connexion">Connectez-vous pour ouvrir vos piliers →</a>';shell.querySelector('.academy-profile-compact').href='/#connexion';shell.querySelector('[data-shell-profile-name]').textContent='Espace membre';setupGlobalSearch();return;}
-  const [{data:profileRow},snapshot]=await Promise.all([
+  const [{data:profileRow},{data:themeRow},snapshot]=await Promise.all([
     supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role').eq('id',sessionUser.id).maybeSingle(),
+    supabase.from('profiles').select('theme_preference').eq('id',sessionUser.id).maybeSingle(),
     loadMemberSnapshot(sessionUser.id)
   ]);
-  profile=profileRow;catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;
+  profile={...profileRow,theme_preference:themeRow?.theme_preference};if(profile.theme_preference){localStorage.setItem('stoa-theme',profile.theme_preference);setTheme(profile.theme_preference==='dark');}catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;
   renderTree();renderBreadcrumb();publishState();
   const name=profile?.username||profile?.first_name||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
   shell.querySelector('[data-shell-profile-meta]').textContent='Profil & parcours';
