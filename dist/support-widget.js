@@ -1,33 +1,96 @@
 import { supabase } from './supabase.js';
 import { openMemberProfile } from './member-profile-card.js';
 
-const session=(await supabase.auth.getSession()).data.session;
-if(session)initialize(session.user);
+const session = (await supabase.auth.getSession()).data.session;
+if (session) initialize(session.user);
 
-async function initialize(user){
-  const {data:ownProfile}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
-  const isAdmin=ownProfile?.role==='admin';
-  const widget=document.createElement('section');widget.className='support-widget';widget.innerHTML=`<button class="support-trigger" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v10H9l-4 3V6Z"/></svg><span>Aide</span><b hidden></b></button><div class="support-panel" hidden><header><div><span class="eyebrow">AIDE STOA</span><strong>${isAdmin?'Discussions membres':'Écrire au staff'}</strong></div><button type="button" data-support-close aria-label="Fermer">×</button></header><button class="support-back" type="button" hidden>← Toutes les discussions</button><div class="support-roster-search" ${isAdmin?'':'hidden'}><label class="sr-only" for="support-member-search">Rechercher un membre</label><input id="support-member-search" type="search" placeholder="Rechercher un membre…" autocomplete="off"></div><div class="support-content"><p class="support-loading">Ouverture…</p></div><form class="support-form" hidden><label class="sr-only" for="support-message">Votre message</label><textarea id="support-message" rows="1" maxlength="2000" placeholder="Écrivez votre message…" required></textarea><button type="submit" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-5-7-2Zm7 2 7-9"/></svg></button></form><p class="support-status" role="status"></p></div>`;document.body.append(widget);
-  const trigger=widget.querySelector('.support-trigger'),panel=widget.querySelector('.support-panel'),content=widget.querySelector('.support-content'),form=widget.querySelector('.support-form'),back=widget.querySelector('.support-back'),status=widget.querySelector('.support-status'),search=widget.querySelector('#support-member-search'),rosterSearch=widget.querySelector('.support-roster-search');
-  let messages=[],profiles=new Map(),activeMember=isAdmin?null:user.id,channel,roster=[];
-  const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-  const normalize=(value='')=>String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  const time=value=>new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
-  const avatar=(profile,id)=>profile?.avatar_url?`<button class="support-avatar has-image" type="button" data-member-profile="${id}" style="background-image:url('${esc(profile.avatar_url)}')" aria-label="Voir le profil de ${esc(profile.display_name)}"></button>`:`<button class="support-avatar" type="button" data-member-profile="${id}" aria-label="Voir le profil de ${esc(profile?.display_name||'Membre')}">${esc((profile?.display_name||'S')[0].toUpperCase())}</button>`;
-  const loadProfiles=async(ids)=>{const missing=[...new Set(ids)].filter(id=>id&&!profiles.has(id));if(!missing.length)return;const {data}=await supabase.rpc('get_community_profiles',{profile_ids:missing});(data||[]).forEach(item=>profiles.set(item.id,item));};
-  const loadRoster=async()=>{if(!isAdmin||roster.length)return;const {data}=await supabase.rpc('get_community_profiles',{profile_ids:null});roster=data||[];roster.forEach(item=>profiles.set(item.id,item));};
-  const setUnread=()=>{const count=messages.filter(item=>!item.read_at&&item.sender_id!==user.id).length,badge=trigger.querySelector('b');badge.textContent=count>9?'9+':String(count);badge.hidden=!count;};
-  const markRead=async()=>{if(panel.hidden)return;const ids=messages.filter(item=>!item.read_at&&item.sender_id!==user.id&&(!isAdmin||item.member_id===activeMember)).map(item=>item.id);if(ids.length){await supabase.from('support_messages').update({read_at:new Date().toISOString()}).in('id',ids);messages.forEach(item=>{if(ids.includes(item.id))item.read_at=new Date().toISOString();});setUnread();}};
-  const renderThread=async()=>{const rows=messages.filter(item=>item.member_id===activeMember);await loadProfiles([...rows.map(item=>item.sender_id),activeMember]);const member=profiles.get(activeMember);content.innerHTML=`${isAdmin?`<div class="support-thread-member">${avatar(member,activeMember)}<button type="button" data-member-profile="${activeMember}"><small>DISCUSSION AVEC</small><strong>${esc(member?.display_name||'Membre STOA')}</strong></button></div>`:''}${rows.map(item=>{const mine=item.sender_id===user.id,person=profiles.get(item.sender_id),name=mine?(person?.display_name||'Vous'):(person?.display_name||'Staff STOA');return `<article class="support-message ${mine?'mine':''}"><header>${avatar(person,item.sender_id)}<button type="button" data-member-profile="${item.sender_id}">${esc(name)}</button><time>${time(item.created_at)}</time></header><p>${esc(item.content).replaceAll('\n','<br>')}</p></article>`;}).join('')||'<p class="support-empty">La discussion est ouverte. Envoyez le premier message.</p>'}`;content.scrollTop=content.scrollHeight;form.hidden=false;back.hidden=!isAdmin;rosterSearch.hidden=true;await markRead();};
-  const renderConversations=async()=>{await loadRoster();const q=normalize(search?.value||'');const memberIds=[...new Set([...messages.map(item=>item.member_id),...roster.map(item=>item.id)])].filter(id=>{const p=profiles.get(id);return !q||normalize(`${p?.display_name||''} ${p?.username||''}`).includes(q);});memberIds.sort((a,b)=>{const aDate=[...messages].reverse().find(item=>item.member_id===a)?.created_at||'',bDate=[...messages].reverse().find(item=>item.member_id===b)?.created_at||'';return bDate.localeCompare(aDate)||(profiles.get(a)?.display_name||'').localeCompare(profiles.get(b)?.display_name||'','fr');});content.innerHTML=memberIds.map(id=>{const last=[...messages].reverse().find(item=>item.member_id===id),unread=messages.filter(item=>item.member_id===id&&!item.read_at&&item.sender_id!==user.id).length,p=profiles.get(id);return `<div class="support-conversation">${avatar(p,id)}<button class="support-conversation-copy" type="button" data-member-profile="${id}"><strong>${esc(p?.display_name||'Membre STOA')}</strong><small>${esc(p?.username?`@${p.username}`:(id===user.id?'Votre compte · test':''))}</small></button><button class="support-conversation-open" type="button" data-support-member="${id}" aria-label="Ouvrir la discussion">${last?'<span>'+esc(last.content)+'</span>':'<span>Démarrer</span>'}<i>→</i>${unread?`<b>${unread}</b>`:''}</button></div>`;}).join('')||'<p class="support-empty">Aucun membre trouvé.</p>';form.hidden=true;back.hidden=true;rosterSearch.hidden=false;};
-  const render=()=>isAdmin&&!activeMember?renderConversations():renderThread();
-  const load=async()=>{let query=supabase.from('support_messages').select('*').order('created_at');if(!isAdmin)query=query.eq('member_id',user.id);const {data,error}=await query;if(error){content.innerHTML=`<p class="support-empty">La messagerie est momentanément indisponible.<br>${esc(error.message)}</p>`;return;}messages=data||[];setUnread();render();};
-  const toggle=open=>{panel.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)render();};
-  trigger.addEventListener('click',()=>toggle(panel.hidden));widget.querySelector('[data-support-close]').addEventListener('click',()=>toggle(false));
-  content.addEventListener('click',event=>{const profileButton=event.target.closest('[data-member-profile]');if(profileButton)return openMemberProfile(profileButton.dataset.memberProfile);const button=event.target.closest('[data-support-member]');if(button){activeMember=button.dataset.supportMember;render();}});back.addEventListener('click',()=>{activeMember=null;render();});
-  search?.addEventListener('input',()=>renderConversations());
-  form.addEventListener('submit',async event=>{event.preventDefault();const textarea=form.querySelector('textarea'),value=textarea.value.trim();if(!value||!activeMember)return;const button=form.querySelector('button');button.disabled=true;const {error}=await supabase.from('support_messages').insert({member_id:activeMember,sender_id:user.id,content:value});button.disabled=false;status.textContent=error?error.message:'';if(!error){textarea.value='';textarea.style.height='';await load();}});
-  form.querySelector('textarea').addEventListener('input',event=>{event.currentTarget.style.height='';event.currentTarget.style.height=`${Math.min(96,event.currentTarget.scrollHeight)}px`;});
-  form.querySelector('textarea').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();form.requestSubmit();}});
-  await load();channel=supabase.channel(`support:${user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'support_messages'},()=>load()).subscribe();addEventListener('pagehide',()=>{if(channel)supabase.removeChannel(channel)},{once:true});
+async function initialize(user) {
+  const { data: ownProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const isAdmin = ownProfile?.role === 'admin';
+  const supportIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path d="M6 12H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v-7Zm12 0h1a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2v-7Z"/><path d="M17 19c-1 2-3 2-5 2"/></svg>';
+  const sendIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-5-7-2Zm7 2 7-9"/></svg>';
+  const widget = document.createElement('section');
+  widget.className = `support-widget${isAdmin ? ' support-widget-admin' : ''}`;
+  widget.innerHTML = `<button class="support-trigger" type="button" aria-label="${isAdmin ? 'Ouvrir la boîte support' : 'Contacter le support STOA'}" title="${isAdmin ? 'Boîte support' : 'Aide et support'}" aria-expanded="false">${supportIcon}<b hidden></b></button><div class="support-panel" hidden><header><div><span class="eyebrow">${isAdmin ? 'ESPACE STAFF' : 'AIDE & SUPPORT'}</span><strong>${isAdmin ? 'Boîte support' : 'Support STOA'}</strong><small>${isAdmin ? 'Demandes des membres' : 'Académie, compte et abonnement'}</small></div><button type="button" data-support-close aria-label="Fermer">×</button></header><button class="support-back" type="button" hidden>← Toutes les demandes</button><div class="support-roster-search" ${isAdmin ? '' : 'hidden'}><label class="sr-only" for="support-member-search">Rechercher une demande</label><input id="support-member-search" type="search" placeholder="Rechercher un membre…" autocomplete="off"></div><div class="support-content"><p class="support-loading">Ouverture du support…</p></div><form class="support-form" hidden><label class="sr-only" for="support-message">Votre message</label><textarea id="support-message" rows="1" maxlength="2000" placeholder="${isAdmin ? 'Répondre en tant que Support STOA…' : 'Posez votre question au support…'}" required></textarea><button type="submit" aria-label="Envoyer">${sendIcon}</button></form><p class="support-status" role="status"></p></div>`;
+  document.body.append(widget);
+
+  const trigger = widget.querySelector('.support-trigger');
+  const panel = widget.querySelector('.support-panel');
+  const content = widget.querySelector('.support-content');
+  const form = widget.querySelector('.support-form');
+  const back = widget.querySelector('.support-back');
+  const status = widget.querySelector('.support-status');
+  const search = widget.querySelector('#support-member-search');
+  const rosterSearch = widget.querySelector('.support-roster-search');
+  let messages = [], profiles = new Map(), activeMember = isAdmin ? null : user.id, channel;
+
+  const esc = (value = '') => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+  const normalize = (value = '') => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const time = (value) => new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  const profile = (id) => profiles.get(id) || { display_name: 'Membre STOA', username: '', avatar_url: null };
+  const avatar = (item, id, clickable = false) => {
+    const tag = clickable ? 'button' : 'span', attrs = clickable ? `type="button" data-member-profile="${id}" aria-label="Voir le profil de ${esc(item.display_name)}"` : 'aria-hidden="true"';
+    return item.avatar_url ? `<${tag} class="support-avatar has-image" ${attrs} style="background-image:url('${esc(item.avatar_url)}')"></${tag}>` : `<${tag} class="support-avatar" ${attrs}>${esc((item.display_name || 'S')[0].toUpperCase())}</${tag}>`;
+  };
+  const supportAvatar = '<span class="support-avatar support-avatar-staff" aria-hidden="true">?</span>';
+  const loadProfiles = async (ids) => { const missing = [...new Set(ids)].filter((id) => id && !profiles.has(id)); if (!missing.length) return; const { data } = await supabase.rpc('get_community_profiles', { profile_ids: missing }); (data || []).forEach((item) => profiles.set(item.id, item)); };
+  const incoming = (item) => isAdmin ? item.sender_id === item.member_id : item.sender_id !== item.member_id;
+  const setUnread = () => { const count = messages.filter((item) => !item.read_at && incoming(item)).length, badge = trigger.querySelector('b'); badge.textContent = count > 9 ? '9+' : String(count); badge.hidden = !count; };
+  const markRead = async () => { if (panel.hidden || !activeMember) return; const ids = messages.filter((item) => item.member_id === activeMember && !item.read_at && incoming(item)).map((item) => item.id); if (!ids.length) return; await supabase.from('support_messages').update({ read_at: new Date().toISOString() }).in('id', ids); messages.forEach((item) => { if (ids.includes(item.id)) item.read_at = new Date().toISOString(); }); setUnread(); };
+
+  const renderThread = async () => {
+    const rows = messages.filter((item) => item.member_id === activeMember);
+    await loadProfiles([activeMember, ...rows.map((item) => item.sender_id)]);
+    const member = profile(activeMember);
+    const threadHead = isAdmin ? `<div class="support-thread-member">${avatar(member, activeMember, true)}<button type="button" data-member-profile="${activeMember}"><small>DEMANDE DE</small><strong>${esc(member.display_name)}</strong>${member.username ? `<span>@${esc(member.username)}</span>` : ''}</button></div>` : '<div class="support-welcome"><span>?</span><div><strong>Une question ?</strong><p>Écrivez ici. Un membre du staff STOA vous répondra dans cette conversation.</p></div></div>';
+    const items = rows.map((item) => {
+      const mine = item.sender_id === user.id;
+      if (!isAdmin) {
+        const fromSupport = item.sender_id !== item.member_id;
+        return `<article class="support-message ${mine ? 'mine' : 'support-reply'}"><header>${fromSupport ? supportAvatar : ''}<strong>${fromSupport ? 'Support STOA' : 'Vous'}</strong><time>${time(item.created_at)}</time></header><p>${esc(item.content).replaceAll('\n', '<br>')}</p></article>`;
+      }
+      const fromMember = item.sender_id === item.member_id;
+      const person = profile(item.sender_id);
+      return `<article class="support-message ${fromMember ? 'support-member-message' : 'mine'}"><header>${fromMember ? avatar(person, item.sender_id, true) : supportAvatar}<strong>${fromMember ? esc(person.display_name) : item.sender_id === user.id ? 'Vous · Support' : 'Support STOA'}</strong><time>${time(item.created_at)}</time></header><p>${esc(item.content).replaceAll('\n', '<br>')}</p></article>`;
+    }).join('');
+    content.innerHTML = `${threadHead}${items || '<p class="support-empty">Aucun message pour le moment.<br>Vous pouvez poser votre première question ici.</p>'}`;
+    content.scrollTop = content.scrollHeight;
+    form.hidden = false;
+    back.hidden = !isAdmin;
+    rosterSearch.hidden = true;
+    await markRead();
+  };
+
+  const renderConversations = async () => {
+    const memberIds = [...new Set(messages.map((item) => item.member_id))];
+    await loadProfiles(memberIds);
+    const query = normalize(search?.value || '');
+    const filtered = memberIds.filter((id) => { const person = profile(id); return !query || normalize(`${person.display_name} ${person.username}`).includes(query); });
+    filtered.sort((a, b) => { const aDate = [...messages].reverse().find((item) => item.member_id === a)?.created_at || '', bDate = [...messages].reverse().find((item) => item.member_id === b)?.created_at || ''; return bDate.localeCompare(aDate); });
+    content.innerHTML = filtered.map((id) => {
+      const person = profile(id), rows = messages.filter((item) => item.member_id === id), last = rows.at(-1), unread = rows.filter((item) => !item.read_at && item.sender_id === id).length;
+      return `<div class="support-conversation" data-support-member="${id}">${avatar(person, id, true)}<button class="support-conversation-open" type="button" data-support-member="${id}"><strong>${esc(person.display_name)}</strong><small>${last ? esc(last.content) : 'Nouvelle demande'}</small></button><div><time>${last ? time(last.created_at) : ''}</time>${unread ? `<b>${unread > 9 ? '9+' : unread}</b>` : ''}</div></div>`;
+    }).join('') || '<p class="support-empty">Aucune demande de support pour le moment.</p>';
+    form.hidden = true;
+    back.hidden = true;
+    rosterSearch.hidden = false;
+  };
+
+  const render = () => isAdmin && !activeMember ? renderConversations() : renderThread();
+  const load = async () => { let query = supabase.from('support_messages').select('*').order('created_at'); if (!isAdmin) query = query.eq('member_id', user.id); const { data, error } = await query; if (error) { content.innerHTML = `<p class="support-empty">Le support est momentanément indisponible.<br>${esc(error.message)}</p>`; return; } messages = data || []; setUnread(); await render(); };
+  const toggle = (open) => { panel.hidden = !open; trigger.setAttribute('aria-expanded', String(open)); widget.classList.toggle('support-open', open); if (open) render(); };
+
+  trigger.addEventListener('click', () => toggle(panel.hidden));
+  widget.querySelector('[data-support-close]').addEventListener('click', () => toggle(false));
+  content.addEventListener('click', (event) => { const profileButton = event.target.closest('[data-member-profile]'); if (profileButton && isAdmin) return openMemberProfile(profileButton.dataset.memberProfile); const button = event.target.closest('[data-support-member]'); if (button && isAdmin) { activeMember = button.dataset.supportMember; render(); } });
+  back.addEventListener('click', () => { activeMember = null; render(); });
+  search?.addEventListener('input', renderConversations);
+  form.addEventListener('submit', async (event) => { event.preventDefault(); const textarea = form.querySelector('textarea'), value = textarea.value.trim(); if (!value || !activeMember) return; const button = form.querySelector('button'); button.disabled = true; const { error } = await supabase.from('support_messages').insert({ member_id: activeMember, sender_id: user.id, content: value }); button.disabled = false; status.textContent = error ? error.message : ''; if (!error) { textarea.value = ''; textarea.style.height = ''; await load(); } });
+  form.querySelector('textarea').addEventListener('input', (event) => { event.currentTarget.style.height = ''; event.currentTarget.style.height = `${Math.min(96, event.currentTarget.scrollHeight)}px`; });
+  form.querySelector('textarea').addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit(); } });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !panel.hidden) toggle(false); });
+
+  await load();
+  channel = supabase.channel(`support:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'support_messages' }, load).subscribe();
+  addEventListener('pagehide', () => { if (channel) supabase.removeChannel(channel); }, { once: true });
 }
