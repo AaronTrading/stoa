@@ -121,7 +121,8 @@ const persistModuleProgress = async (localId, done) => {
 
 const categoryStrip = document.querySelector('#category-strip');
 if (categoryStrip) {
-  categoryStrip.insertAdjacentHTML('beforeend', chapters.slice(0,6).map((chapter,index)=>`<a href="/academie?chapitre=${index+1}">${number(index+1)} <b>${chapter.name}</b></a>`).join(''));
+  const roman = ['I', 'II', 'III', 'IV', 'V'];
+  categoryStrip.insertAdjacentHTML('beforeend', pillars.map((pillar,index)=>`<span class="pillar-item"><i>${roman[index]}</i><b>${pillar.name}</b></span>`).join(''));
 }
 
 const landingChapters = document.querySelector('#landing-chapters');

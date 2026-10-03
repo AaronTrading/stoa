@@ -85,11 +85,17 @@ const updateAuthUI = (session, profile = currentProfile) => {
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
     link.href = user ? '/accueil' : '#connexion';
-    const label = user ? 'Accéder à l’Académie' : 'Espace membre';
+    const label = user ? 'Mon espace' : 'Connexion';
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
     link.replaceChildren(document.createTextNode(`${label} `), arrow);
     link.setAttribute('aria-label', user ? 'Ouvrir mon académie' : 'Se connecter à STOA');
+  });
+
+  document.querySelectorAll('[data-member-academy-link]').forEach((link) => {
+    const hasAcademyAccess = Boolean(user && ['member', 'coaching', 'admin'].includes(activeProfile?.role));
+    link.hidden = !hasAcademyAccess;
+    link.href = '/accueil';
   });
 
   document.querySelectorAll('[data-auth-avatar]').forEach((avatar) => {
@@ -118,7 +124,7 @@ const hydrateAuthUI = async (session) => {
 
   const { data } = await supabase
     .from('profiles')
-    .select('full_name, first_name, avatar_url, department')
+    .select('full_name, first_name, avatar_url, department, role')
     .eq('id', user.id)
     .maybeSingle();
 

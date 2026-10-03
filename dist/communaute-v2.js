@@ -72,7 +72,7 @@ function avatar(item, cls = 'message-avatar') {
 }
 const channelFor = (tag) => channels.find((c) => norm(c.slug) === norm(tag) || norm(c.name) === norm(tag));
 function rich(text = '') {
-  const re = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.-]{2,32}|#[A-Za-zÀ-ÖØ-öø-ÿ0-9_-]+)/gu;
+  const re = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.;-]{2,32}|#[A-Za-zÀ-ÖØ-öø-ÿ0-9_-]+)/gu;
   let out = '', cursor = 0;
   for (const match of text.matchAll(re)) {
     out += esc(text.slice(cursor, match.index)).replaceAll('\n', '<br>');
@@ -101,7 +101,8 @@ function reactions(message) {
 function shared(message) {
   const item = message.shared_message;
   if (!item) return '';
-  return `<div class="shared-message"><button type="button" data-channel-slug="${esc(item.channel_slug || '')}"><strong>${esc(profile(item.user_id).display_name)}</strong> dans #${esc(item.channel_name || 'canal')}</button><span>${item.deleted_at ? '<em>Message supprimé</em>' : rich(item.content)}</span></div>`;
+  const locationLabel = norm(item.channel_slug || item.channel_name) === 'general' ? 'dans la discussion' : `dans ${esc(item.channel_name || 'la communauté')}`;
+  return `<div class="shared-message"><button type="button" data-channel-slug="${esc(item.channel_slug || '')}"><strong>${esc(profile(item.user_id).display_name)}</strong> ${locationLabel}</button><span>${item.deleted_at ? '<em>Message supprimé</em>' : rich(item.content)}</span></div>`;
 }
 function replied(message) {
   const item = message.replied_message;
@@ -204,7 +205,7 @@ async function setTyping(typing) {
   if (!room || active?.kind === 'polls') return;
   await room.track({ user_id: user.id, name: profile(user.id).display_name, typing });
 }
-const placeholder = () => active?.kind === 'questions' ? 'Ex. Comment mieux organiser mon sommeil ?' : active?.kind === 'announcements' ? 'Publier une annonce…' : `Écrire dans #${active?.name.toLowerCase() || 'canal'}…`;
+const placeholder = () => active?.kind === 'questions' ? 'Ex. Comment mieux organiser mon sommeil ?' : active?.kind === 'announcements' ? 'Publier une annonce…' : 'Écrire un message…';
 function resetComposer() {
   replyId = editId = undefined; setTyping(false); els.context.hidden = true; els.input.value = ''; els.input.style.height = ''; els.input.placeholder = placeholder(); els.suggestions.hidden = true;
   if (active?.kind === 'questions') { els.guidance.textContent = 'Posez une question claire qui se termine par « ? ».'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
@@ -212,10 +213,10 @@ function resetComposer() {
 }
 async function switchChannel(id) {
   const next = channels.find((c) => c.id === id || c.slug === id); if (!next || switching || active?.id === next.id) return;
-  switching = true; await unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.name.textContent = next.name; els.description.textContent = next.description || ''; els.typing.hidden = true; els.pinned.hidden = true;
+  switching = true; await unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.name.textContent = next.kind === 'chat' ? 'Discussion générale' : next.name; els.description.textContent = next.kind === 'chat' ? 'Échangez librement avec les membres de l’Académie.' : (next.description || ''); els.typing.hidden = true; els.pinned.hidden = true;
   els.pollForm.hidden = true; els.form.hidden = false; els.guidance.hidden = true;
   if (next.kind === 'announcements' && isAdmin()) { els.guidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
-  resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.set('canal', next.slug); window.history.replaceState(null, '', url);
+  resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.delete('canal'); window.history.replaceState(null, '', url);
   await loadMessages(); subscribe(next); switching = false;
 }
 async function loadMore() {
@@ -306,7 +307,7 @@ async function shareMessage(channelId) {
   if (error) return errorMessage(`Le message n’a pas été partagé : ${error.message}`); els.shareDialog.close(); shareId = undefined; if (channelId === active.id) await loadMessages({ preserve: true, smooth: true });
 }
 function external(url) { try { const parsed = new URL(url); if (!['http:', 'https:'].includes(parsed.protocol)) return; els.externalHost.textContent = parsed.hostname; els.externalContinue.href = parsed.href; els.externalDialog.showModal(); } catch {} }
-function mentionToken() { const before = els.input.value.slice(0, els.input.selectionStart), match = before.match(/(^|\s)([@#])([\p{L}\p{N}_.-]*)$/u); return match ? { marker: match[2], query: match[3], start: before.length - match[2].length - match[3].length, end: before.length } : null; }
+function mentionToken() { const before = els.input.value.slice(0, els.input.selectionStart), match = before.match(/(^|\s)([@#])([\p{L}\p{N}_.;-]*)$/u); return match ? { marker: match[2], query: match[3], start: before.length - match[2].length - match[3].length, end: before.length } : null; }
 async function suggest() {
   const token = mentionToken(); if (!token) return void (els.suggestions.hidden = true); if (token.marker === '@') await loadAllProfiles(); const q = norm(token.query);
   const items = token.marker === '@' ? [...profiles.values()].filter((p) => p.username && (norm(p.username).includes(q) || norm(p.display_name).includes(q))).slice(0, 6).map((p) => ({ value: p.username, title: `@${p.username}`, detail: p.display_name, icon: avatar(p, 'suggestion-avatar') })) : channels.filter((c) => norm(c.slug).includes(q) || norm(c.name).includes(q)).slice(0, 6).map((c) => ({ value: c.slug, title: `#${c.slug}`, detail: c.name, icon: '<span class="suggestion-channel">#</span>' }));

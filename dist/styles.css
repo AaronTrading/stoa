@@ -827,3 +827,25 @@ html.stoa-dark .profile-autosave-note{background:rgba(141,158,119,.12);border-co
 
 /* Member profile moderation */
 .member-card-moderation{display:grid;gap:9px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}.member-card-moderation form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.member-card-moderation select{min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.65);color:var(--ink);font:500 11px var(--font)}.member-card-moderation button{padding:0 14px;border-radius:10px;background:#7f463d;color:#fff;font:600 10px var(--font)}.member-card-moderation p{min-height:16px;color:var(--muted);font-size:9px}.member-card-moderation p[data-tone=error]{color:#a15b50}html.stoa-dark .member-card-moderation select{background:var(--dark-surface-soft);border-color:var(--dark-border);color:var(--ink)}
+
+/* Compact community discussion, fixed profile bio and public pillar summary */
+.pillar-strip .pillar-item{display:flex;align-items:center;gap:9px;color:#909181;font-size:11px}
+.pillar-strip .pillar-item i{font:600 13px/1 var(--serif);font-style:normal;color:var(--muted)}
+.academy-experience.community-page .channel-sidebar{grid-template-columns:auto 1fr;padding:10px 14px}
+.academy-experience .channel-sidebar>.community-mode-nav{grid-column:1;grid-row:1}
+.academy-experience .channel-sidebar>.channel-list[hidden]{display:none!important}
+.academy-experience .channel-sidebar>.presence-note{grid-column:2;grid-row:1;justify-self:end;margin:0}
+.academy-experience.community-page .chat-heading{padding:17px 25px 15px}
+.academy-experience.community-page .chat-heading h2{font-family:var(--font);font-size:24px;font-weight:650;letter-spacing:-.025em}
+.academy-experience.community-page .chat-heading .eyebrow{font-size:9px}
+#profile-bio{height:148px;min-height:148px;max-height:148px;resize:none;overflow:auto}
+@media(max-width:760px){
+  .pillar-strip .pillar-item{width:calc(50% - 12px)}
+  .site-header .pill-nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
+  .site-header .pill-nav::-webkit-scrollbar{display:none}
+  .academy-experience.community-page .channel-sidebar{display:flex;align-items:center;justify-content:space-between;padding:9px 11px}
+  .academy-experience .channel-sidebar>.presence-note{display:none}
+  .academy-experience.community-page .chat-heading{padding:14px 16px 12px}
+  .academy-experience.community-page .chat-heading h2{font-size:20px}
+  .academy-experience.community-page .chat-heading p{max-width:min(64vw,340px)}
+}

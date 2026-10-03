@@ -37,6 +37,7 @@ let dragStart;
 let saveTimer;
 let saveInFlight = false;
 let saveAgain = false;
+const usernamePattern = /^[\p{L}\p{N}._;-]{3,30}$/u;
 
 const setMessage = (text, tone = 'info') => {
   message.textContent = text;
@@ -327,7 +328,11 @@ const saveProfile = async () => {
   const bio = bioInput.value.trim();
   const department = departmentCode(departmentInput.value);
   const fullName = `${firstName} ${lastName}`.trim();
-  if (!firstName || !lastName || username.length < 3 || username.length > 30 || !department || bio.length > 200) {
+  if (!usernamePattern.test(username)) {
+    setMessage('Le pseudo doit contenir 3 à 30 caractères, sans espace. Utilisez uniquement des lettres, chiffres, points, points-virgules, tirets ou tirets bas.', 'error');
+    return;
+  }
+  if (!firstName || !lastName || !department || bio.length > 200) {
     setMessage('Complétez les champs requis pour terminer l’enregistrement.');
     return;
   }
