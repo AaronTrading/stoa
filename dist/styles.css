@@ -154,7 +154,6 @@
   .announcement-popup{top:14px;right:16px;left:16px;width:auto}
 }
 
-
 .support-widget{position:fixed;z-index:840;right:18px;bottom:18px;font-family:var(--font)}.support-trigger{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.8);border-radius:999px;background:rgba(49,57,43,.88);color:#fff;box-shadow:0 16px 45px rgba(32,38,29,.2);backdrop-filter:blur(18px)}.support-trigger svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7}.support-trigger span{font-size:11px;font-weight:650}.support-trigger b{display:grid;min-width:18px;height:18px;padding:0 5px;place-items:center;border-radius:9px;background:#fff;color:var(--olive);font-size:9px}.support-panel{position:absolute;right:0;bottom:55px;width:min(370px,calc(100vw - 28px));height:min(560px,calc(100dvh - 90px));overflow:hidden;border:1px solid rgba(255,255,255,.78);border-radius:20px;background:rgba(246,245,239,.9);box-shadow:0 28px 85px rgba(30,35,27,.24);backdrop-filter:blur(26px);color:var(--ink)}.support-panel[hidden]{display:none}.support-panel>header{display:flex;align-items:center;justify-content:space-between;padding:18px;border-bottom:1px solid rgba(70,75,64,.1)}.support-panel>header strong{display:block;margin-top:3px;font:600 20px var(--serif)}.support-panel>header button{width:34px;height:34px;background:transparent;color:var(--muted);font-size:23px}.support-content{height:calc(100% - 132px);overflow:auto;padding:15px;scrollbar-width:none}.support-content::-webkit-scrollbar{display:none}.support-message{max-width:86%;margin:0 0 9px;padding:10px 12px;border-radius:12px;background:var(--white)}.support-message.mine{margin-left:auto;background:#dde1d3}.support-message span{display:block;margin-bottom:3px;color:var(--muted);font-size:8px}.support-message p{font-size:12px;line-height:1.55}.support-form{position:absolute;left:10px;right:10px;bottom:10px;display:grid;grid-template-columns:1fr 42px;gap:7px}.support-form textarea{width:100%;max-height:100px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);resize:none}.support-form button{border-radius:12px;background:var(--olive);color:#fff}.support-back{width:100%;padding:9px 17px;text-align:left;background:var(--marble);color:var(--muted);font-size:10px}.support-conversation{display:flex;width:100%;align-items:center;gap:9px;padding:12px;border-bottom:1px solid var(--line);background:transparent;text-align:left}.support-conversation>span{min-width:0;flex:1}.support-conversation strong,.support-conversation small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.support-conversation strong{font-size:11px}.support-conversation small{color:var(--muted);font-size:9px}.support-conversation>b{display:grid;width:20px;height:20px;place-items:center;border-radius:50%;background:var(--olive);color:#fff;font-size:9px}.support-empty,.support-loading{padding:30px 10px;color:var(--muted);font-size:11px;text-align:center}.support-status{position:absolute;right:60px;bottom:3px;color:#8b4334;font-size:8px}
 html.stoa-dark .support-panel{background:rgba(42,48,39,.94);border-color:rgba(255,255,255,.1)}html.stoa-dark .support-message{background:#353c31}html.stoa-dark .support-message.mine{background:#48513f}
 @media(max-width:760px){.support-widget{right:12px;bottom:12px}.support-trigger span{display:none}.support-trigger{width:46px;padding:0;justify-content:center}.support-panel{position:fixed;inset:70px 8px 8px;width:auto;height:auto}.support-content{height:calc(100% - 132px)}}
@@ -305,6 +304,7 @@ html.stoa-dark .support-panel{background:rgba(42,48,39,.94);border-color:rgba(25
   .glossary-main{width:calc(100% - 10%);padding:28px 0 70px}.glossary-heading{padding:25px 0 40px}.glossary-heading h1{font-size:clamp(3.6rem,18vw,5rem)}.glossary-heading p{font-size:15px}
   .glossary-entry{grid-template-columns:38px minmax(0,1fr);gap:14px;padding:28px 0}.glossary-entry h2{font-size:28px}.glossary-entry p{font-size:14px}
 }
+
 @media(max-width:560px){
   .chapter-grid{grid-template-columns:1fr}.chapter-card:last-child{grid-column:auto;min-height:245px}.chapter-card:last-child .chapter-icon{height:89px}
   .pricing-grid{gap:14px}.price-card{padding:24px 20px}
@@ -848,4 +848,29 @@ html.stoa-dark .profile-autosave-note{background:rgba(141,158,119,.12);border-co
   .academy-experience.community-page .chat-heading{padding:14px 16px 12px}
   .academy-experience.community-page .chat-heading h2{font-size:20px}
   .academy-experience.community-page .chat-heading p{max-width:min(64vw,340px)}
+}
+
+/* Compact sidebar safeguards: keep these last to win over legacy tablet rules. */
+.academy-logo-mark{display:none}
+@media(min-width:901px){
+  .academy-sidebar-collapsed{--academy-sidebar:104px}
+  .academy-sidebar-collapsed .academy-sidebar{width:78px;padding-right:11px;padding-left:11px}
+  .academy-sidebar-collapsed .academy-sidebar-brand{height:102px;padding:4px 0;flex:0 0 102px;flex-direction:column;justify-content:center;gap:8px}
+  .academy-sidebar-collapsed .academy-sidebar-brand>a{width:42px;height:42px;flex:0 0 42px;margin:0;justify-content:center}
+  .academy-sidebar-collapsed .academy-sidebar-brand .academy-logo-full{display:none}
+  .academy-sidebar-collapsed .academy-sidebar-brand .academy-logo-mark{display:block;width:38px;height:38px;max-width:none;object-fit:contain;object-position:center}
+  .academy-sidebar-collapsed .academy-sidebar-controls{width:36px;flex:0 0 36px;justify-content:center}
+  .academy-sidebar-collapsed .academy-theme-toggle{width:36px;height:36px;flex:0 0 36px}
+  .academy-sidebar-collapsed .academy-global-search,
+  .academy-sidebar-collapsed .academy-resources{display:none!important}
+  .academy-sidebar-collapsed .academy-primary-nav>a,
+  .academy-sidebar-collapsed .academy-shop-link{width:48px;margin-right:auto;margin-left:auto;justify-content:center;padding:0}
+  .academy-sidebar-collapsed .academy-shop-link span,
+  .academy-sidebar-collapsed .academy-shop-link svg:last-child{display:none!important}
+  .academy-sidebar-collapsed .academy-profile-compact{width:48px;height:48px;min-height:48px;flex:0 0 48px;margin:8px auto 0;padding:6px;justify-content:center}
+  .academy-sidebar-collapsed .academy-profile-avatar{width:36px;height:36px;flex:0 0 36px;border-radius:50%}
+  .academy-sidebar-collapsed .academy-collapse{width:48px;margin:7px auto 0;justify-content:center}
+}
+@media(max-width:760px){
+  .support-panel.support-viewport-fit{top:64px;right:8px!important;bottom:auto!important;left:8px!important}
 }

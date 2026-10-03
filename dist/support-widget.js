@@ -83,9 +83,10 @@ async function initialize(user) {
     const viewport = window.visualViewport;
     const viewportHeight = viewport?.height || innerHeight;
     const keyboardOpen = viewportHeight < document.documentElement.clientHeight - 120;
+    const topOffset = (viewport?.offsetTop || 0) + 64;
     panel.classList.add('support-viewport-fit');
-    panel.style.top = `${(viewport?.offsetTop || 0) + 8}px`;
-    panel.style.height = `${Math.max(280, viewportHeight - (keyboardOpen ? 16 : 84))}px`;
+    panel.style.top = `${topOffset}px`;
+    panel.style.height = `${Math.max(160, viewportHeight - 72)}px`;
     if (keyboardOpen) requestAnimationFrame(() => { content.scrollTop = content.scrollHeight; });
   };
   const toggle = (open) => { panel.hidden = !open; trigger.setAttribute('aria-expanded', String(open)); widget.classList.toggle('support-open', open); if (open) { render(); requestAnimationFrame(fitMobileViewport); } else fitMobileViewport(); };
