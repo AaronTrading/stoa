@@ -1,4 +1,9 @@
 import { supabase } from './supabase.js';
+import { coachingOffer,formatCommercialPrice } from './commercial-config.js';
+
+document.querySelectorAll('[data-coaching-duration]').forEach(node=>node.textContent=`${coachingOffer.durationMonths} mois`);
+document.querySelectorAll('[data-coaching-regular-price]').forEach(node=>node.textContent=formatCommercialPrice(coachingOffer.regularPrice));
+document.querySelectorAll('[data-coaching-launch-price]').forEach(node=>node.textContent=formatCommercialPrice(coachingOffer.launchPrice));
 
 let pillars = [
   {id:'nourrir',name:'NOURRIR',orderIndex:0},

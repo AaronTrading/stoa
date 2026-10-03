@@ -62,7 +62,7 @@ nav.addEventListener('click',async event=>{const button=event.target.closest('[d
 async function initialize(){
   user=(await supabase.auth.getSession()).data.session?.user;if(!user){location.replace('/#connexion');return;}
   const {data:access,error:accessError}=await supabase.rpc('get_my_coaching_access').maybeSingle();
-  if(accessError||!access){content.innerHTML='<div class="coaching-access-empty"><span>◇</span><h2>Accès Coaching requis</h2><p>Ce questionnaire est réservé aux clients du Coaching Privé STOA.</p><a class="button dark" href="/#offres">Découvrir l’accompagnement</a></div>';form.querySelector('footer').hidden=true;return;}
+  if(accessError||!access){content.innerHTML='<div class="coaching-access-empty"><span>◇</span><h2>Accès Coaching requis</h2><p>Ce questionnaire est réservé aux clients du Coaching Privé STOA.</p><a class="button dark" href="/decouvrir-coaching">Découvrir le Coaching</a></div>';form.querySelector('footer').hidden=true;return;}
   const {data:existing}=await supabase.from('coaching_questionnaires').select('*').eq('client_id',user.id).eq('kind','admission').in('status',['draft','submitted']).order('created_at',{ascending:false}).limit(1).maybeSingle();
   if(existing?.status==='submitted'){location.replace('/coaching');return;}
   if(existing)questionnaire=existing;else{const created=await supabase.from('coaching_questionnaires').insert({client_id:user.id,kind:'admission'}).select().single();if(created.error){showStatus(created.error.message,'error');return;}questionnaire=created.data;}

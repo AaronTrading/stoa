@@ -69,7 +69,7 @@ const showHeaderAvatar = (url, fallback = 'S') => {
   });
 };
 
-const roleLabels = { member: 'Académie', coaching: 'Accompagnement', admin: 'Administration' };
+const roleLabels = { member: 'Académie', coaching: 'Coaching', admin: 'Administration' };
 const cropSize = cropCanvas.width;
 
 const setDiscordLinkState = (linked) => {

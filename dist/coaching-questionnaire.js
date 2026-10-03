@@ -75,7 +75,7 @@ export const coachingQuestionnaire = [
     {key:'identity_change',label:'Quelle personne cherchez-vous à devenir ?',type:'textarea'},
     {key:'meaning',label:'Pourquoi ce changement compte-t-il maintenant ?',type:'textarea',required:true}
   ]},
-  { key:'engagement', title:'Motivation & engagement', eyebrow:'09 — RENDRE LE PLAN RÉALISTE', intro:'Construire un accompagnement que vous pourrez réellement suivre.', questions:[
+  { key:'engagement', title:'Motivation & engagement', eyebrow:'09 — RENDRE LE PLAN RÉALISTE', intro:'Construire un Coaching que vous pourrez réellement suivre.', questions:[
     {key:'change_reason',label:'Pourquoi souhaitez-vous changer maintenant ?',type:'textarea',required:true},
     {key:'past_attempts',label:'Qu’avez-vous déjà essayé ?',type:'textarea'},
     {key:'worked_before',label:'Qu’est-ce qui a déjà fonctionné ?',type:'textarea'},
@@ -84,15 +84,15 @@ export const coachingQuestionnaire = [
     {key:'engagement_level',label:'Niveau d’engagement actuel',type:'scale',min:1,max:10,low:'Prudent',high:'Très engagé'},
     {key:'anticipated_difficulties',label:'Difficultés anticipées',type:'multiselect',options:['Temps','Énergie','Motivation','Organisation','Entourage','Budget','Imprévus','Perfectionnisme']}
   ]},
-  { key:'preferences', title:'Votre accompagnement', eyebrow:'10 — TROUVER LE BON TON', intro:'Le coach adapte sa manière de vous accompagner.', questions:[
+  { key:'preferences', title:'Votre Coaching', eyebrow:'10 — TROUVER LE BON TON', intro:'Le coach adapte le Coaching à votre situation.', questions:[
     {key:'coach_style',label:'Style préféré',type:'multiselect',required:true,options:['Très direct','Pédagogique','Analytique','Encourageant','Challengeant','Équilibré']},
     {key:'contact_frequency',label:'Fréquence de contact',type:'choice',required:true,options:['Faible','Modérée','Élevée']},
     {key:'communication',label:'Formats utiles',type:'multiselect',options:['Messages','Appels','Vidéos','Documents','Tâches','Combinaison']},
     {key:'feedback_style',label:'Comment souhaitez-vous recevoir un retour quand quelque chose ne fonctionne pas ?',type:'textarea',required:true},
     {key:'accountability',label:'Quel niveau de responsabilisation souhaitez-vous ?',type:'scale',min:1,max:10,low:'Très souple',high:'Très cadré'}
   ]},
-  { key:'vigilance', title:'Points de vigilance', eyebrow:'11 — ADAPTER SANS DIAGNOSTIQUER', intro:'Seulement les informations utiles à un accompagnement prudent.', questions:[
-    {key:'professional_constraints',label:'Un professionnel vous a-t-il donné une consigne qui concerne cet accompagnement ?',type:'choice',options:['Oui','Non','Je préfère ne pas répondre']},
+  { key:'vigilance', title:'Points de vigilance', eyebrow:'11 — ADAPTER SANS DIAGNOSTIQUER', intro:'Seulement les informations utiles à un Coaching prudent.', questions:[
+    {key:'professional_constraints',label:'Un professionnel vous a-t-il donné une consigne qui concerne votre Coaching ?',type:'choice',options:['Oui','Non','Je préfère ne pas répondre']},
     {key:'professional_constraints_details',label:'Quelle consigne devons-nous respecter ?',type:'textarea',optional:true,showIf:{key:'professional_constraints',equals:'Oui'}},
     {key:'avoid_topics',label:'Y a-t-il un sujet que vous ne souhaitez pas aborder ?',type:'textarea',optional:true},
     {key:'coach_should_know',label:'Que devrait absolument savoir votre coach ?',type:'textarea',optional:true},
@@ -101,7 +101,7 @@ export const coachingQuestionnaire = [
   { key:'confirmation', title:'Votre point de départ', eyebrow:'12 — RELIRE & TRANSMETTRE', intro:'Vos réponses seront accessibles uniquement à votre coach STOA et aux administrateurs autorisés.', questions:[
     {key:'final_message',label:'Un dernier message pour votre coach ?',type:'textarea',optional:true},
     {key:'accuracy_confirmed',label:'Je confirme que ces informations reflètent ma situation actuelle',type:'checkbox',required:true},
-    {key:'privacy_confirmed',label:'J’accepte l’utilisation de ces réponses pour mon accompagnement individuel',type:'checkbox',required:true}
+    {key:'privacy_confirmed',label:'J’accepte l’utilisation de ces réponses pour mon Coaching individuel',type:'checkbox',required:true}
   ]}
 ];
 
