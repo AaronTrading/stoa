@@ -11,6 +11,9 @@ Ouvrir `dist/index.html` directement, ou lancer `node serve.cjs` puis visiter ht
 - `dist/module.html` : lecteur des modules, exercices et notes personnelles.
 - `dist/profil.html` : profil membre, nom et photo de profil Supabase.
 - `dist/communaute.html` : salons de discussion en temps réel, réactions et présence.
+- `dist/coaching-onboarding.html` : questionnaire adaptatif et reprenable du Coaching Privé.
+- `dist/coaching.html` : espace privé client, plan, objectifs, habitudes, check-ins et messages.
+- `dist/coaching-coach.html` : portefeuille et dossier longitudinal réservé aux coachs autorisés.
 - `dist/styles.css` : styles partagés, palette et responsive.
 - `dist/app.js` : contenu, interactions et stockage local.
 
@@ -26,9 +29,11 @@ L’interface d’authentification dans `dist/auth.js` permet la connexion et l�
 
 La page `/communaute` utilise les changements PostgreSQL de Supabase Realtime pour les messages et les réactions, et Presence pour compter les membres présents dans le canal actif. Les profils affichés passent par une fonction SQL qui ne retourne que les informations publiques utiles à la communauté.
 
+Le Coaching Privé utilise un droit séparé dans `coaching_clients` : un compte Academy ne reçoit donc jamais cet accès par son seul rôle. Le futur webhook Stripe devra activer ce droit côté serveur avec `access_source = 'stripe'` et l’identifiant d’abonnement. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille. Les notes privées ne sont jamais lisibles par le client.
+
 ## Portée
 
-Prototype fonctionnel. Les modules contiennent des textes de démonstration à remplacer par les cours définitifs. Les offres sont présentées à 39 €/mois et 180 €/mois. Aucun paiement ni service de coaching n’est encore connecté à l’interface.
+Les modules contiennent encore des textes à finaliser. Le paiement Stripe n’est pas encore relié au droit Coaching : l’activation peut être faite par un administrateur dans l’espace coach, et la colonne `stripe_subscription_id` est prête pour le webhook futur.
 
 La progression et les notes utilisent localStorage sur l’appareil courant. Elles ne sont pas synchronisées entre appareils et peuvent être effacées par le navigateur. En cas de stockage indisponible, l’interface indique l’échec de sauvegarde. Ne pas utiliser les notes pour des informations médicales sensibles.
 

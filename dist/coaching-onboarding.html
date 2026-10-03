@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Questionnaire d’admission au Coaching Privé STOA."><title>Admission Coaching — STOA</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script type="module" src="auth.js"></script><script type="module" src="academy-shell.js"></script><script type="module" src="coaching-onboarding.js"></script></head>
+<body class="member-page coaching-page coaching-onboarding-page"><a class="skip" href="#main">Aller au contenu</a><header class="site-header"><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a></header>
+<main class="coaching-onboarding" id="main">
+  <header class="coaching-onboarding-head"><div><span class="eyebrow">COACHING PRIVÉ · ADMISSION</span><h1>Construisons votre<br>point de départ.</h1><p>Vos réponses sont sauvegardées automatiquement. Vous pouvez fermer cette page et reprendre plus tard.</p></div><a href="/coaching" class="text-link">Quitter pour l’instant <span>→</span></a></header>
+  <section class="coaching-questionnaire-shell" aria-live="polite">
+    <div class="coaching-step-rail"><span id="coaching-step-label">Étape 1 sur 12</span><div class="coaching-progress"><i id="coaching-progress-bar"></i></div><nav id="coaching-step-nav" aria-label="Étapes du questionnaire"></nav><p><span aria-hidden="true">●</span> Enregistrement automatique</p></div>
+    <form class="coaching-step-card" id="coaching-questionnaire-form" novalidate>
+      <div id="coaching-step-content"><p class="coaching-loading">Préparation de votre questionnaire…</p></div>
+      <p class="coaching-form-status" id="coaching-form-status" role="status"></p>
+      <footer><button class="button coaching-back" id="coaching-back" type="button">← Retour</button><button class="button dark" id="coaching-next" type="submit">Continuer <span>→</span></button></footer>
+    </form>
+  </section>
+</main></body></html>
