@@ -37,6 +37,9 @@ let dragStart;
 let saveTimer;
 let saveInFlight = false;
 let saveAgain = false;
+let usernameSaveTimer;
+let usernameSaveInFlight = false;
+let usernameSaveAgain = false;
 const usernamePattern = /^[\p{L}\p{N}._;-]{3,30}$/u;
 
 const setMessage = (text, tone = 'info') => {
@@ -324,14 +327,9 @@ const saveProfile = async () => {
   if (saveInFlight) { saveAgain = true; return; }
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
-  const username = usernameInput.value.trim();
   const bio = bioInput.value.trim();
   const department = departmentCode(departmentInput.value);
   const fullName = `${firstName} ${lastName}`.trim();
-  if (!usernamePattern.test(username)) {
-    setMessage('Le pseudo doit contenir 3 à 30 caractères, sans espace. Utilisez uniquement des lettres, chiffres, points, points-virgules, tirets ou tirets bas.', 'error');
-    return;
-  }
   if (!firstName || !lastName || !department || bio.length > 200) {
     setMessage('Complétez les champs requis pour terminer l’enregistrement.');
     return;
@@ -361,24 +359,20 @@ const saveProfile = async () => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, department, bio, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
     saveInFlight = false;
     setBusy(false);
-    if (profileError.code === '23505') {
-      setMessage('Ce pseudo est déjà utilisé. Choisissez-en un autre.', 'error');
-      return;
-    }
     setMessage(`Le profil n’a pas pu être enregistré : ${profileError.message}`, 'error');
     return;
   }
 
   const { error: userError } = await supabase.auth.updateUser({
-    data: { full_name: fullName, first_name: firstName, last_name: lastName, username, department, avatar_url: avatarUrl },
+    data: { full_name: fullName, first_name: firstName, last_name: lastName, department, avatar_url: avatarUrl },
   });
-  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, username, department, bio, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, department, bio, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, firstName);
@@ -400,11 +394,57 @@ const queueAutoSave = (delay = 700) => {
   saveTimer = setTimeout(saveProfile, delay);
 };
 
-[firstNameInput, lastNameInput, usernameInput, departmentInput, bioInput].forEach((input) => {
+const saveUsername = async () => {
+  if (!user) return;
+  if (usernameSaveInFlight) { usernameSaveAgain = true; return; }
+  const username = usernameInput.value.trim();
+  if (!usernamePattern.test(username)) {
+    setMessage('Le pseudo doit contenir 3 à 30 caractères, sans espace. Utilisez uniquement des lettres, chiffres, points, points-virgules, tirets ou tirets bas.', 'error');
+    return;
+  }
+  if (username === profile?.username) {
+    setMessage('Tout est enregistré.', 'success');
+    return;
+  }
+
+  usernameSaveInFlight = true;
+  setMessage('Enregistrement du pseudo…');
+  const { error: profileError } = await supabase.from('profiles').update({ username }).eq('id', user.id);
+  if (profileError) {
+    usernameSaveInFlight = false;
+    if (profileError.code === '23505') {
+      setMessage('Ce pseudo est déjà utilisé. Choisissez-en un autre.', 'error');
+      return;
+    }
+    setMessage(`Le pseudo n’a pas pu être enregistré : ${profileError.message}`, 'error');
+    return;
+  }
+
+  const { error: userError } = await supabase.auth.updateUser({ data: { username } });
+  profile = { ...profile, username };
+  document.querySelector('[data-shell-profile-name]')?.replaceChildren(username);
+  document.dispatchEvent(new CustomEvent('stoa:profile-updated', { detail: { username } }));
+  usernameSaveInFlight = false;
+  setMessage(userError ? 'Pseudo enregistré. Il sera synchronisé partout à la prochaine connexion.' : 'Pseudo enregistré.', userError ? 'error' : 'success');
+  if (usernameSaveAgain || usernameInput.value.trim() !== username) {
+    usernameSaveAgain = false;
+    queueUsernameSave(0);
+  }
+};
+
+const queueUsernameSave = (delay = 700) => {
+  clearTimeout(usernameSaveTimer);
+  setMessage('Modification du pseudo en attente…');
+  usernameSaveTimer = setTimeout(saveUsername, delay);
+};
+
+[firstNameInput, lastNameInput, departmentInput, bioInput].forEach((input) => {
   input.addEventListener('input', () => queueAutoSave());
   input.addEventListener('change', () => queueAutoSave(150));
 });
-form.addEventListener('submit', (event) => { event.preventDefault(); queueAutoSave(0); });
+usernameInput.addEventListener('input', () => queueUsernameSave());
+usernameInput.addEventListener('change', () => queueUsernameSave(150));
+form.addEventListener('submit', (event) => { event.preventDefault(); queueAutoSave(0); queueUsernameSave(0); });
 
 removeButton.addEventListener('click', async () => {
   if (!user) return;
