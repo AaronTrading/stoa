@@ -3,9 +3,9 @@ import { supabase } from './supabase.js';
 // Copie locale utilisée si Supabase est momentanément indisponible.
 const fallbackProducts = [
   {
-    id: 'huile-olive-charisma', nom: 'Huile d’olive Charisma', prix: 29.99,
+    id: 'huile-olive-charisma', nom: 'Huile d’olive STOA', prix: 29.99,
     description: 'Huile d’olive vierge extra biologique grecque, issue d’olives Koroneiki. Format 1 litre.',
-    image: '/assets/shop/catalog/huile-charisma.webp', producteur: 'Vassilakis Estate',
+    image: '/assets/coaching/huile-stoa.png', producteur: 'Vassilakis Estate',
     source: 'https://www.amazon.fr/Charisma-dOlive-Vierge-Biologique-Grecque/dp/B0CRZ73R7B?th=1',
   },
   {
@@ -335,7 +335,7 @@ document.querySelector('#shop-edit-cancel').addEventListener('click', () => {
 document.querySelector('#shop-edit-save').addEventListener('click', saveProducts);
 document.querySelector('#shop-add-product').addEventListener('click', () => {
   syncEditor();
-  products.push({ id: `produit-${crypto.randomUUID()}`, nom: 'Nouveau produit', prix: 0, description: 'Description du produit.', image: '/assets/shop/catalog/huile-charisma.webp', producteur: '', source: '', selections: [] });
+  products.push({ id: `produit-${crypto.randomUUID()}`, nom: 'Nouveau produit', prix: 0, description: 'Description du produit.', image: '/assets/coaching/huile-stoa.png', producteur: '', source: '', selections: [] });
   renderProducts(); grid.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 
