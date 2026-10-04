@@ -3,7 +3,7 @@ import { coachingQuestionnaire, visibleQuestions, validateCoachingStep } from '.
 
 const form=document.querySelector('#coaching-questionnaire-form'),content=document.querySelector('#coaching-step-content'),status=document.querySelector('#coaching-form-status'),back=document.querySelector('#coaching-back'),next=document.querySelector('#coaching-next'),label=document.querySelector('#coaching-step-label'),bar=document.querySelector('#coaching-progress-bar'),nav=document.querySelector('#coaching-step-nav');
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-let user,questionnaire,stepIndex=0,answers={},saveTimer,saving=false,pendingSave=false;
+let user,questionnaire,stepIndex=0,answers={},saveTimer,saving=false,pendingSave=false,hasBooking=false;
 
 const showStatus=(text,tone='')=>{status.textContent=text;status.dataset.tone=tone;};
 const answerValue=(key)=>answers[key];
@@ -22,7 +22,8 @@ function render(){
   const step=coachingQuestionnaire[stepIndex],questions=visibleQuestions(step,answers);
   label.textContent=`Étape ${stepIndex+1} sur ${coachingQuestionnaire.length}`;bar.style.width=`${((stepIndex+1)/coachingQuestionnaire.length)*100}%`;
   nav.innerHTML=coachingQuestionnaire.map((item,index)=>`<button type="button" data-step="${index}" class="${index===stepIndex?'active':''}${index<stepIndex?' done':''}" ${index>Math.max(stepIndex,questionnaire.current_step||0)?'disabled':''}><span>${index<stepIndex?'✓':String(index+1).padStart(2,'0')}</span><b>${esc(item.title)}</b></button>`).join('');
-  content.innerHTML=`<header><span class="eyebrow">${esc(step.eyebrow)}</span><h2>${esc(step.title)}</h2><p>${esc(step.intro)}</p></header><div class="coaching-fields">${questions.map(field).join('')}</div>`;
+  const booking=stepIndex===coachingQuestionnaire.length-1?`<aside class="coaching-booking-required ${hasBooking?'complete':''}"><span>${hasBooking?'✓':'12 bis'}</span><div><strong>${hasBooking?'Votre appel est réservé':'Réservez votre appel de 15 minutes'}</strong><p>${hasBooking?'Le créneau est bien associé à votre admission.':'Cette étape gratuite est obligatoire avant la transmission finale à votre coach.'}</p>${hasBooking?'':'<a class="button" href="/rendez-vous?etape=post&retour=/coaching-onboarding">Choisir un créneau →</a>'}</div></aside>`:'';
+  content.innerHTML=`<header><span class="eyebrow">${esc(step.eyebrow)}</span><h2>${esc(step.title)}</h2><p>${esc(step.intro)}</p></header><div class="coaching-fields">${questions.map(field).join('')}</div>${booking}`;
   back.disabled=stepIndex===0;next.innerHTML=stepIndex===coachingQuestionnaire.length-1?'Transmettre à mon coach <span>✓</span>':'Continuer <span>→</span>';
   content.querySelectorAll('input[type=range]').forEach(input=>input.addEventListener('input',()=>{input.closest('fieldset').querySelector('output').textContent=input.value;}));
 }
@@ -50,6 +51,7 @@ const queueSave=()=>{clearTimeout(saveTimer);showStatus('Modifications en attent
 
 form.addEventListener('input',event=>{collect();if(event.target.type==='radio'||event.target.type==='checkbox'){render();}queueSave();});
 form.addEventListener('submit',async event=>{event.preventDefault();collect();const missing=validateCoachingStep(coachingQuestionnaire[stepIndex],answers);if(missing.length){showStatus(`Répondez aux ${missing.length} question${missing.length>1?'s':''} obligatoire${missing.length>1?'s':''}.`,'error');content.querySelector(`[data-question="${missing[0].key}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});return;}await saveCurrent();if(stepIndex<coachingQuestionnaire.length-1){stepIndex++;render();scrollTo({top:0,behavior:'smooth'});return;}
+  if(!hasBooking){showStatus('Réservez votre appel gratuit avant de transmettre le questionnaire.','error');content.querySelector('.coaching-booking-required')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
   next.disabled=true;showStatus('Transmission sécurisée à votre coach…');
   const summary={main_goal:answers.main_goal||'',main_goal_category:answers.main_goal_category||'',time_horizon:answers.time_horizon||'',weekly_time:answers.weekly_time||'',domains:{nourrir:answers.nutrition_change||'',corps:answers.activity_types||[],sommeil:answers.sleep_change||'',proteger:answers.home_exposures||[],construire:answers.organization_issues||[],se_construire:answers.long_term_vision||''}};
   const priorities=[answers.priority_1,answers.priority_2,answers.priority_3].filter(Boolean),constraints=[...(answers.anticipated_difficulties||[]),answers.food_constraints,answers.professional_constraints_details].filter(Boolean),preferences={coach_style:answers.coach_style||[],contact_frequency:answers.contact_frequency||'',communication:answers.communication||[],feedback_style:answers.feedback_style||''};
@@ -66,6 +68,6 @@ async function initialize(){
   const {data:existing}=await supabase.from('coaching_questionnaires').select('*').eq('client_id',user.id).eq('kind','admission').in('status',['draft','submitted']).order('created_at',{ascending:false}).limit(1).maybeSingle();
   if(existing?.status==='submitted'){location.replace('/coaching');return;}
   if(existing)questionnaire=existing;else{const created=await supabase.from('coaching_questionnaires').insert({client_id:user.id,kind:'admission'}).select().single();if(created.error){showStatus(created.error.message,'error');return;}questionnaire=created.data;}
-  const {data:rows}=await supabase.from('coaching_questionnaire_responses').select('question_key,answer').eq('questionnaire_id',questionnaire.id);(rows||[]).forEach(row=>{answers[row.question_key]=row.answer;});stepIndex=Math.min(11,questionnaire.current_step||access.onboarding_step||0);render();
+  const [{data:rows},{data:booking}]=await Promise.all([supabase.from('coaching_questionnaire_responses').select('question_key,answer').eq('questionnaire_id',questionnaire.id),supabase.from('coaching_call_bookings').select('id').eq('user_id',user.id).eq('status','confirmed').limit(1).maybeSingle()]);hasBooking=Boolean(booking);(rows||[]).forEach(row=>{answers[row.question_key]=row.answer;});stepIndex=Math.min(11,questionnaire.current_step||access.onboarding_step||0);render();
 }
 initialize();

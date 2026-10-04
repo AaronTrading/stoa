@@ -1,5 +1,5 @@
 import type Stripe from 'npm:stripe@22';
-import { json, service, stripe, stripeCryptoProvider } from '../_shared/billing.ts';
+import { academyPriceId, coachingPriceId, json, service, stripe, stripeCryptoProvider } from '../_shared/billing.ts';
 
 const customerId = (value: string | Stripe.Customer | Stripe.DeletedCustomer | null) => typeof value === 'string' ? value : value?.id || '';
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice & Record<string, unknown>) => {
@@ -17,7 +17,9 @@ async function synchronize(event: Stripe.Event, subscription: Stripe.Subscriptio
   const userId = raw.metadata?.user_id || raw.metadata?.supabase_user_id || fallbackUserId || null;
   const periodStart = raw.current_period_start || item?.current_period_start;
   const periodEnd = raw.current_period_end || item?.current_period_end;
-  const productType = raw.metadata?.product === 'stoa_coaching' ? 'coaching' : 'academy';
+  const priceId = item?.price?.id || '';
+  const productType = priceId === coachingPriceId ? 'coaching' : priceId === academyPriceId ? 'academy' : null;
+  if (!productType) throw new Error(`UNRECOGNIZED_STRIPE_PRICE:${priceId || 'missing'}`);
   const { error } = await service.rpc('process_stripe_subscription_event', {
     p_event_id: event.id,
     p_event_type: event.type,
@@ -25,7 +27,7 @@ async function synchronize(event: Stripe.Event, subscription: Stripe.Subscriptio
     p_user_id: userId,
     p_customer_id: customerId(raw.customer),
     p_subscription_id: raw.id,
-    p_price_id: item?.price?.id || '',
+    p_price_id: priceId,
     p_status: raw.status,
     p_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
     p_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,

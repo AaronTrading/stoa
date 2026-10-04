@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2';
 
 // Recover magic links generated while the redirect still contained #offres.
 // A URL can only have one fragment, so expose Supabase's auth fragment first.

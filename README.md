@@ -14,6 +14,7 @@ Ouvrir `dist/index.html` directement, ou lancer `node serve.cjs` puis visiter ht
 - `dist/coaching-onboarding.html` : questionnaire adaptatif et reprenable du Coaching Privé.
 - `dist/coaching.html` : espace privé client, plan, objectifs, habitudes, check-ins et messages.
 - `dist/coaching-coach.html` : portefeuille et dossier longitudinal réservé aux coachs autorisés.
+- `dist/rendez-vous.html` : réservation gratuite des appels Coaching publiés par les coachs.
 - `dist/styles.css` : styles partagés, palette et responsive.
 - `dist/app.js` : contenu, interactions et stockage local.
 
@@ -21,15 +22,15 @@ Les fichiers du dossier `dist` sont les sources du site, directement modifiables
 
 ## Backend Supabase
 
-Les migrations SQL sont dans `supabase/migrations/` et les données de démonstration dans `supabase/seed.sql`. Le seed crée 17 chapitres, 34 modules et 102 sous-chapitres. Toutes les tables applicatives utilisent RLS.
+Les migrations SQL sont dans `supabase/migrations/`. L’Académie courante repose sur cinq piliers — Nourrir, Corps, Protéger, Vivre et Se construire — et toutes les tables applicatives utilisent RLS. Le seed historique sert uniquement au développement et ne constitue plus le catalogue de production.
 
 Le client navigateur est dans `lib/supabase.js`, avec les helpers d’authentification dans `lib/auth.js` et le schéma JSDoc dans `lib/database.js`. Comme le site reste sans build, le client officiel `@supabase/supabase-js` est chargé comme module ESM. Les valeurs publiques sont injectées par `window.__STOA_ENV__`; `dist/env.example.js` montre le format attendu.
 
-L’interface d’authentification dans `dist/auth.js` permet la connexion et l’inscription par email et mot de passe, l’envoi d’un magic link et la connexion avec Discord. La page `/profil` permet de modifier le prénom, le nom et le pseudo, de recadrer une photo puis d’envoyer l’avatar optimisé dans le bucket Supabase `avatars`. Un membre connecté par email peut aussi associer son identité Discord depuis cette page. Le secret Discord reste uniquement dans la configuration du fournisseur Supabase.
+L’interface d’authentification dans `dist/auth.js` permet la connexion et l’inscription par email et mot de passe, le magic link, la récupération de mot de passe et la connexion avec Google ou Discord. Les nouvelles adresses email doivent être confirmées. La page `/profil` permet de modifier l’identité, les préférences et l’avatar, puis d’associer Google ou Discord sans écraser le profil STOA.
 
 La page `/communaute` utilise les changements PostgreSQL de Supabase Realtime pour les messages et les réactions, et Presence pour compter les membres présents dans le canal actif. Les profils affichés passent par une fonction SQL qui ne retourne que les informations publiques utiles à la communauté.
 
-Le Coaching utilise un droit séparé dans `coaching_clients` : un compte Académie ne reçoit donc jamais cet accès par son seul rôle. Le webhook Stripe active ce droit côté serveur avec `access_source = 'stripe'` et l’identifiant d’abonnement. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille. Les notes privées ne sont jamais lisibles par le client.
+Le Coaching utilise un droit séparé dans `coaching_clients` : un compte Académie ne reçoit donc jamais cet accès par son seul rôle. Un appel gratuit de 15 minutes doit être réservé avant le checkout puis associé à l’admission. Chaque coach publie ses créneaux dans son espace et reçoit un email à la réservation. Le webhook Stripe valide le prix, applique les événements dans l’ordre et active le droit côté serveur. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille.
 
 ## Email Center
 
@@ -49,7 +50,11 @@ La première version ne mesure pas les ouvertures ou les clics : Gmail API ne fo
 
 Les modules contiennent encore des textes à finaliser. Le paiement Stripe Academy et Coaching est relié aux droits d’accès par webhook ; l’activation manuelle reste disponible aux administrateurs dans l’espace coach.
 
-La progression et les notes utilisent localStorage sur l’appareil courant. Elles ne sont pas synchronisées entre appareils et peuvent être effacées par le navigateur. En cas de stockage indisponible, l’interface indique l’échec de sauvegarde. Ne pas utiliser les notes pour des informations médicales sensibles.
+La progression, la reprise de lecture et les notes sont synchronisées dans Supabase pour le compte courant. Les préférences locales accélèrent l’affichage mais ne constituent pas l’autorité d’accès.
+
+## Vérification
+
+`npm run verify` contrôle la syntaxe des scripts servis et exécute la suite Node. Le même contrôle tourne dans GitHub Actions à chaque push et pull request.
 
 ## Direction artistique et crédits
 

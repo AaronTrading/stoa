@@ -33,7 +33,7 @@ function render(){
 }
 
 async function load(){
-  const today=new Date().toISOString().slice(0,10),tables={
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),tables={
     tasks:supabase.from('coaching_tasks').select('*').eq('client_id',user.id).neq('status','cancelled').order('due_at',{ascending:true,nullsFirst:false}),
     goals:supabase.from('coaching_goals').select('*').eq('client_id',user.id).neq('status','cancelled').order('priority',{ascending:false}),
     habits:supabase.from('coaching_habits').select('*').eq('client_id',user.id).eq('active',true).order('created_at'),
@@ -42,9 +42,9 @@ async function load(){
     plans:supabase.from('coaching_plans').select('*').eq('client_id',user.id).eq('status','active').eq('visible_to_client',true).order('created_at',{ascending:false}).limit(1),
     reviews:supabase.from('coaching_reviews').select('*').eq('client_id',user.id).eq('visible_to_client',true).order('created_at',{ascending:false}).limit(4),
     appointments:supabase.from('coaching_appointments').select('*').eq('client_id',user.id).eq('status','planned').gte('starts_at',new Date().toISOString()).order('starts_at').limit(1),
-    messages:supabase.from('coaching_messages').select('*').eq('client_id',user.id).order('created_at').limit(100)
+    messages:supabase.from('coaching_messages').select('*').eq('client_id',user.id).order('created_at',{ascending:false}).limit(100)
   };
-  const entries=await Promise.all(Object.entries(tables).map(async([key,promise])=>[key,(await promise).data||[]]));data=Object.fromEntries(entries);render();
+  const entries=await Promise.all(Object.entries(tables).map(async([key,promise])=>{const result=await promise;return[key,key==='messages'?[...(result.data||[])].reverse():result.data||[],result.error];})),failures=entries.filter(([, ,error])=>error).map(([key])=>key);data=Object.fromEntries(entries.map(([key,value])=>[key,value]));render();if(failures.length)alert('Certaines données ne peuvent pas être chargées. Réessayez dans un instant.','error');
 }
 async function updateCompletion(kind,id){
   const table=kind==='tasks'?'coaching_tasks':'coaching_goals',rows=data[kind],row=rows.find(item=>item.id===id),completed=row.status==='completed';
@@ -59,7 +59,7 @@ document.addEventListener('click',async event=>{
 });
 
 $('#coaching-message-form').addEventListener('submit',async event=>{event.preventDefault();const field=event.currentTarget.elements.content,content=field.value.trim();if(!content)return;field.disabled=true;const {error}=await supabase.from('coaching_messages').insert({client_id:user.id,sender_id:user.id,content});field.disabled=false;if(error)return alert(error.message,'error');field.value='';});
-$('#coaching-checkin-form').addEventListener('submit',async event=>{event.preventDefault();const form=new FormData(event.currentTarget),now=new Date(),day=now.getDay()||7,start=new Date(now);start.setDate(now.getDate()-day+1);const end=new Date(start);end.setDate(start.getDate()+6);const payload={client_id:user.id,period_start:start.toISOString().slice(0,10),period_end:end.toISOString().slice(0,10),status:'submitted',submitted_at:new Date().toISOString()};for(const [key,value] of form)payload[key]=['energy','sleep','nutrition','activity'].includes(key)?Number(value):String(value).trim();const {error}=await supabase.from('coaching_checkins').upsert(payload,{onConflict:'client_id,period_start'});$('#checkin-status').textContent=error?error.message:'Bilan transmis à votre coach.';if(!error)event.currentTarget.reset();});
+$('#coaching-checkin-form').addEventListener('submit',async event=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.currentTarget)),{error}=await supabase.rpc('submit_my_coaching_checkin',{p_energy:Number(values.energy),p_sleep:Number(values.sleep),p_nutrition:Number(values.nutrition),p_activity:Number(values.activity),p_main_win:String(values.main_win||'').trim(),p_main_difficulty:String(values.main_difficulty||'').trim(),p_next_focus:String(values.next_focus||'').trim(),p_help_needed:String(values.help_needed||'').trim()});$('#checkin-status').textContent=error?'Le bilan n’a pas pu être transmis. Réessayez.':'Bilan transmis à votre coach.';if(!error)event.currentTarget.reset();});
 
 async function initialize(){
   user=(await supabase.auth.getSession()).data.session?.user;if(!user){location.replace('/#connexion');return;}

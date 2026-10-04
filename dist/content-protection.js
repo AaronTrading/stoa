@@ -17,7 +17,7 @@ async function initialize(user){
   const inPaidContent=target=>target instanceof Element&&Boolean(target.closest('.academy-paid-content'));
   const notify=message=>{toast?.remove();toast=document.createElement('div');toast.className='content-protection-toast';toast.setAttribute('role','status');toast.textContent=message;document.body.append(toast);setTimeout(()=>toast?.remove(),2200)};
   const prevent=event=>{event.preventDefault();notify('Ce contenu est réservé aux membres STOA.')};
-  document.addEventListener('contextmenu',event=>{if(inPaidContent(event.target)&&!editable(event.target))prevent(event)});
+  document.addEventListener('contextmenu',event=>{if(!editable(event.target))prevent(event)});
   document.addEventListener('selectstart',event=>{if(inPaidContent(event.target)&&!editable(event.target))event.preventDefault()});
   document.addEventListener('dragstart',event=>{if(inPaidContent(event.target)&&!editable(event.target))event.preventDefault()});
   document.addEventListener('copy',event=>{const anchor=getSelection()?.anchorNode?.parentElement;if(inPaidContent(anchor)&&!editable(anchor))prevent(event)});

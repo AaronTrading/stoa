@@ -26,10 +26,10 @@ test('the public Google client ID is available to the static frontend', () => {
   assert.match(envSource, /GOOGLE_CLIENT_ID:\s*'439569333078-[^']+\.apps\.googleusercontent\.com'/);
 });
 
-test('signed-in visitors leave the public site without an intermediate account panel', () => {
+test('signed-in visitors can revisit the public site without an intermediate account panel', () => {
   assert.doesNotMatch(authSource, /auth-member-view/);
-  assert.match(authSource, /location\.pathname === '\/'/);
-  assert.match(authSource, /location\.replace\(authenticatedDestination/);
+  assert.match(authSource, /const authenticatedDestination/);
+  assert.doesNotMatch(authSource, /if \(location\.pathname === '\/'\) location\.replace\(authenticatedDestination/);
 });
 
 test('Google can be linked from the profile like Discord', () => {

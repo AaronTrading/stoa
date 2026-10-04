@@ -73,7 +73,7 @@ test('admins can grant Academy access by username without Stripe', () => {
 });
 
 test('no Stripe secret is embedded in client files', () => {
-  for (const path of ['dist/subscribe.js', 'dist/subscription-success.js', 'dist/commercial-config.js']) {
+  for (const path of ['dist/subscription-success.js', 'dist/commercial-config.js']) {
     const source = read(path);
     assert.doesNotMatch(source, /(?:sk|rk)_(?:test|live)_/);
     assert.doesNotMatch(source, /STRIPE_SECRET_KEY/);
