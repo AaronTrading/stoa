@@ -17,5 +17,5 @@ test('le pseudo est enregistré sans réécrire l’identité', () => {
 test('le champ pseudo possède sa propre autosauvegarde', () => {
   assert.match(source, /usernameInput\.addEventListener\('input',[\s\S]*?queueUsernameSave\(\)/);
   assert.match(source, /enforceLowercaseUsername\(usernameInput\)/);
-  assert.match(source, /\[firstNameInput, lastNameInput, departmentInput, bioInput\]/);
+  assert.match(source, /\[firstNameInput, lastNameInput, departmentInput, bioInput, hideLastNameInput\]/);
 });

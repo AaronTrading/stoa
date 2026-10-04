@@ -9,6 +9,7 @@ const departmentInput = document.querySelector('#profile-department');
 const departmentField = document.querySelector('[data-profile-department-field]');
 const locationInputs = [...document.querySelectorAll('input[name="locationType"]')];
 const bioInput = document.querySelector('#profile-bio');
+const hideLastNameInput = document.querySelector('#profile-hide-last-name');
 attachDepartmentPicker(departmentInput);
 const emailInput = document.querySelector('#profile-email');
 const fileInput = document.querySelector('#profile-avatar-input');
@@ -192,7 +193,7 @@ const initializeProfile = async () => {
   const [profileResult, identitiesResult, publicProfileResult, themeResult, subscriptionResult, accessResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('full_name, first_name, last_name, username, avatar_url, department, location_label, bio, role, created_at')
+      .select('full_name, first_name, last_name, username, avatar_url, department, location_label, bio, hide_last_name_in_community, role, created_at')
       .eq('id', user.id)
       .single(),
     supabase.auth.getUserIdentities(),
@@ -229,6 +230,7 @@ const initializeProfile = async () => {
   locationInputs.forEach(input=>{input.checked=input.value===locationType});
   departmentField.hidden=locationType!=='france';
   bioInput.value = (profile.bio || '').slice(0, 200);
+  hideLastNameInput.checked = Boolean(profile.hide_last_name_in_community);
   applyThemePreference(profile.theme_preference);
   if (localTheme && localThemeDate > remoteThemeDate && localTheme !== themeResult.data?.theme_preference) {
     supabase.rpc('set_theme_preference', { p_theme: localTheme });
@@ -434,7 +436,7 @@ const saveProfile = async () => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, hide_last_name_in_community: hideLastNameInput.checked, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
@@ -447,7 +449,7 @@ const saveProfile = async () => {
   const { error: userError } = await supabase.auth.updateUser({
     data: { full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, avatar_url: avatarUrl },
   });
-  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, hide_last_name_in_community: hideLastNameInput.checked, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, firstName);
@@ -514,7 +516,7 @@ const queueUsernameSave = (delay = 700) => {
   usernameSaveTimer = setTimeout(saveUsername, delay);
 };
 
-[firstNameInput, lastNameInput, departmentInput, bioInput].forEach((input) => {
+[firstNameInput, lastNameInput, departmentInput, bioInput, hideLastNameInput].forEach((input) => {
   input.addEventListener('input', () => queueAutoSave());
   input.addEventListener('change', () => queueAutoSave(150));
 });

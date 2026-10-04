@@ -104,7 +104,7 @@ async function hydrate(){
   catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;searchSections=sectionRows||[];
   if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#offres">Rejoindre l’Académie →</a>';
   renderBreadcrumb();publishState();
-  const name=profile?.username||profile?.first_name||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
+  const name=[profile?.first_name,profile?.last_name].filter(Boolean).join(' ')||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
   const coachingLink=shell.querySelector('[data-coaching-link]'),hasCoaching=Boolean(coachingRows?.length);
   coachingLink.hidden=false;
   coachingLink.href=hasCoaching?'/coaching':'/decouvrir-coaching';
