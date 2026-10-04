@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
-const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,posts]=await Promise.all([
+const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,questionnaire,posts]=await Promise.all([
   read('../supabase/migrations/202610040049_access_and_data_integrity.sql'),
   read('../supabase/migrations/202610040050_monotone_billing_and_email_jobs.sql'),
   read('../supabase/migrations/202610040051_coaching_call_booking.sql'),
@@ -15,6 +15,7 @@ const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,booking
   read('../dist/booking.js'),
   read('../dist/coaching-coach.html'),
   read('../dist/coaching-coach.js'),
+  read('../dist/coaching-questionnaire.js'),
   read('../dist/posts.js'),
 ]);
 
@@ -65,6 +66,18 @@ test('Coaching booking is atomic, announced by email and mandatory for checkout'
   assert.match(coachPage,/coach-calendar-grid/);
   assert.match(coachPage,/data-calendar-preset="morning"/);
   assert.match(coachJs,/toggleAvailability/);
+});
+
+test('the Coaching interface translates questionnaire metadata and legacy values',()=>{
+  assert.match(coachJs,/coachingSectionLabel\(row\.section_key\)/);
+  assert.match(coachJs,/coachingQuestionLabel\(row\.question_key\)/);
+  assert.match(coachJs,/formatCoachingAnswer\(row\.question_key,row\.answer\)/);
+  assert.doesNotMatch(coachJs,/JSON\.stringify\(row\.answer\)/);
+  assert.match(questionnaire,/birth_date',label:'Date de naissance'/);
+  assert.match(questionnaire,/batch cooking possible':'Préparation en série possible'/);
+  assert.match(questionnaire,/challengeant:'Exigeant'/);
+  assert.doesNotMatch(coachPage,/>Onboarding</);
+  assert.doesNotMatch(coachPage,/>Check-in/);
 });
 
 test('community uploads use a separate bounded image bucket',()=>{

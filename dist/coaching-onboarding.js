@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { coachingQuestionnaire, visibleQuestions, validateCoachingStep } from './coaching-questionnaire.js';
+import { coachingQuestionnaire, normalizeCoachingStoredAnswer, visibleQuestions, validateCoachingStep } from './coaching-questionnaire.js';
 
 const form=document.querySelector('#coaching-questionnaire-form'),content=document.querySelector('#coaching-step-content'),status=document.querySelector('#coaching-form-status'),back=document.querySelector('#coaching-back'),next=document.querySelector('#coaching-next'),label=document.querySelector('#coaching-step-label'),bar=document.querySelector('#coaching-progress-bar'),nav=document.querySelector('#coaching-step-nav');
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
@@ -56,7 +56,7 @@ form.addEventListener('submit',async event=>{event.preventDefault();collect();co
   const summary={main_goal:answers.main_goal||'',main_goal_category:answers.main_goal_category||'',time_horizon:answers.time_horizon||'',weekly_time:answers.weekly_time||'',domains:{nourrir:answers.nutrition_change||'',corps:answers.activity_types||[],sommeil:answers.sleep_change||'',proteger:answers.home_exposures||[],construire:answers.organization_issues||[],se_construire:answers.long_term_vision||''}};
   const priorities=[answers.priority_1,answers.priority_2,answers.priority_3].filter(Boolean),constraints=[...(answers.anticipated_difficulties||[]),answers.food_constraints,answers.professional_constraints_details].filter(Boolean),preferences={coach_style:answers.coach_style||[],contact_frequency:answers.contact_frequency||'',communication:answers.communication||[],feedback_style:answers.feedback_style||''};
   const {error}=await supabase.rpc('complete_coaching_onboarding',{p_questionnaire_id:questionnaire.id,p_summary:summary,p_priorities:priorities,p_constraints:constraints,p_preferences:preferences});
-  if(error){next.disabled=false;showStatus(`Transmission impossible : ${error.message}`,'error');return;}location.assign('/coaching?bienvenue=1');
+  if(error){next.disabled=false;showStatus('La transmission du questionnaire a échoué. Réessayez dans un instant.','error');return;}location.assign('/coaching?bienvenue=1');
 });
 back.addEventListener('click',async()=>{if(stepIndex===0)return;await saveCurrent();stepIndex--;render();});
 nav.addEventListener('click',async event=>{const button=event.target.closest('[data-step]');if(!button||button.disabled)return;await saveCurrent();stepIndex=Number(button.dataset.step);render();});
@@ -67,7 +67,7 @@ async function initialize(){
   if(accessError||!access){content.innerHTML='<div class="coaching-access-empty"><span>◇</span><h2>Accès Coaching requis</h2><p>Ce questionnaire est réservé aux clients du Coaching Privé STOA.</p><a class="button dark" href="/decouvrir-coaching">Découvrir le Coaching</a></div>';form.querySelector('footer').hidden=true;return;}
   const {data:existing}=await supabase.from('coaching_questionnaires').select('*').eq('client_id',user.id).eq('kind','admission').in('status',['draft','submitted']).order('created_at',{ascending:false}).limit(1).maybeSingle();
   if(existing?.status==='submitted'){location.replace('/coaching');return;}
-  if(existing)questionnaire=existing;else{const created=await supabase.from('coaching_questionnaires').insert({client_id:user.id,kind:'admission'}).select().single();if(created.error){showStatus(created.error.message,'error');return;}questionnaire=created.data;}
-  const [{data:rows},{data:booking}]=await Promise.all([supabase.from('coaching_questionnaire_responses').select('question_key,answer').eq('questionnaire_id',questionnaire.id),supabase.from('coaching_call_bookings').select('id').eq('user_id',user.id).eq('status','confirmed').limit(1).maybeSingle()]);hasBooking=Boolean(booking);(rows||[]).forEach(row=>{answers[row.question_key]=row.answer;});stepIndex=Math.min(11,questionnaire.current_step||access.onboarding_step||0);render();
+  if(existing)questionnaire=existing;else{const created=await supabase.from('coaching_questionnaires').insert({client_id:user.id,kind:'admission'}).select().single();if(created.error){showStatus('Le questionnaire n’a pas pu être créé. Réessayez dans un instant.','error');return;}questionnaire=created.data;}
+  const [{data:rows},{data:booking}]=await Promise.all([supabase.from('coaching_questionnaire_responses').select('question_key,answer').eq('questionnaire_id',questionnaire.id),supabase.from('coaching_call_bookings').select('id').eq('user_id',user.id).eq('status','confirmed').limit(1).maybeSingle()]);hasBooking=Boolean(booking);(rows||[]).forEach(row=>{answers[row.question_key]=normalizeCoachingStoredAnswer(row.question_key,row.answer);});stepIndex=Math.min(11,questionnaire.current_step||access.onboarding_step||0);render();
 }
 initialize();

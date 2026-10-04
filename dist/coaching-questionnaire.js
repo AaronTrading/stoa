@@ -24,7 +24,7 @@ export const coachingQuestionnaire = [
     {key:'food_constraints',label:'Contraintes alimentaires utiles à connaître',type:'textarea',optional:true,help:'Allergies déclarées, choix personnels, contraintes culturelles. Vous pouvez passer cette question.'},
     {key:'food_preferences',label:'Aliments appréciés ou détestés',type:'textarea'},
     {key:'cooking_level',label:'Aisance en cuisine',type:'choice',options:['Je ne cuisine pas','Débutant','À l’aise','Très à l’aise']},
-    {key:'food_organization',label:'Organisation disponible',type:'multiselect',options:['Courses planifiées','Budget contraint','Moins de 20 min par repas','Cuisine équipée','Batch cooking possible','Peu d’équipement']},
+    {key:'food_organization',label:'Organisation disponible',type:'multiselect',options:['Courses planifiées','Budget contraint','Moins de 20 min par repas','Cuisine équipée','Préparation en série possible','Peu d’équipement']},
     {key:'hydration',label:'Eau consommée par jour',type:'choice',options:['Moins de 0,5 L','0,5–1 L','1–1,5 L','1,5–2 L','Plus de 2 L','Je ne sais pas']},
     {key:'drinks',label:'Boissons habituelles',type:'multiselect',options:['Eau','Café','Thé','Boissons sucrées','Boissons énergisantes','Alcool','Autre']},
     {key:'nutrition_change',label:'Qu’aimeriez-vous réellement améliorer ici ?',type:'textarea'}
@@ -85,7 +85,7 @@ export const coachingQuestionnaire = [
     {key:'anticipated_difficulties',label:'Difficultés anticipées',type:'multiselect',options:['Temps','Énergie','Motivation','Organisation','Entourage','Budget','Imprévus','Perfectionnisme']}
   ]},
   { key:'preferences', title:'Votre Coaching', eyebrow:'10 — TROUVER LE BON TON', intro:'Le coach adapte le Coaching à votre situation.', questions:[
-    {key:'coach_style',label:'Style préféré',type:'multiselect',required:true,options:['Très direct','Pédagogique','Analytique','Encourageant','Challengeant','Équilibré']},
+    {key:'coach_style',label:'Style préféré',type:'multiselect',required:true,options:['Très direct','Pédagogique','Analytique','Encourageant','Exigeant','Équilibré']},
     {key:'contact_frequency',label:'Fréquence de contact',type:'choice',required:true,options:['Faible','Modérée','Élevée']},
     {key:'communication',label:'Formats utiles',type:'multiselect',options:['Messages','Appels','Vidéos','Documents','Tâches','Combinaison']},
     {key:'feedback_style',label:'Comment souhaitez-vous recevoir un retour quand quelque chose ne fonctionne pas ?',type:'textarea',required:true},
@@ -114,6 +114,38 @@ export const isQuestionVisible = (question, answers = {}) => {
 };
 
 export const visibleQuestions = (step, answers = {}) => step.questions.filter((question) => isQuestionVisible(question, answers));
+
+const questionnaireSections = new Map(coachingQuestionnaire.map(section => [section.key, section]));
+const questionnaireQuestions = new Map(coachingQuestionnaire.flatMap(section => section.questions.map(question => [question.key, question])));
+const legacyFrenchValues = new Map(Object.entries({
+  yes:'Oui',no:'Non',true:'Oui',false:'Non',other:'Autre',none:'Aucun',
+  never:'Jamais',sometimes:'Parfois',often:'Souvent',always:'Toujours',
+  morning:'Matin',afternoon:'Après-midi',evening:'Soir',daily:'Quotidien',weekly:'Hebdomadaire',monthly:'Mensuel',
+  active:'Actif',paused:'En pause',completed:'Terminé',cancelled:'Annulé',pending:'En attente',draft:'Brouillon',submitted:'Transmis',reviewed:'Relu',
+  male:'Homme',female:'Femme','batch cooking possible':'Préparation en série possible',challengeant:'Exigeant'
+}));
+
+export const coachingSectionLabel = key => questionnaireSections.get(key)?.title || 'Informations complémentaires';
+export const coachingQuestionLabel = key => questionnaireQuestions.get(key)?.label || 'Information complémentaire';
+export const normalizeCoachingStoredAnswer = (key, answer) => {
+  const question=questionnaireQuestions.get(key);
+  const normalize=value=>{
+    if(typeof value!=='string'||!question||!['choice','multiselect'].includes(question.type))return value;
+    return legacyFrenchValues.get(value.trim().toLocaleLowerCase('fr-FR'))||value;
+  };
+  return Array.isArray(answer)?answer.map(normalize):normalize(answer);
+};
+export const formatCoachingAnswer = (key, answer) => {
+  const question=questionnaireQuestions.get(key);
+  if(answer===undefined||answer===null||answer==='')return 'Non renseigné';
+  if(Array.isArray(answer))return answer.length?answer.map(value=>formatCoachingAnswer(key,value)).join(', '):'Aucune sélection';
+  if(typeof answer==='boolean')return answer?'Oui':'Non';
+  if(typeof answer==='object'){const values=Object.values(answer).map(value=>formatCoachingAnswer('',value)).filter(value=>value!=='Non renseigné');return values.length?values.join(' · '):'Non renseigné';}
+  if(question?.type==='date'){const [year,month,day]=String(answer).split('-').map(Number);if(year&&month&&day)return new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',year:'numeric'}).format(new Date(year,month-1,day));}
+  if(question?.type==='scale')return `${answer} sur ${question.max||10}`;
+  const text=String(answer).trim(),translated=legacyFrenchValues.get(text.toLocaleLowerCase('fr-FR'));
+  return question&&['text','textarea'].includes(question.type)?text:translated||text;
+};
 
 export const validateCoachingStep = (step, answers = {}) => visibleQuestions(step, answers).filter((question) => {
   if (!question.required) return false;
