@@ -115,6 +115,7 @@ async function hydrate(){
   const avatar=shell.querySelector('.academy-profile-avatar'),url=profile?.avatar_url||sessionUser.user_metadata?.avatar_url||sessionUser.user_metadata?.picture||'';avatar.textContent=url?'':name[0].toUpperCase();avatar.style.backgroundImage=url?`url("${url.replaceAll('"','%22')}")`:'';avatar.classList.toggle('has-image',Boolean(url));
   if(path==='/module')setupReadingState();
   setupGlobalSearch();
+  if(academyAccess){import('./academy-onboarding.js');import('./content-protection.js');}
 }
 
 function setupGlobalSearch(){

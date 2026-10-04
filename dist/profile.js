@@ -6,6 +6,8 @@ const firstNameInput = document.querySelector('#profile-first-name');
 const lastNameInput = document.querySelector('#profile-last-name');
 const usernameInput = document.querySelector('#profile-username');
 const departmentInput = document.querySelector('#profile-department');
+const departmentField = document.querySelector('[data-profile-department-field]');
+const locationInputs = [...document.querySelectorAll('input[name="locationType"]')];
 const bioInput = document.querySelector('#profile-bio');
 attachDepartmentPicker(departmentInput);
 const emailInput = document.querySelector('#profile-email');
@@ -181,7 +183,7 @@ const initializeProfile = async () => {
   const [profileResult, identitiesResult, publicProfileResult, themeResult, subscriptionResult, accessResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('full_name, first_name, last_name, username, avatar_url, department, bio, role, created_at')
+      .select('full_name, first_name, last_name, username, avatar_url, department, location_label, bio, role, created_at')
       .eq('id', user.id)
       .single(),
     supabase.auth.getUserIdentities(),
@@ -214,6 +216,9 @@ const initializeProfile = async () => {
   lastNameInput.value = lastName;
   usernameInput.value = normalizeUsername(username);
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
+  const locationType=profile.department?'france':profile.location_label==='À l’étranger'?'abroad':'none';
+  locationInputs.forEach(input=>{input.checked=input.value===locationType});
+  departmentField.hidden=locationType!=='france';
   bioInput.value = (profile.bio || '').slice(0, 200);
   applyThemePreference(profile.theme_preference);
   if (localTheme && localThemeDate > remoteThemeDate && localTheme !== themeResult.data?.theme_preference) {
@@ -384,9 +389,11 @@ const saveProfile = async () => {
   const firstName = firstNameInput.value.trim();
   const lastName = lastNameInput.value.trim();
   const bio = bioInput.value.trim();
-  const department = departmentCode(departmentInput.value);
+  const locationType=locationInputs.find(input=>input.checked)?.value||'none';
+  const department = locationType==='france'?departmentCode(departmentInput.value):null;
+  const locationLabel=locationType==='abroad'?'À l’étranger':locationType==='none'?'Non renseigné':null;
   const fullName = `${firstName} ${lastName}`.trim();
-  if (!firstName || !lastName || !department || bio.length > 200) {
+  if (!firstName || !lastName || (locationType==='france'&&!department) || bio.length > 200) {
     setMessage('Complétez les champs requis pour terminer l’enregistrement.');
     return;
   }
@@ -415,7 +422,7 @@ const saveProfile = async () => {
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, first_name: firstName, last_name: lastName, department, bio, avatar_url: avatarUrl })
+    .update({ full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, avatar_url: avatarUrl })
     .eq('id', user.id);
 
   if (profileError) {
@@ -426,9 +433,9 @@ const saveProfile = async () => {
   }
 
   const { error: userError } = await supabase.auth.updateUser({
-    data: { full_name: fullName, first_name: firstName, last_name: lastName, department, avatar_url: avatarUrl },
+    data: { full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, avatar_url: avatarUrl },
   });
-  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, department, bio, avatar_url: avatarUrl };
+  profile = { ...profile, full_name: fullName, first_name: firstName, last_name: lastName, department, location_label:locationLabel, bio, avatar_url: avatarUrl };
   pendingAvatar = null;
   fileInput.value = '';
   showAvatar(avatarUrl, firstName);
@@ -499,6 +506,7 @@ const queueUsernameSave = (delay = 700) => {
   input.addEventListener('input', () => queueAutoSave());
   input.addEventListener('change', () => queueAutoSave(150));
 });
+locationInputs.forEach(input=>input.addEventListener('change',()=>{departmentField.hidden=input.checked&&input.value!=='france';queueAutoSave(150)}));
 usernameInput.addEventListener('input', () => {
   enforceLowercaseUsername(usernameInput);
   queueUsernameSave();

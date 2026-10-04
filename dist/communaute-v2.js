@@ -268,6 +268,7 @@ async function send() {
   const result = editId ? await supabase.from('messages').update({ content }).eq('id', editId).eq('user_id', user.id).select('id').single() : await supabase.from('messages').insert({ channel_id: active.id, user_id: user.id, content, parent_message_id: parentId, reply_to_message_id: replyId || null }).select('id').single();
   submit.disabled = els.input.disabled = false;
   if (result.error) { errorMessage(`Le message n’a pas été enregistré : ${result.error.message}`); return els.input.focus(); }
+  if(!editId)window.dispatchEvent(new CustomEvent('stoa:community-message-sent',{detail:{messageId:result.data?.id,channelId:active.id}}));
   resetComposer(); await loadMessages({ preserve: true, smooth: true }); els.input.focus();
 }
 function startReply(id) {
