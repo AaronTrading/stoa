@@ -15,7 +15,7 @@ dialog.innerHTML = `
   <img class="auth-logo-image" src="/assets/branding/fondtransparent.png" alt="">
   <span class="eyebrow">ENTRER DANS STOA</span>
   <h2 id="auth-title">Votre espace membre</h2>
-  <p class="auth-intro">Retrouvez votre parcours avec votre adresse email ou votre compte Discord.</p>
+  <p class="auth-intro">Retrouvez votre parcours avec votre adresse email, Google ou Discord.</p>
   <div class="auth-guest-view">
     <div class="auth-mode-tabs" role="tablist" aria-label="Connexion ou inscription"><button type="button" role="tab" data-auth-mode="login" aria-selected="true">Se connecter</button><button type="button" role="tab" data-auth-mode="signup" aria-selected="false">S’inscrire</button></div>
     <form class="auth-form" novalidate>
@@ -35,12 +35,6 @@ dialog.innerHTML = `
     <button class="auth-provider" type="button" data-auth-action="magic-link"><span aria-hidden="true">✉</span> Recevoir un lien magique</button>
     <button class="auth-provider discord" type="button" data-auth-action="discord"><img src="assets/branding/discord.svg" alt="" aria-hidden="true"> Continuer avec Discord</button>
   </div>
-  <div class="auth-member-view" hidden>
-    <p>Vous êtes connecté avec <strong data-auth-email></strong>.</p>
-    <a class="button dark" href="/accueil">Ouvrir mon espace <span>↗</span></a>
-    <a class="button profile-button" href="/profil">Gérer mon profil <span>↗</span></a>
-    <button class="auth-secondary" type="button" data-auth-action="signout">Se déconnecter</button>
-  </div>
   <p class="auth-message" role="status" aria-live="polite"></p>
 `;
 document.body.append(dialog);
@@ -48,8 +42,6 @@ attachDepartmentPicker(dialog.querySelector('#auth-department'));
 
 const form = dialog.querySelector('.auth-form');
 const message = dialog.querySelector('.auth-message');
-const guestView = dialog.querySelector('.auth-guest-view');
-const memberView = dialog.querySelector('.auth-member-view');
 let currentSession = null;
 let currentProfile = null;
 let currentProfileUserId = null;
@@ -57,6 +49,11 @@ let authMode = 'login';
 const googleClientId = globalThis.__STOA_ENV__?.GOOGLE_CLIENT_ID || '';
 let googleNonce = '';
 let googleIdentityReady = false;
+
+const authenticatedDestination = (session = currentSession, profile = currentProfile) => {
+  const hasAcademyAccess = Boolean(session?.user && ['member', 'coaching', 'admin'].includes(profile?.role));
+  return hasAcademyAccess ? '/accueil' : '/profil';
+};
 
 const setAuthMode = (mode) => {
   authMode = mode === 'signup' ? 'signup' : 'login';
@@ -96,7 +93,7 @@ const updateAuthUI = (session, profile = currentProfile) => {
   }
   const activeProfile = user && currentProfileUserId === user.id ? profile : null;
   const hasAcademyAccess = Boolean(user && ['member', 'coaching', 'admin'].includes(activeProfile?.role));
-  const memberDestination = hasAcademyAccess ? '/accueil' : '/#offres';
+  const memberDestination = hasAcademyAccess ? '/accueil' : '/profil';
   const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
@@ -129,14 +126,6 @@ const updateAuthUI = (session, profile = currentProfile) => {
     element.textContent = firstName || 'membre';
   });
 
-  guestView.hidden = Boolean(user);
-  memberView.hidden = !user;
-  dialog.querySelector('[data-auth-email]').textContent = user?.email || '';
-  const memberButton = memberView.querySelector('.button.dark');
-  if (memberButton) {
-    memberButton.href = memberDestination;
-    memberButton.innerHTML = `${hasAcademyAccess ? 'Ouvrir mon espace' : 'Rejoindre l’Académie'} <span>↗</span>`;
-  }
 };
 
 const hydrateAuthUI = async (session) => {
@@ -150,13 +139,18 @@ const hydrateAuthUI = async (session) => {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!data || currentSession?.user?.id !== user.id) return;
+  if (!data || currentSession?.user?.id !== user.id) {
+    if (location.pathname === '/' && currentSession?.user?.id === user.id) location.replace('/profil');
+    return;
+  }
   currentProfile = data;
   currentProfileUserId = user.id;
   updateAuthUI(session, data);
   if (['discord', 'google'].includes(user.app_metadata?.provider) && !data.department && location.pathname !== '/profil') {
     location.replace('/profil?nouveau=1');
+    return;
   }
+  if (location.pathname === '/') location.replace(authenticatedDestination(session, data));
 };
 
 const generateGoogleNonce = async () => {
@@ -223,6 +217,10 @@ const loadGoogleIdentity = async () => {
 };
 
 const openDialog = () => {
+  if (currentSession) {
+    location.assign(authenticatedDestination());
+    return;
+  }
   setMessage('');
   updateAuthUI(currentSession);
   document.querySelectorAll('dialog[open]').forEach((openDialogElement) => {
@@ -250,7 +248,7 @@ const initializeAuth = async () => {
   document.addEventListener('click', (event) => {
     const authLink = event.target.closest('[data-auth-link]');
     const avatar = event.target.closest('[data-auth-avatar]');
-    if (authLink || (avatar && !currentSession)) {
+    if ((authLink && !currentSession) || (avatar && !currentSession)) {
       event.preventDefault();
       openDialog();
     }
@@ -331,36 +329,6 @@ const initializeAuth = async () => {
       setBusy(false);
       setMessage('Connexion Discord indisponible. Vérifiez la configuration du fournisseur.', 'error');
     }
-  });
-
-  dialog.querySelector('[data-auth-action="signout"]').addEventListener('click', async () => {
-    setBusy(true);
-    globalThis.google?.accounts?.id?.disableAutoSelect?.();
-    sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
-    const { error } = await supabase.auth.signOut();
-    setBusy(false);
-    if (error) {
-      setMessage(error.message, 'error');
-      return;
-    }
-    dialog.close();
-    showToast('Vous êtes déconnecté.', 'success');
-  });
-
-  memberView.querySelector('.button.dark')?.addEventListener('click', async (event) => {
-    if (!currentSession || ['member', 'coaching', 'admin'].includes(currentProfile?.role)) return;
-    event.preventDefault();
-    const button = event.currentTarget;
-    button.setAttribute('aria-busy', 'true');
-    button.textContent = 'Ouverture du paiement…';
-    const { data, error } = await supabase.functions.invoke('create-checkout', { body: { offer: 'academy' } });
-    if (error || !data?.url) {
-      button.removeAttribute('aria-busy');
-      button.innerHTML = 'Rejoindre l’Académie <span>↗</span>';
-      setMessage(data?.error || error?.message || 'Le paiement ne peut pas être ouvert pour le moment.', 'error');
-      return;
-    }
-    location.assign(data.url);
   });
 
   if (location.hash === '#connexion' && !currentSession) openDialog();

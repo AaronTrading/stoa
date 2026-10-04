@@ -24,6 +24,8 @@ const cropZoom = document.querySelector('#avatar-crop-zoom');
 const cropApply = document.querySelector('#crop-apply');
 const discordLinkButton = document.querySelector('#discord-link-button');
 const discordLinkStatus = document.querySelector('#discord-link-status');
+const googleLinkButton = document.querySelector('#google-link-button');
+const googleLinkStatus = document.querySelector('#google-link-status');
 const themeInputs = [...document.querySelectorAll('input[name="themePreference"]')];
 const subscriptionTitle = document.querySelector('#profile-subscription-title');
 const subscriptionDetail = document.querySelector('#profile-subscription-detail');
@@ -98,6 +100,13 @@ const setDiscordLinkState = (linked) => {
   discordLinkButton.textContent = linked ? 'Associé ✓' : 'Associer';
   discordLinkButton.disabled = linked;
   discordLinkButton.classList.toggle('linked', linked);
+};
+
+const setGoogleLinkState = (linked) => {
+  googleLinkStatus.textContent = linked ? 'Compte associé' : 'Non associé';
+  googleLinkButton.textContent = linked ? 'Associé ✓' : 'Associer';
+  googleLinkButton.disabled = linked;
+  googleLinkButton.classList.toggle('linked', linked);
 };
 
 const applyThemePreference = (theme) => {
@@ -229,14 +238,17 @@ const initializeProfile = async () => {
   const publicProfile = publicProfileResult.data;
   document.querySelector('#profile-level').textContent = publicProfile ? `Niveau ${publicProfile.level_number} · ${publicProfile.level_label} (${publicProfile.completed_modules} leçon${Number(publicProfile.completed_modules) > 1 ? 's' : ''})` : 'Niveau 1 · Initié';
   document.querySelector('#profile-created-at').textContent = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at));
-  document.querySelector('#profile-provider').textContent = user.app_metadata?.provider === 'discord' ? 'Connecté avec Discord' : 'Connecté par email';
   showAvatar(avatarUrl, firstName || user.email);
   removeButton.hidden = !avatarUrl;
   document.querySelectorAll('[data-user-first-name]').forEach((element) => {
     element.textContent = firstName || 'membre';
   });
   const identities = identitiesResult.data?.identities || user.identities || [];
-  setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
+  const linkedProviders = new Set(identities.map((identity) => identity.provider));
+  setDiscordLinkState(linkedProviders.has('discord'));
+  setGoogleLinkState(linkedProviders.has('google'));
+  const providerLabels = [linkedProviders.has('email') && 'email', linkedProviders.has('google') && 'Google', linkedProviders.has('discord') && 'Discord'].filter(Boolean);
+  document.querySelector('#profile-provider').textContent = providerLabels.length ? `Accès liés : ${providerLabels.join(' · ')}` : 'Compte STOA';
   currentSubscription = subscriptionResult.data || null;
   hasAcademyAccess = Boolean(accessResult.data);
   const activeStripeSubscription = Boolean(currentSubscription && ['active', 'trialing'].includes(currentSubscription.status));
@@ -557,7 +569,24 @@ discordLinkButton.addEventListener('click', async () => {
   }
 });
 
+googleLinkButton.addEventListener('click', async () => {
+  googleLinkButton.disabled = true;
+  googleLinkButton.textContent = 'Redirection…';
+  setMessage('Ouverture de Google pour associer votre compte…');
+  const { error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+    options: { redirectTo: new URL('/profil', siteUrl).href, queryParams: { prompt: 'select_account' } },
+  });
+  if (error) {
+    googleLinkButton.disabled = false;
+    googleLinkButton.textContent = 'Associer';
+    setMessage(`Le compte Google n’a pas pu être associé : ${error.message}`, 'error');
+  }
+});
+
 document.querySelector('#profile-signout').addEventListener('click', async () => {
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
   const { error } = await supabase.auth.signOut();
   if (error) {
     setMessage(error.message, 'error');
