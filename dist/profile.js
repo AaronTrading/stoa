@@ -257,7 +257,7 @@ const initializeProfile = async () => {
 
 subscriptionAction?.addEventListener('click', async () => {
   if (!currentSubscription || !['active', 'trialing'].includes(currentSubscription.status)) {
-    location.assign('/subscribe');
+    location.assign('/#offres');
     return;
   }
   subscriptionAction.disabled = true;

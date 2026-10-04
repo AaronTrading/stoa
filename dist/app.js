@@ -137,14 +137,25 @@ if (landingChapters) {
 }
 
 const dialog = document.querySelector('#plan-dialog');
-document.querySelectorAll('[data-plan]').forEach(button => button.addEventListener('click',()=>{
-  if (button.dataset.plan === 'Académie') {
-    location.assign('/subscribe');
-    return;
-  }
-  document.querySelector('#plan-title').textContent = button.dataset.plan;
-  dialog.showModal();
-}));
+const academyCheckoutButton=document.querySelector('[data-plan="Académie"]');
+const academyCheckoutStatus=document.querySelector('#academy-checkout-status');
+let academyCheckoutBusy=false;
+const setAcademyCheckoutStatus=(message,tone='info')=>{if(academyCheckoutStatus){academyCheckoutStatus.textContent=message;academyCheckoutStatus.dataset.tone=tone;}};
+const startAcademyCheckout=async()=>{
+  if(academyCheckoutBusy)return;
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session){sessionStorage.setItem('stoa-pending-checkout','academy');document.querySelector('[data-auth-link]')?.click();return;}
+  sessionStorage.removeItem('stoa-pending-checkout');
+  const {data:hasAccess}=await supabase.rpc('has_active_academy_access',{p_user_id:session.user.id});
+  if(hasAccess){location.assign('/accueil');return;}
+  academyCheckoutBusy=true;academyCheckoutButton.disabled=true;academyCheckoutButton.setAttribute('aria-busy','true');setAcademyCheckoutStatus('Ouverture du paiement sécurisé…');
+  const {data,error}=await supabase.functions.invoke('create-checkout',{body:{offer:'academy'}});
+  academyCheckoutBusy=false;academyCheckoutButton.disabled=false;academyCheckoutButton.setAttribute('aria-busy','false');
+  if(error||!data?.url){setAcademyCheckoutStatus(data?.error||error?.message||'Le paiement ne peut pas être ouvert pour le moment.','error');return;}
+  location.assign(data.url);
+};
+academyCheckoutButton?.addEventListener('click',startAcademyCheckout);
+window.addEventListener('stoa:auth-ready',event=>{if(event.detail?.session&&sessionStorage.getItem('stoa-pending-checkout')==='academy')startAcademyCheckout();});
 document.querySelector('.dialog-close')?.addEventListener('click',()=>dialog.close());
 dialog?.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();}});
 

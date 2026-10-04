@@ -80,7 +80,7 @@ const updateAuthUI = (session, profile = currentProfile) => {
   }
   const activeProfile = user && currentProfileUserId === user.id ? profile : null;
   const hasAcademyAccess = Boolean(user && ['member', 'coaching', 'admin'].includes(activeProfile?.role));
-  const memberDestination = hasAcademyAccess ? '/accueil' : '/subscribe';
+  const memberDestination = hasAcademyAccess ? '/accueil' : '/#offres';
   const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
@@ -152,18 +152,19 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('/subscribe', siteUrl).href;
+const redirectTo = new URL('/#offres', siteUrl).href;
 
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   await hydrateAuthUI(sessionData.session);
+  window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
   if (document.body.classList.contains('member-page') && !sessionData.session) {
     location.replace('/#connexion');
     return;
   }
   supabase.auth.onAuthStateChange((_event, session) => {
     updateAuthUI(session);
-    window.setTimeout(() => hydrateAuthUI(session), 0);
+    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
   });
 
   document.addEventListener('click', (event) => {
@@ -196,7 +197,6 @@ const initializeAuth = async () => {
     updateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
-    if (location.pathname === '/' || location.pathname === '/index') location.assign('/subscribe');
   });
 
   dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {

@@ -87,8 +87,7 @@ async function hydrate(){
   if(!sessionUser){shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#connexion">Connectez-vous pour ouvrir vos piliers →</a>';shell.querySelector('.academy-profile-compact').href='/#connexion';shell.querySelector('[data-shell-profile-name]').textContent='Espace membre';setupGlobalSearch();return;}
   const {data:academyAccess,error:accessError}=await supabase.rpc('has_active_academy_access',{p_user_id:sessionUser.id});
   if(path!=='/profil'&&(accessError||!academyAccess)){
-    const returnTo=`${location.pathname}${location.search}${location.hash}`;
-    location.replace(`/subscribe?retour=${encodeURIComponent(returnTo)}`);
+    location.replace('/#offres');
     return;
   }
   const contentSnapshot=academyAccess?loadMemberSnapshot(sessionUser.id):Promise.resolve({chapters:[],states:[]});
@@ -103,7 +102,7 @@ async function hydrate(){
   const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(themeRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(themeRow?.theme_preference||localTheme||'light');
   profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(themeRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',themeRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==themeRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
   catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;searchSections=sectionRows||[];
-  if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/subscribe">Rejoindre l’Académie →</a>';
+  if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#offres">Rejoindre l’Académie →</a>';
   renderBreadcrumb();publishState();
   const name=profile?.username||profile?.first_name||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
   const coachingLink=shell.querySelector('[data-coaching-link]'),hasCoaching=Boolean(coachingRows?.length);

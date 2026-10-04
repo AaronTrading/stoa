@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/subscribe", "destination": "/#offres", "permanent": false }
+  ],
   "functions": {
     "api/email-center-send.mjs": {
       "maxDuration": 60

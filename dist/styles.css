@@ -918,6 +918,7 @@ html.stoa-dark .profile-autosave-note{background:rgba(141,158,119,.12);border-co
 
 .coaching-public-price{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.coaching-public-price s{font-size:24px;letter-spacing:-.03em;color:#aeb5a5}.coaching-public-price strong{font-size:50px;font-weight:500;letter-spacing:-.06em}.premium>.button{margin-top:0}
 .academy-public-price{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.academy-public-price s{color:var(--muted);font-size:23px;letter-spacing:-.03em}.academy-public-price strong{font-size:50px;font-weight:500;letter-spacing:-.06em}.academy-public-price>span{font-size:16px;letter-spacing:0;color:var(--muted)}
+.academy-checkout-status{min-height:1.35rem;margin-top:.75rem;color:var(--muted);font-size:.76rem}.academy-checkout-status[data-tone=error]{color:#9b4e45}.price-card [aria-busy=true]{opacity:.68;pointer-events:none}
 
 .coaching-sales,.coaching-sales-hero,.coaching-sales-hero>*{min-width:0}.coaching-sales-page{overflow-x:hidden}@media(max-width:680px){.coaching-sales-hero-copy,.coaching-sales-hero-copy>p,.coaching-sales-hero blockquote{width:100%;max-width:100%}.coaching-sales-hero-visual{width:100%}}
 
