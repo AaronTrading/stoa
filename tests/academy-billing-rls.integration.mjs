@@ -51,6 +51,7 @@ test('RLS denies a signed-in non-subscriber and follows webhook entitlement chan
     const deniedAgain = await academyRows();
     assert.deepEqual(deniedAgain.body, []);
   } finally {
+    await rest(`/rest/v1/stripe_webhook_events?stripe_event_id=in.(evt_active_${suffix},evt_cancel_${suffix})`, { method: 'DELETE' });
     if (userId) await rest(`/auth/v1/admin/users/${userId}`, { method: 'DELETE' });
   }
 });
