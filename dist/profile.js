@@ -41,6 +41,17 @@ let usernameSaveTimer;
 let usernameSaveInFlight = false;
 let usernameSaveAgain = false;
 const usernamePattern = /^[\p{L}\p{N}._;-]{3,30}$/u;
+const normalizeUsername = (value) => String(value || '').replace(/^@+/, '').trim().toLocaleLowerCase('fr-FR');
+
+const enforceLowercaseUsername = (input) => {
+  const before = input.value;
+  const normalized = before.replace(/^@+/, '').toLocaleLowerCase('fr-FR');
+  if (before === normalized) return;
+  const caret = input.selectionStart ?? normalized.length;
+  input.value = normalized;
+  const nextCaret = Math.max(0, caret - (before.length - normalized.length));
+  input.setSelectionRange?.(nextCaret, nextCaret);
+};
 
 const setMessage = (text, tone = 'info') => {
   message.textContent = text;
@@ -194,7 +205,7 @@ const initializeProfile = async () => {
   const avatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
   firstNameInput.value = firstName;
   lastNameInput.value = lastName;
-  usernameInput.value = username;
+  usernameInput.value = normalizeUsername(username);
   departmentInput.value = departmentLabel(profile.department || user.user_metadata?.department || '');
   bioInput.value = (profile.bio || '').slice(0, 200);
   applyThemePreference(profile.theme_preference);
@@ -397,7 +408,8 @@ const queueAutoSave = (delay = 700) => {
 const saveUsername = async () => {
   if (!user) return;
   if (usernameSaveInFlight) { usernameSaveAgain = true; return; }
-  const username = usernameInput.value.trim();
+  const username = normalizeUsername(usernameInput.value);
+  usernameInput.value = username;
   if (!usernamePattern.test(username)) {
     setMessage('Le pseudo doit contenir 3 à 30 caractères, sans espace. Utilisez uniquement des lettres, chiffres, points, points-virgules, tirets ou tirets bas.', 'error');
     return;
@@ -426,7 +438,7 @@ const saveUsername = async () => {
   document.dispatchEvent(new CustomEvent('stoa:profile-updated', { detail: { username } }));
   usernameSaveInFlight = false;
   setMessage(userError ? 'Pseudo enregistré. Il sera synchronisé partout à la prochaine connexion.' : 'Pseudo enregistré.', userError ? 'error' : 'success');
-  if (usernameSaveAgain || usernameInput.value.trim() !== username) {
+  if (usernameSaveAgain || normalizeUsername(usernameInput.value) !== username) {
     usernameSaveAgain = false;
     queueUsernameSave(0);
   }
@@ -442,7 +454,10 @@ const queueUsernameSave = (delay = 700) => {
   input.addEventListener('input', () => queueAutoSave());
   input.addEventListener('change', () => queueAutoSave(150));
 });
-usernameInput.addEventListener('input', () => queueUsernameSave());
+usernameInput.addEventListener('input', () => {
+  enforceLowercaseUsername(usernameInput);
+  queueUsernameSave();
+});
 usernameInput.addEventListener('change', () => queueUsernameSave(150));
 form.addEventListener('submit', (event) => { event.preventDefault(); queueAutoSave(0); queueUsernameSave(0); });
 
