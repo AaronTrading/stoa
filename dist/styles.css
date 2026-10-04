@@ -942,3 +942,6 @@ html.stoa-dark .email-center-page{--email-ink:#edf0e9;--email-muted:#b7bfb2;--em
 .coach-dialog .username-entry>input{padding:.8rem .8rem .8rem .35rem!important}
 .coach-dialog .username-entry:focus-within{border-color:#727967}
 .stoa-dark .username-entry,.stoa-dark .coach-dialog .username-entry{background:rgba(9,14,9,.28);border-color:rgba(234,239,229,.16);color:#bdc5b8}
+.coach-actions button.danger{border-color:rgba(151,72,57,.3);color:#8f4337;background:rgba(154,77,62,.07)}
+.coach-actions button.danger:hover{background:rgba(154,77,62,.14)}
+.stoa-dark .coach-actions button.danger{border-color:rgba(224,143,126,.35);color:#efb2a5;background:rgba(154,77,62,.12)}
