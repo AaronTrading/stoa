@@ -152,7 +152,7 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('/#offres', siteUrl).href;
+const redirectTo = new URL('/', siteUrl).href;
 
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
