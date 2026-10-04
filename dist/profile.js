@@ -23,6 +23,9 @@ const cropApply = document.querySelector('#crop-apply');
 const discordLinkButton = document.querySelector('#discord-link-button');
 const discordLinkStatus = document.querySelector('#discord-link-status');
 const themeInputs = [...document.querySelectorAll('input[name="themePreference"]')];
+const subscriptionTitle = document.querySelector('#profile-subscription-title');
+const subscriptionDetail = document.querySelector('#profile-subscription-detail');
+const subscriptionAction = document.querySelector('#profile-subscription-action');
 
 let user;
 let profile;
@@ -40,6 +43,8 @@ let saveAgain = false;
 let usernameSaveTimer;
 let usernameSaveInFlight = false;
 let usernameSaveAgain = false;
+let currentSubscription = null;
+let hasAcademyAccess = false;
 const usernamePattern = /^[\p{L}\p{N}._;-]{3,30}$/u;
 const normalizeUsername = (value) => String(value || '').replace(/^@+/, '').trim().toLocaleLowerCase('fr-FR');
 
@@ -83,7 +88,7 @@ const showHeaderAvatar = (url, fallback = 'S') => {
   });
 };
 
-const roleLabels = { member: 'Académie', coaching: 'Coaching', admin: 'Administration' };
+const roleLabels = { registered: 'Compte créé', member: 'Académie', coaching: 'Coaching', admin: 'Administration' };
 const cropSize = cropCanvas.width;
 
 const setDiscordLinkState = (linked) => {
@@ -173,7 +178,7 @@ const initializeProfile = async () => {
     return;
   }
 
-  const [profileResult, identitiesResult, publicProfileResult, themeResult] = await Promise.all([
+  const [profileResult, identitiesResult, publicProfileResult, themeResult, subscriptionResult, accessResult] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, first_name, last_name, username, avatar_url, department, bio, role, created_at')
@@ -182,6 +187,8 @@ const initializeProfile = async () => {
     supabase.auth.getUserIdentities(),
     supabase.rpc('get_community_profiles', { profile_ids: [user.id] }).maybeSingle(),
     supabase.from('profiles').select('theme_preference,theme_updated_at').eq('id', user.id).maybeSingle(),
+    supabase.from('subscriptions').select('status,current_period_end,cancel_at_period_end,stripe_customer_id,updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.rpc('has_active_academy_access', { p_user_id: user.id }),
   ]);
 
   const { data, error } = profileResult;
@@ -225,7 +232,45 @@ const initializeProfile = async () => {
   });
   const identities = identitiesResult.data?.identities || user.identities || [];
   setDiscordLinkState(identities.some((identity) => identity.provider === 'discord'));
+  currentSubscription = subscriptionResult.data || null;
+  hasAcademyAccess = Boolean(accessResult.data);
+  const activeStripeSubscription = Boolean(currentSubscription && ['active', 'trialing'].includes(currentSubscription.status));
+  if (activeStripeSubscription) {
+    subscriptionTitle.textContent = currentSubscription.status === 'trialing' ? 'Période d’essai active' : 'Académie active';
+    if (currentSubscription.current_period_end) {
+      const periodDate = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(currentSubscription.current_period_end));
+      subscriptionDetail.textContent = currentSubscription.cancel_at_period_end ? `Accès conservé jusqu’au ${periodDate}.` : `Prochaine échéance le ${periodDate}.`;
+    } else subscriptionDetail.textContent = 'Votre accès à l’Académie est actif.';
+    subscriptionAction.textContent = 'Gérer mon abonnement';
+    subscriptionAction.hidden = false;
+  } else if (hasAcademyAccess) {
+    subscriptionTitle.textContent = 'Accès inclus';
+    subscriptionDetail.textContent = profile.role === 'coaching' ? 'Votre accès est inclus avec le Coaching.' : 'Votre accès privilégié à l’Académie est actif.';
+    subscriptionAction.hidden = true;
+  } else {
+    subscriptionTitle.textContent = 'Aucun abonnement actif';
+    subscriptionDetail.textContent = 'Rejoignez l’Académie pour ouvrir le parcours, les leçons et la communauté.';
+    subscriptionAction.textContent = 'Rejoindre l’Académie';
+    subscriptionAction.hidden = false;
+  }
 };
+
+subscriptionAction?.addEventListener('click', async () => {
+  if (!currentSubscription || !['active', 'trialing'].includes(currentSubscription.status)) {
+    location.assign('/subscribe');
+    return;
+  }
+  subscriptionAction.disabled = true;
+  subscriptionAction.textContent = 'Ouverture…';
+  const { data, error } = await supabase.functions.invoke('create-portal', { body: {} });
+  if (error || !data?.url) {
+    subscriptionAction.disabled = false;
+    subscriptionAction.textContent = 'Gérer mon abonnement';
+    setMessage(data?.error || error?.message || 'Le portail d’abonnement ne peut pas être ouvert pour le moment.', 'error');
+    return;
+  }
+  location.assign(data.url);
+});
 
 themeInputs.forEach((input) => input.addEventListener('change', async () => {
   if (!input.checked || !user) return;

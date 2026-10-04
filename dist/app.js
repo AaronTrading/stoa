@@ -137,6 +137,10 @@ if (landingChapters) {
 
 const dialog = document.querySelector('#plan-dialog');
 document.querySelectorAll('[data-plan]').forEach(button => button.addEventListener('click',()=>{
+  if (button.dataset.plan === 'Académie') {
+    location.assign('/subscribe');
+    return;
+  }
   document.querySelector('#plan-title').textContent = button.dataset.plan;
   dialog.showModal();
 }));

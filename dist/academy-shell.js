@@ -85,17 +85,26 @@ const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.di
 async function hydrate(){
   sessionUser=(await supabase.auth.getSession()).data.session?.user;
   if(!sessionUser){shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#connexion">Connectez-vous pour ouvrir vos piliers →</a>';shell.querySelector('.academy-profile-compact').href='/#connexion';shell.querySelector('[data-shell-profile-name]').textContent='Espace membre';setupGlobalSearch();return;}
+  const {data:academyAccess,error:accessError}=await supabase.rpc('has_active_academy_access',{p_user_id:sessionUser.id});
+  if(path!=='/profil'&&(accessError||!academyAccess)){
+    const returnTo=`${location.pathname}${location.search}${location.hash}`;
+    location.replace(`/subscribe?retour=${encodeURIComponent(returnTo)}`);
+    return;
+  }
+  const contentSnapshot=academyAccess?loadMemberSnapshot(sessionUser.id):Promise.resolve({chapters:[],states:[]});
+  const contentSections=academyAccess?supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index'):Promise.resolve({data:[]});
   const [{data:profileRow},{data:themeRow},snapshot,{data:sectionRows},{data:coachingRows},{data:isStaff}]=await Promise.all([
     supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role').eq('id',sessionUser.id).maybeSingle(),
     supabase.from('profiles').select('theme_preference,theme_updated_at').eq('id',sessionUser.id).maybeSingle(),
-    loadMemberSnapshot(sessionUser.id),
-    supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index'),
+    contentSnapshot,
+    contentSections,
     supabase.rpc('get_my_coaching_access'),supabase.rpc('is_coaching_staff')
   ]);
   const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(themeRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(themeRow?.theme_preference||localTheme||'light');
   profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(themeRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',themeRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==themeRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
   catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;searchSections=sectionRows||[];
-  renderTree();renderBreadcrumb();publishState();
+  if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/subscribe">Rejoindre l’Académie →</a>';
+  renderBreadcrumb();publishState();
   const name=profile?.username||profile?.first_name||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
   const coachingLink=shell.querySelector('[data-coaching-link]'),hasCoaching=Boolean(coachingRows?.length);
   coachingLink.hidden=false;

@@ -79,21 +79,22 @@ const updateAuthUI = (session, profile = currentProfile) => {
     currentProfileUserId = null;
   }
   const activeProfile = user && currentProfileUserId === user.id ? profile : null;
+  const hasAcademyAccess = Boolean(user && ['member', 'coaching', 'admin'].includes(activeProfile?.role));
+  const memberDestination = hasAcademyAccess ? '/accueil' : '/subscribe';
   const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
-    link.href = user ? '/accueil' : '#connexion';
-    const label = user ? 'Mon espace' : 'Connexion';
+    link.href = user ? memberDestination : '#connexion';
+    const label = user ? (hasAcademyAccess ? 'Mon espace' : 'Rejoindre STOA') : 'Connexion';
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
     link.replaceChildren(document.createTextNode(`${label} `), arrow);
-    link.setAttribute('aria-label', user ? 'Ouvrir mon académie' : 'Se connecter à STOA');
+    link.setAttribute('aria-label', user ? (hasAcademyAccess ? 'Ouvrir mon académie' : 'Découvrir l’abonnement STOA') : 'Se connecter à STOA');
   });
 
   document.querySelectorAll('[data-member-academy-link]').forEach((link) => {
-    const hasAcademyAccess = Boolean(user && ['member', 'coaching', 'admin'].includes(activeProfile?.role));
     link.hidden = !hasAcademyAccess;
     link.href = '/accueil';
   });
@@ -115,6 +116,11 @@ const updateAuthUI = (session, profile = currentProfile) => {
   guestView.hidden = Boolean(user);
   memberView.hidden = !user;
   dialog.querySelector('[data-auth-email]').textContent = user?.email || '';
+  const memberButton = memberView.querySelector('.button.dark');
+  if (memberButton) {
+    memberButton.href = memberDestination;
+    memberButton.innerHTML = `${hasAcademyAccess ? 'Ouvrir mon espace' : 'Rejoindre l’Académie'} <span>↗</span>`;
+  }
 };
 
 const hydrateAuthUI = async (session) => {
@@ -146,7 +152,7 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('/accueil', siteUrl).href;
+const redirectTo = new URL('/subscribe', siteUrl).href;
 
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
@@ -190,7 +196,7 @@ const initializeAuth = async () => {
     updateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
-    if (location.pathname === '/' || location.pathname === '/index') location.assign('/accueil');
+    if (location.pathname === '/' || location.pathname === '/index') location.assign('/subscribe');
   });
 
   dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {
