@@ -3,5 +3,4 @@ window.__STOA_ENV__ = {
   SITE_URL: 'https://example.com',
   SUPABASE_URL: 'https://YOUR_PROJECT_REF.supabase.co',
   SUPABASE_PUBLISHABLE_KEY: 'YOUR_PUBLISHABLE_KEY',
-  COACHING_CHECKOUT_URL: '',
 };

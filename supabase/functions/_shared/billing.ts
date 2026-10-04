@@ -5,6 +5,8 @@ export const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '');
 export const stripeCryptoProvider = Stripe.createSubtleCryptoProvider();
 export const siteUrl = (Deno.env.get('SITE_URL') || 'https://stoa-coaching.fr').replace(/\/$/, '');
 export const academyPriceId = Deno.env.get('STRIPE_PRICE_ID') || '';
+export const academyFirstMonthCouponId = Deno.env.get('STRIPE_ACADEMY_FIRST_MONTH_COUPON_ID') || '';
+export const coachingPriceId = Deno.env.get('STRIPE_COACHING_PRICE_ID') || '';
 
 export const service = createClient(
   Deno.env.get('SUPABASE_URL') || '',
@@ -62,6 +64,12 @@ export async function resolveStripeCustomer(user: User): Promise<string> {
 
 export async function hasAcademyAccess(userId: string): Promise<boolean> {
   const { data, error } = await service.rpc('has_active_academy_access', { p_user_id: userId });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function hasCoachingAccess(userId: string): Promise<boolean> {
+  const { data, error } = await service.rpc('has_coaching_access', { p_user_id: userId });
   if (error) throw error;
   return Boolean(data);
 }

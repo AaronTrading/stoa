@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const migration = read('supabase/migrations/202610040042_academy_billing.sql');
 const roleMigration = read('supabase/migrations/202610040041_registered_role.sql');
 const roleSyncFix = read('supabase/migrations/202610040043_fix_membership_role_sync.sql');
+const offersMigration = read('supabase/migrations/202610040044_billing_offers.sql');
 const checkout = read('supabase/functions/create-checkout/index.ts');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const shell = read('dist/academy-shell.js');
@@ -38,10 +39,16 @@ test('Stripe synchronization is signed and idempotent', () => {
   assert.match(checkout, /mode: 'subscription'/);
   assert.match(checkout, /client_reference_id: user\.id/);
   assert.match(checkout, /subscription_data: \{ metadata:/);
+  assert.match(checkout, /discounts: \[\{ coupon: academyFirstMonthCouponId \}\]/);
+  assert.match(checkout, /offer === 'coaching'/);
+  assert.match(checkout, /managed_payments: \{ enabled: false \}/);
+  assert.match(offersMigration, /product_type in \('academy','coaching'\)/);
+  assert.match(offersMigration, /insert into public\.coaching_clients/);
 });
 
 test('frontend never grants access from the success redirect', () => {
   assert.match(success, /has_active_academy_access/);
+  assert.match(success, /has_coaching_access/);
   assert.match(success, /for\(let attempt=0;attempt<15;attempt\+\+\)/);
   assert.match(shell, /location\.replace\(`\/subscribe/);
   assert.match(shell, /has_active_academy_access/);

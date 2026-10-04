@@ -29,7 +29,7 @@ L’interface d’authentification dans `dist/auth.js` permet la connexion et l�
 
 La page `/communaute` utilise les changements PostgreSQL de Supabase Realtime pour les messages et les réactions, et Presence pour compter les membres présents dans le canal actif. Les profils affichés passent par une fonction SQL qui ne retourne que les informations publiques utiles à la communauté.
 
-Le Coaching Privé utilise un droit séparé dans `coaching_clients` : un compte Académie ne reçoit donc jamais cet accès par son seul rôle. Le futur webhook Stripe devra activer ce droit côté serveur avec `access_source = 'stripe'` et l’identifiant d’abonnement. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille. Les notes privées ne sont jamais lisibles par le client.
+Le Coaching utilise un droit séparé dans `coaching_clients` : un compte Académie ne reçoit donc jamais cet accès par son seul rôle. Le webhook Stripe active ce droit côté serveur avec `access_source = 'stripe'` et l’identifiant d’abonnement. Les RLS limitent chaque client à ses données, chaque coach à ses clients assignés et les administrateurs à l’ensemble du portefeuille. Les notes privées ne sont jamais lisibles par le client.
 
 ## Email Center
 
@@ -47,7 +47,7 @@ La première version ne mesure pas les ouvertures ou les clics : Gmail API ne fo
 
 ## Portée
 
-Les modules contiennent encore des textes à finaliser. Le paiement Stripe n’est pas encore relié au droit Coaching : l’activation peut être faite par un administrateur dans l’espace coach, et la colonne `stripe_subscription_id` est prête pour le webhook futur.
+Les modules contiennent encore des textes à finaliser. Le paiement Stripe Academy et Coaching est relié aux droits d’accès par webhook ; l’activation manuelle reste disponible aux administrateurs dans l’espace coach.
 
 La progression et les notes utilisent localStorage sur l’appareil courant. Elles ne sont pas synchronisées entre appareils et peuvent être effacées par le navigateur. En cas de stockage indisponible, l’interface indique l’échec de sauvegarde. Ne pas utiliser les notes pour des informations médicales sensibles.
 

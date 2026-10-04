@@ -15,16 +15,15 @@ test('la page commerciale reprend la terminologie STOA',()=>{
   assert.match(page,/L’Académie vous donne les connaissances/);
   assert.match(page,/Le Coaching vous aide/);
   assert.doesNotMatch(page,/Accompagnement|Academy/);
-  assert.match(page,/data-coaching-regular-price/);
-  assert.match(page,/data-coaching-launch-price/);
+  assert.match(page,/data-coaching-price/);
 });
 
 test('le tarif Coaching vient d’une configuration unique',()=>{
   assert.match(config,/durationMonths:3/);
-  assert.match(config,/regularPrice:600/);
-  assert.match(config,/launchPrice:300/);
-  assert.match(index,/data-coaching-regular-price/);
-  assert.match(index,/data-coaching-launch-price/);
+  assert.match(config,/billingIntervalMonths:3/);
+  assert.match(config,/price:299\.99/);
+  assert.match(index,/data-coaching-price/);
+  assert.match(page,/Facturé tous les trois mois/);
 });
 
 test('la page est réservée aux membres et respecte le droit Coaching',()=>{
@@ -38,4 +37,5 @@ test('la page est réservée aux membres et respecte le droit Coaching',()=>{
 test('les événements commerciaux utilisent l’analytics existant sans dépendance ajoutée',()=>{
   for(const event of ['coaching_page_view','coaching_cta_click','coaching_pricing_view','coaching_checkout_started','coaching_purchase_completed'])assert.match(sales,new RegExp(event));
   assert.match(sales,/window\.dataLayer/);
+  assert.match(sales,/functions\.invoke\('create-checkout',\{body:\{offer:'coaching'\}\}\)/);
 });

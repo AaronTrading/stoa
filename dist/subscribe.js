@@ -2,8 +2,8 @@ import { supabase } from './supabase.js';
 import { academyOffer,formatAcademyPrice } from './commercial-config.js';
 
 const button=document.querySelector('#subscribe-start'),status=document.querySelector('#subscribe-status');
-document.querySelectorAll('[data-academy-regular-price]').forEach(node=>node.textContent=formatAcademyPrice(academyOffer.regularPrice));
-document.querySelectorAll('[data-academy-launch-price]').forEach(node=>node.textContent=formatAcademyPrice(academyOffer.launchPrice));
+document.querySelectorAll('[data-academy-first-month-price]').forEach(node=>node.textContent=formatAcademyPrice(academyOffer.firstMonthPrice));
+document.querySelectorAll('[data-academy-recurring-price]').forEach(node=>node.textContent=formatAcademyPrice(academyOffer.recurringPrice));
 document.querySelectorAll('[data-year]').forEach(node=>node.textContent=new Date().getFullYear());
 if(new URLSearchParams(location.search).has('annule'))status.textContent='Le paiement a été annulé. Aucun prélèvement n’a été effectué.';
 

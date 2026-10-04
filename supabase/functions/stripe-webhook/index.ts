@@ -17,6 +17,7 @@ async function synchronize(event: Stripe.Event, subscription: Stripe.Subscriptio
   const userId = raw.metadata?.user_id || raw.metadata?.supabase_user_id || fallbackUserId || null;
   const periodStart = raw.current_period_start || item?.current_period_start;
   const periodEnd = raw.current_period_end || item?.current_period_end;
+  const productType = raw.metadata?.product === 'stoa_coaching' ? 'coaching' : 'academy';
   const { error } = await service.rpc('process_stripe_subscription_event', {
     p_event_id: event.id,
     p_event_type: event.type,
@@ -29,6 +30,7 @@ async function synchronize(event: Stripe.Event, subscription: Stripe.Subscriptio
     p_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
     p_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     p_cancel_at_period_end: Boolean(raw.cancel_at_period_end),
+    p_product_type: productType,
   });
   if (error) throw error;
 }

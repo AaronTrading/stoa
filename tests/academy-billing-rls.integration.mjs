@@ -35,7 +35,7 @@ test('RLS denies a signed-in non-subscriber and follows webhook entitlement chan
     assert.equal(denied.status, 200);
     assert.deepEqual(denied.body, []);
 
-    const eventBase = { p_event_type: 'customer.subscription.updated', p_stripe_created_at: new Date().toISOString(), p_user_id: userId, p_customer_id: `cus_rls_${suffix}`, p_subscription_id: `sub_rls_${suffix}`, p_price_id: 'price_rls', p_period_start: new Date().toISOString(), p_period_end: new Date(Date.now() + 86400000).toISOString(), p_cancel_at_period_end: false };
+    const eventBase = { p_event_type: 'customer.subscription.updated', p_stripe_created_at: new Date().toISOString(), p_user_id: userId, p_customer_id: `cus_rls_${suffix}`, p_subscription_id: `sub_rls_${suffix}`, p_price_id: 'price_rls', p_period_start: new Date().toISOString(), p_period_end: new Date(Date.now() + 86400000).toISOString(), p_cancel_at_period_end: false, p_product_type: 'academy' };
     const activate = await rest('/rest/v1/rpc/process_stripe_subscription_event', { method: 'POST', body: JSON.stringify({ ...eventBase, p_event_id: `evt_active_${suffix}`, p_status: 'active' }) });
     await assertStatus(activate, 200);
     const allowed = await academyRows();
@@ -52,6 +52,35 @@ test('RLS denies a signed-in non-subscriber and follows webhook entitlement chan
     assert.deepEqual(deniedAgain.body, []);
   } finally {
     await rest(`/rest/v1/stripe_webhook_events?stripe_event_id=in.(evt_active_${suffix},evt_cancel_${suffix})`, { method: 'DELETE' });
+    if (userId) await rest(`/auth/v1/admin/users/${userId}`, { method: 'DELETE' });
+  }
+});
+
+test('a Stripe Coaching subscription grants and revokes the private Coaching access', async () => {
+  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const email = `stripe-coaching-${suffix}@example.invalid`;
+  const password = `Stoa-${suffix}-Secure!`;
+  let userId;
+  try {
+    const create = await rest('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password, email_confirm: true }) });
+    await assertStatus(create, 200);
+    userId = (await create.json()).id;
+    const login = await fetch(`${base}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: publicKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    await assertStatus(login, 200);
+    const userHeaders = { apikey: publicKey, Authorization: `Bearer ${(await login.json()).access_token}`, 'Content-Type': 'application/json' };
+    const coachingAccess = () => fetch(`${base}/rest/v1/rpc/get_my_coaching_access`, { method: 'POST', headers: userHeaders, body: '{}' }).then(response => response.json());
+    const eventBase = { p_event_type: 'customer.subscription.updated', p_stripe_created_at: new Date().toISOString(), p_user_id: userId, p_customer_id: `cus_coaching_${suffix}`, p_subscription_id: `sub_coaching_${suffix}`, p_price_id: 'price_coaching_rls', p_period_start: new Date().toISOString(), p_period_end: new Date(Date.now() + 86400000).toISOString(), p_cancel_at_period_end: false, p_product_type: 'coaching' };
+
+    assert.deepEqual(await coachingAccess(), []);
+    const activate = await rest('/rest/v1/rpc/process_stripe_subscription_event', { method: 'POST', body: JSON.stringify({ ...eventBase, p_event_id: `evt_coaching_active_${suffix}`, p_status: 'active' }) });
+    await assertStatus(activate, 200);
+    assert.equal((await coachingAccess()).length, 1);
+
+    const cancel = await rest('/rest/v1/rpc/process_stripe_subscription_event', { method: 'POST', body: JSON.stringify({ ...eventBase, p_event_id: `evt_coaching_cancel_${suffix}`, p_status: 'canceled', p_period_end: new Date(Date.now() - 1000).toISOString() }) });
+    await assertStatus(cancel, 200);
+    assert.deepEqual(await coachingAccess(), []);
+  } finally {
+    await rest(`/rest/v1/stripe_webhook_events?stripe_event_id=in.(evt_coaching_active_${suffix},evt_coaching_cancel_${suffix})`, { method: 'DELETE' });
     if (userId) await rest(`/auth/v1/admin/users/${userId}`, { method: 'DELETE' });
   }
 });
