@@ -170,7 +170,7 @@ const initializeAuth = async () => {
   document.addEventListener('click', (event) => {
     const authLink = event.target.closest('[data-auth-link]');
     const avatar = event.target.closest('[data-auth-avatar]');
-    if ((authLink && !currentSession) || (avatar && !currentSession)) {
+    if (authLink || (avatar && !currentSession)) {
       event.preventDefault();
       openDialog();
     }
