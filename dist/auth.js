@@ -17,17 +17,18 @@ dialog.innerHTML = `
   <h2 id="auth-title">Votre espace membre</h2>
   <p class="auth-intro">Retrouvez votre parcours avec votre adresse email ou votre compte Discord.</p>
   <div class="auth-guest-view">
+    <div class="auth-mode-tabs" role="tablist" aria-label="Connexion ou inscription"><button type="button" role="tab" data-auth-mode="login" aria-selected="true">Se connecter</button><button type="button" role="tab" data-auth-mode="signup" aria-selected="false">S’inscrire</button></div>
     <form class="auth-form" novalidate>
-      <label for="auth-name">Nom complet <span>pour créer un compte</span></label>
-      <input id="auth-name" name="fullName" type="text" autocomplete="name" placeholder="Votre nom">
-      <label for="auth-department">Département <span>pour créer un compte</span></label>
-      <input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" placeholder="Numéro ou nom du département">
+      <div class="auth-signup-fields" hidden>
+        <div><label for="auth-first-name">Prénom</label><input id="auth-first-name" name="firstName" type="text" autocomplete="given-name" placeholder="Votre prénom"></div>
+        <div><label for="auth-last-name">Nom</label><input id="auth-last-name" name="lastName" type="text" autocomplete="family-name" placeholder="Votre nom"></div>
+        <div><label for="auth-department">Département</label><input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" placeholder="Numéro ou nom du département"></div>
+      </div>
       <label for="auth-email">Adresse email</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
       <label for="auth-password">Mot de passe</label>
       <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="8 caractères minimum" required>
       <button class="button dark auth-submit" type="submit">Se connecter <span>↗</span></button>
-      <button class="auth-secondary" type="button" data-auth-action="signup">Créer mon compte</button>
     </form>
     <div class="auth-separator"><span>ou</span></div>
     <button class="auth-provider" type="button" data-auth-action="magic-link"><span aria-hidden="true">✉</span> Recevoir un lien magique</button>
@@ -51,6 +52,17 @@ const memberView = dialog.querySelector('.auth-member-view');
 let currentSession = null;
 let currentProfile = null;
 let currentProfileUserId = null;
+let authMode = 'login';
+
+const setAuthMode = (mode) => {
+  authMode = mode === 'signup' ? 'signup' : 'login';
+  dialog.querySelector('.auth-signup-fields').hidden = authMode !== 'signup';
+  dialog.querySelectorAll('[data-auth-mode]').forEach((button) => button.setAttribute('aria-selected', String(button.dataset.authMode === authMode)));
+  const submit = dialog.querySelector('.auth-submit');
+  submit.innerHTML = authMode === 'signup' ? 'Créer mon compte <span>↗</span>' : 'Se connecter <span>↗</span>';
+  dialog.querySelector('#auth-password').autocomplete = authMode === 'signup' ? 'new-password' : 'current-password';
+  setMessage('');
+};
 
 const showToast = (text, tone = 'info') => {
   statusToast.textContent = text;
@@ -186,6 +198,24 @@ const initializeAuth = async () => {
       return;
     }
 
+    if (authMode === 'signup') {
+      const firstName = String(data.get('firstName') || '').trim();
+      const lastName = String(data.get('lastName') || '').trim();
+      const department = departmentCode(data.get('department'));
+      if (!firstName || !lastName || !department) {
+        setMessage('Ajoutez votre prénom, votre nom et votre département.', 'error');
+        return;
+      }
+      setBusy(true);
+      const fullName = `${firstName} ${lastName}`;
+      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName, department }, emailRedirectTo: redirectTo } });
+      setBusy(false);
+      if (error) { setMessage(error.message, 'error'); return; }
+      if (authData.session) { updateAuthUI(authData.session); dialog.close(); showToast('Votre compte STOA est créé.', 'success'); }
+      else setMessage('Compte créé. Consultez votre boîte mail pour confirmer votre adresse.', 'success');
+      return;
+    }
+
     setBusy(true);
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
@@ -199,41 +229,7 @@ const initializeAuth = async () => {
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
   });
 
-  dialog.querySelector('[data-auth-action="signup"]').addEventListener('click', async () => {
-    const data = new FormData(form);
-    const fullName = String(data.get('fullName') || '').trim();
-    const [firstName, ...lastNameParts] = fullName.split(/\s+/);
-    const department = departmentCode(data.get('department'));
-    const email = String(data.get('email') || '').trim();
-    const password = String(data.get('password') || '');
-    if (!fullName || !email || password.length < 8 || !department) {
-      setMessage('Ajoutez votre nom, votre département, un email valide et un mot de passe d’au moins 8 caractères.', 'error');
-      return;
-    }
-
-    setBusy(true);
-    const { data: authData, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, first_name: firstName, last_name: lastNameParts.join(' ') || null, department },
-        emailRedirectTo: redirectTo,
-      },
-    });
-    setBusy(false);
-    if (error) {
-      setMessage(error.message, 'error');
-      return;
-    }
-
-    if (authData.session) {
-      updateAuthUI(authData.session);
-      dialog.close();
-      showToast('Votre compte STOA est créé.', 'success');
-    } else {
-      setMessage('Compte créé. Consultez votre boîte mail pour confirmer votre adresse.', 'success');
-    }
-  });
+  dialog.querySelectorAll('[data-auth-mode]').forEach((button) => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
 
   dialog.querySelector('[data-auth-action="magic-link"]').addEventListener('click', async () => {
     const email = String(new FormData(form).get('email') || '').trim();
