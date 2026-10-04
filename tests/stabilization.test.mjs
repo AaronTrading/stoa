@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
-const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachJs,posts]=await Promise.all([
+const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,posts]=await Promise.all([
   read('../supabase/migrations/202610040049_access_and_data_integrity.sql'),
   read('../supabase/migrations/202610040050_monotone_billing_and_email_jobs.sql'),
   read('../supabase/migrations/202610040051_coaching_call_booking.sql'),
@@ -13,6 +13,7 @@ const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,booking
   read('../dist/auth.js'),
   read('../dist/rendez-vous.html'),
   read('../dist/booking.js'),
+  read('../dist/coaching-coach.html'),
   read('../dist/coaching-coach.js'),
   read('../dist/posts.js'),
 ]);
@@ -61,6 +62,9 @@ test('Coaching booking is atomic, announced by email and mandatory for checkout'
   assert.match(bookingPage,/Adresse de livraison/);
   assert.match(bookingJs,/api\/book-coaching-call/);
   assert.match(coachJs,/coaching_availability_slots/);
+  assert.match(coachPage,/coach-calendar-grid/);
+  assert.match(coachPage,/data-calendar-preset="morning"/);
+  assert.match(coachJs,/toggleAvailability/);
 });
 
 test('community uploads use a separate bounded image bucket',()=>{
