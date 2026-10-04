@@ -269,6 +269,22 @@ const initializeAuth = async () => {
     showToast('Vous êtes déconnecté.', 'success');
   });
 
+  memberView.querySelector('.button.dark')?.addEventListener('click', async (event) => {
+    if (!currentSession || ['member', 'coaching', 'admin'].includes(currentProfile?.role)) return;
+    event.preventDefault();
+    const button = event.currentTarget;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Ouverture du paiement…';
+    const { data, error } = await supabase.functions.invoke('create-checkout', { body: { offer: 'academy' } });
+    if (error || !data?.url) {
+      button.removeAttribute('aria-busy');
+      button.innerHTML = 'Rejoindre l’Académie <span>↗</span>';
+      setMessage(data?.error || error?.message || 'Le paiement ne peut pas être ouvert pour le moment.', 'error');
+      return;
+    }
+    location.assign(data.url);
+  });
+
   if (location.hash === '#connexion' && !currentSession) openDialog();
 };
 
