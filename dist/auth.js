@@ -31,6 +31,7 @@ dialog.innerHTML = `
       <button class="button dark auth-submit" type="submit">Se connecter <span>↗</span></button>
     </form>
     <div class="auth-separator"><span>ou</span></div>
+    <button class="auth-provider google" type="button" data-auth-action="google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"/><path fill="#34a853" d="M12 22c2.7 0 4.97-.9 6.62-2.37l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.6 0-4.81-1.76-5.6-4.13H3.06v2.62A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.4 13.92A6 6 0 0 1 6.08 12c0-.67.12-1.32.32-1.92V7.46H3.06A10 10 0 0 0 2 12c0 1.61.39 3.14 1.06 4.54l3.34-2.62Z"/><path fill="#ea4335" d="M12 5.95c1.47 0 2.79.5 3.83 1.5l2.87-2.88A9.63 9.63 0 0 0 12 2a10 10 0 0 0-8.94 5.46l3.34 2.62c.79-2.37 3-4.13 5.6-4.13Z"/></svg> Continuer avec Google</button>
     <button class="auth-provider" type="button" data-auth-action="magic-link"><span aria-hidden="true">✉</span> Recevoir un lien magique</button>
     <button class="auth-provider discord" type="button" data-auth-action="discord"><img src="assets/branding/discord.svg" alt="" aria-hidden="true"> Continuer avec Discord</button>
   </div>
@@ -53,6 +54,9 @@ let currentSession = null;
 let currentProfile = null;
 let currentProfileUserId = null;
 let authMode = 'login';
+const googleClientId = globalThis.__STOA_ENV__?.GOOGLE_CLIENT_ID || '';
+let googleNonce = '';
+let googleIdentityReady = false;
 
 const setAuthMode = (mode) => {
   authMode = mode === 'signup' ? 'signup' : 'login';
@@ -150,8 +154,71 @@ const hydrateAuthUI = async (session) => {
   currentProfile = data;
   currentProfileUserId = user.id;
   updateAuthUI(session, data);
-  if (user.app_metadata?.provider === 'discord' && !data.department && location.pathname !== '/profil') {
+  if (['discord', 'google'].includes(user.app_metadata?.provider) && !data.department && location.pathname !== '/profil') {
     location.replace('/profil?nouveau=1');
+  }
+};
+
+const generateGoogleNonce = async () => {
+  const nonceBytes = crypto.getRandomValues(new Uint8Array(32));
+  const nonce = btoa(String.fromCharCode(...nonceBytes));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce));
+  const hashedNonce = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return { nonce, hashedNonce };
+};
+
+const handleGoogleCredential = async (response) => {
+  if (!response?.credential || !googleNonce) return;
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'google',
+    token: response.credential,
+    nonce: googleNonce,
+  });
+  if (error) {
+    setMessage('La connexion rapide avec Google a échoué. Réessayez depuis le bouton Google.', 'error');
+    return;
+  }
+  await hydrateAuthUI(data.session);
+  if (dialog.open) dialog.close();
+  showToast('Connexion Google réussie. Bienvenue dans STOA.', 'success');
+};
+
+const loadGoogleIdentity = async () => {
+  if (!googleClientId || currentSession || googleIdentityReady) return;
+  if (!globalThis.google?.accounts?.id) {
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-google-identity]');
+      if (existing) {
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.dataset.googleIdentity = '';
+      script.addEventListener('load', resolve, { once: true });
+      script.addEventListener('error', reject, { once: true });
+      document.head.append(script);
+    });
+  }
+  const { nonce, hashedNonce } = await generateGoogleNonce();
+  googleNonce = nonce;
+  globalThis.google.accounts.id.initialize({
+    client_id: googleClientId,
+    callback: handleGoogleCredential,
+    nonce: hashedNonce,
+    context: 'signin',
+    auto_select: true,
+    cancel_on_tap_outside: true,
+    itp_support: true,
+    use_fedcm_for_prompt: true,
+  });
+  googleIdentityReady = true;
+  if (location.pathname === '/' && !sessionStorage.getItem('stoa-google-one-tap-dismissed')) {
+    globalThis.google.accounts.id.prompt((notification) => {
+      if (notification.isDismissedMoment?.()) sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
+    });
   }
 };
 
@@ -169,6 +236,7 @@ const redirectTo = new URL('/', siteUrl).href;
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   await hydrateAuthUI(sessionData.session);
+  if (!sessionData.session) loadGoogleIdentity().catch(() => {});
   window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
   if (document.body.classList.contains('member-page') && !sessionData.session) {
     location.replace('/#connexion');
@@ -231,6 +299,18 @@ const initializeAuth = async () => {
 
   dialog.querySelectorAll('[data-auth-mode]').forEach((button) => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
 
+  dialog.querySelector('[data-auth-action="google"]').addEventListener('click', async () => {
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, queryParams: { prompt: 'select_account' } },
+    });
+    if (error) {
+      setBusy(false);
+      setMessage('Connexion Google indisponible. Réessayez dans un instant.', 'error');
+    }
+  });
+
   dialog.querySelector('[data-auth-action="magic-link"]').addEventListener('click', async () => {
     const email = String(new FormData(form).get('email') || '').trim();
     if (!email) {
@@ -255,6 +335,8 @@ const initializeAuth = async () => {
 
   dialog.querySelector('[data-auth-action="signout"]').addEventListener('click', async () => {
     setBusy(true);
+    globalThis.google?.accounts?.id?.disableAutoSelect?.();
+    sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
     const { error } = await supabase.auth.signOut();
     setBusy(false);
     if (error) {
