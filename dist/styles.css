@@ -1001,3 +1001,44 @@ html.stoa-dark .email-center-page{--email-ink:#edf0e9;--email-muted:#b7bfb2;--em
 .profile-subscription-card{display:grid;gap:.45rem;margin:1.2rem 0;padding:1.1rem;border:1px solid rgba(78,88,70,.14);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.68),rgba(226,230,218,.42))}.profile-subscription-card>strong{font:500 1.45rem var(--serif)}.profile-subscription-card>small{color:var(--muted);line-height:1.5}.profile-subscription-card .button{width:100%;margin-top:.45rem;justify-content:center;background:var(--olive);color:#fff}
 html.stoa-dark .subscribe-page,html.stoa-dark .subscription-success-page{background:radial-gradient(circle at 78% 8%,rgba(112,132,99,.2),transparent 30rem),#20271f;color:#edf0e9}html.stoa-dark .subscribe-details article,html.stoa-dark .subscribe-gate-copy,html.stoa-dark .profile-subscription-card{border-color:rgba(255,255,255,.1);background:rgba(43,52,41,.72)}html.stoa-dark .subscribe-offer{background:linear-gradient(145deg,rgba(54,64,51,.88),rgba(34,42,33,.72));border-color:rgba(255,255,255,.1)}
 @media(max-width:800px){.subscribe-main{padding-top:6rem}.subscribe-hero{grid-template-columns:1fr;min-height:0}.subscribe-hero h1{font-size:clamp(3.2rem,15vw,5.2rem)}.subscribe-details{grid-template-columns:1fr}.subscribe-gate-copy{margin:3rem auto}.subscription-success{padding:1rem}.subscription-success .glass-panel{padding:2rem 1.25rem}}
+
+/* Espace coach : une seule source de vérité pour la largeur utile. */
+@media(min-width:1121px){
+  body.academy-experience.coaching-coach-page>main.coach-workspace{
+    width:auto!important;
+    max-width:none!important;
+    min-width:0;
+    margin-right:0!important;
+    margin-left:var(--academy-sidebar)!important;
+    overflow-x:clip;
+  }
+}
+body.academy-experience.coaching-coach-page .coach-metrics{
+  grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));
+}
+body.academy-experience.coaching-coach-page .coach-layout,
+body.academy-experience.coaching-coach-page .coach-dossier,
+body.academy-experience.coaching-coach-page .coach-dossier-tab,
+body.academy-experience.coaching-coach-page .coach-response-grid{
+  min-width:0;
+  max-width:100%;
+}
+body.academy-experience.coaching-coach-page .coach-response-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+@media(max-width:1120px){
+  body.academy-experience.coaching-coach-page>main.coach-workspace{
+    width:100%!important;
+    max-width:100%!important;
+    margin-right:0!important;
+    margin-left:0!important;
+    padding-right:clamp(.75rem,3vw,1.5rem);
+    padding-left:clamp(.75rem,3vw,1.5rem);
+    overflow-x:clip;
+  }
+}
+@media(max-width:760px){
+  body.academy-experience.coaching-coach-page .coach-response-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+}

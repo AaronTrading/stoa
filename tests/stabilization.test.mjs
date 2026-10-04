@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
-const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,questionnaire,posts]=await Promise.all([
+const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,questionnaire,styles,posts]=await Promise.all([
   read('../supabase/migrations/202610040049_access_and_data_integrity.sql'),
   read('../supabase/migrations/202610040050_monotone_billing_and_email_jobs.sql'),
   read('../supabase/migrations/202610040051_coaching_call_booking.sql'),
@@ -16,6 +16,7 @@ const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,booking
   read('../dist/coaching-coach.html'),
   read('../dist/coaching-coach.js'),
   read('../dist/coaching-questionnaire.js'),
+  read('../dist/styles.css'),
   read('../dist/posts.js'),
 ]);
 
@@ -78,6 +79,12 @@ test('the Coaching interface translates questionnaire metadata and legacy values
   assert.match(questionnaire,/challengeant:'Exigeant'/);
   assert.doesNotMatch(coachPage,/>Onboarding</);
   assert.doesNotMatch(coachPage,/>Check-in/);
+});
+
+test('the Coach workspace uses the same breakpoint as the Academy sidebar',()=>{
+  assert.match(styles,/@media\(min-width:1121px\)\{\s*body\.academy-experience\.coaching-coach-page>main\.coach-workspace\{\s*width:auto!important/);
+  assert.match(styles,/@media\(max-width:1120px\)\{\s*body\.academy-experience\.coaching-coach-page>main\.coach-workspace\{\s*width:100%!important/);
+  assert.match(styles,/\.coach-response-grid\{\s*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test('community uploads use a separate bounded image bucket',()=>{
