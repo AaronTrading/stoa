@@ -1041,3 +1041,5 @@ body.academy-experience.coaching-coach-page .coach-response-grid{
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+.lesson-save-tools #lesson-edit-delete{color:#9a4438}

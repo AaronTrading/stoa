@@ -147,6 +147,16 @@ const saveLesson = async () => {
   leaveEditMode();
 };
 
+const deleteLesson = async () => {
+  if (!lessonData?.moduleId || !confirm('Supprimer définitivement cette leçon et tout son contenu ?')) return;
+  const button = document.querySelector('#lesson-edit-delete');
+  button.disabled = true;
+  setStatus('Suppression…');
+  const { error } = await supabase.rpc('admin_delete_module', { p_id: lessonData.moduleId });
+  if (error) { button.disabled = false; setStatus(`Échec : ${error.message}`, 'error'); return; }
+  location.href = '/academie';
+};
+
 const initialize = async () => {
   lessonData = window.__STOA_LESSON_DATA__;
   if (!lessonData || pencil.dataset.ready) return;
@@ -163,6 +173,7 @@ if (window.__STOA_LESSON_DATA__) initialize();
 pencil?.addEventListener('click', enterEditMode);
 document.querySelector('#lesson-edit-cancel')?.addEventListener('click', restoreOriginal);
 document.querySelector('#lesson-edit-save')?.addEventListener('click', saveLesson);
+document.querySelector('#lesson-edit-delete')?.addEventListener('click', deleteLesson);
 
 document.addEventListener('selectionchange', () => {
   if (!editing) return;
