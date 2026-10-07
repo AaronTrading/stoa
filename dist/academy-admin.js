@@ -19,6 +19,7 @@ if (libraryHeading) {
     <p>Ajoutez une nouvelle leçon au chapitre de votre choix.</p>
     <form id="academy-module-form">
       <label>Chapitre<select name="chapter_id" required></select></label>
+      <label>Position dans le chapitre<select name="order_index" required></select></label>
       <label>Titre du module<input name="title" type="text" maxlength="160" required placeholder="Nom du nouveau module"></label>
       <label>Description<textarea name="description" rows="4" placeholder="Courte introduction du module"></textarea></label>
       <label class="academy-module-duration">Durée estimée<input name="duration_minutes" type="number" min="1" max="600" value="10" required><span>minutes</span></label>
@@ -31,6 +32,7 @@ if (libraryHeading) {
 
   const form = dialog.querySelector('form');
   const chapterSelect = form.elements.chapter_id;
+  const orderSelect = form.elements.order_index;
   const status = dialog.querySelector('.academy-module-status');
   const submitButton = form.querySelector('[type="submit"]');
   let chapters = [];
@@ -44,6 +46,12 @@ if (libraryHeading) {
     if (!submitButton.disabled) dialog.close();
   };
 
+  const renderOrderOptions = () => {
+    const chapter = chapters.find((item) => item.id === chapterSelect.value);
+    const modules = [...(chapter?.modules || [])].sort((left, right) => left.order_index - right.order_index);
+    orderSelect.innerHTML = modules.map((module, index) => `<option value="${index}">${index + 1} — Avant ${module.title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')}</option>`).join('') + `<option value="${modules.length}" selected>${modules.length + 1} — À la fin</option>`;
+  };
+
   const initialize = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
@@ -51,7 +59,7 @@ if (libraryHeading) {
 
     const [{ data: profile }, { data: chapterRows, error }] = await Promise.all([
       supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
-      supabase.from('chapters').select('id,title,order_index,pillar:pillars(title,order_index)').eq('is_visible', true).order('order_index'),
+      supabase.from('chapters').select('id,title,order_index,pillar:pillars(title,order_index),modules(id,title,order_index)').eq('is_visible', true).order('order_index'),
     ]);
     if (profile?.role !== 'admin' || error || !chapterRows?.length) return;
 
@@ -73,16 +81,19 @@ if (libraryHeading) {
       });
       chapterSelect.append(group);
     });
+    renderOrderOptions();
     createButton.hidden = false;
   };
 
   createButton.addEventListener('click', () => {
     form.reset();
     form.elements.duration_minutes.value = 10;
+    renderOrderOptions();
     setStatus('');
     dialog.showModal();
     requestAnimationFrame(() => form.elements.title.focus());
   });
+  chapterSelect.addEventListener('change', renderOrderOptions);
   dialog.querySelector('.dialog-close').addEventListener('click', closeDialog);
   dialog.addEventListener('click', (event) => {
     if (event.target !== dialog || submitButton.disabled) return;
@@ -97,52 +108,31 @@ if (libraryHeading) {
     const title = String(values.get('title') || '').trim();
     const description = String(values.get('description') || '').trim();
     const duration = Number(values.get('duration_minutes'));
+    const orderIndex = Number(values.get('order_index'));
     const chapter = chapters.find((item) => item.id === chapterId);
-    if (!chapter || !title || !Number.isInteger(duration) || duration < 1) {
+    if (!chapter || !title || !Number.isInteger(duration) || duration < 1 || !Number.isInteger(orderIndex) || orderIndex < 0) {
       setStatus('Complétez les champs obligatoires.', 'error');
       return;
     }
 
     submitButton.disabled = true;
     setStatus('Création du module…');
-    const { data: lastModule, error: orderError } = await supabase.from('modules').select('order_index').eq('chapter_id', chapterId).order('order_index', { ascending: false }).limit(1).maybeSingle();
-    if (orderError) {
-      submitButton.disabled = false;
-      setStatus(`Création impossible : ${orderError.message}`, 'error');
-      return;
-    }
-
-    const orderIndex = (lastModule?.order_index ?? -1) + 1;
-    const { data: moduleRow, error: moduleError } = await supabase.from('modules').insert({
-      chapter_id: chapterId,
-      title,
-      description,
-      duration_minutes: duration,
-      order_index: orderIndex,
-      is_visible: true,
-    }).select('id').single();
-
-    if (moduleError) {
-      submitButton.disabled = false;
-      setStatus(`Création impossible : ${moduleError.message}`, 'error');
-      return;
-    }
-
-    const { error: contentError } = await supabase.from('subchapters').insert({
-      module_id: moduleRow.id,
-      title: 'Cours',
-      content: '<p>Commencez à rédiger votre module ici.</p>',
-      order_index: 0,
+    const { data, error } = await supabase.rpc('admin_create_module_at_position', {
+      p_chapter_id: chapterId,
+      p_title: title,
+      p_description: description,
+      p_duration_minutes: duration,
+      p_order_index: orderIndex,
     });
-    if (contentError) {
-      await supabase.from('modules').delete().eq('id', moduleRow.id);
+    const created = Array.isArray(data) ? data[0] : data;
+    if (error || !created) {
       submitButton.disabled = false;
-      setStatus(`Création impossible : ${contentError.message}`, 'error');
+      setStatus(`Création impossible : ${error?.message || 'réponse invalide'}`, 'error');
       return;
     }
 
     setStatus('Module créé. Ouverture de l’éditeur…', 'success');
-    location.href = `/module?chapitre=${chapter.order_index + 1}&module=${orderIndex + 1}`;
+    location.href = `/module?chapitre=${chapter.order_index + 1}&module=${Number(created.module_order_index) + 1}`;
   });
 
   initialize();
