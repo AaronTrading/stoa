@@ -35,7 +35,7 @@ async function removeCoaching(button){if(!isAdmin||!selected)return;if(!confirm(
 const localDateKey=value=>{const date=new Date(value);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
 const sameLocalDay=(left,right)=>localDateKey(left)===localDateKey(right);
 const calendarMonthEnd=month=>new Date(month.getFullYear(),month.getMonth()+1,1);
-const calendarTimes=()=>Array.from({length:37},(_,index)=>{const minutes=9*60+index*15;return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;});
+const calendarTimes=()=>Array.from({length:57},(_,index)=>{const minutes=7*60+index*15;return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;});
 const slotAt=(day,time)=>availabilitySlots.find(slot=>{const date=new Date(slot.starts_at),slotTime=`${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;return sameLocalDay(date,day)&&slotTime===time;});
 const dateAtTime=(day,time)=>{const [hours,minutes]=time.split(':').map(Number),date=new Date(day);date.setHours(hours,minutes,0,0);return date;};
 function setCalendarStatus(message='',tone=''){const node=$('#coach-calendar-status');node.textContent=message;node.dataset.tone=tone;}
@@ -68,7 +68,7 @@ async function toggleAvailability(time,button){
   const {error}=await request;if(error){setCalendarStatus('Ce créneau n’a pas pu être modifié.','error');button.disabled=false;return;}await loadAvailability();
 }
 async function applyAvailabilityPreset(kind,button){
-  const ranges={morning:[9*60,12*60],afternoon:[14*60,18*60],day:[9*60,18*60]},[start,end]=ranges[kind],cutoff=Date.now()+8*3600000;
+  const ranges={morning:[7*60,12*60],afternoon:[14*60,18*60],day:[7*60,21*60+15]},[start,end]=ranges[kind],cutoff=Date.now()+8*3600000;
   const rows=calendarTimes().filter(time=>{const [hours,minutes]=time.split(':').map(Number),total=hours*60+minutes;return total>=start&&total<end&&!slotAt(availabilityDay,time)&&dateAtTime(availabilityDay,time).getTime()>=cutoff;}).map(time=>({coach_id:user.id,starts_at:dateAtTime(availabilityDay,time).toISOString(),duration_minutes:15}));
   if(!rows.length)return setCalendarStatus('Tous ces horaires sont déjà publiés.');button.disabled=true;setCalendarStatus('Publication des créneaux…');const {error}=await supabase.from('coaching_availability_slots').insert(rows);button.disabled=false;if(error)return setCalendarStatus('Les créneaux n’ont pas pu être publiés.','error');await loadAvailability();
 }
