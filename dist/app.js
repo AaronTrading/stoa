@@ -313,8 +313,6 @@ if (document.querySelector('#lesson-content')) {
       return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
     window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
-    const summary=document.querySelector('#lesson-summary');
-    summary.innerHTML=sections.filter(section=>section.title!=='Cours').map(section=>`<a href="#lesson-${section.id}">${escapeContent(section.title)}</a>`).join('');
     renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };
@@ -328,9 +326,6 @@ if (document.querySelector('#lesson-content')) {
     let score=0; fields.forEach((field,index)=>{const selected=field.querySelector('.selected'),answerIndex=Number(selected.dataset.quizAnswer),correct=quiz.questions[index].correct;if(answerIndex===correct){score++;selected.classList.add('correct');}else{selected.classList.add('incorrect');field.querySelector(`[data-quiz-answer="${correct}"]`)?.classList.add('correct');}});
     quizElement.querySelector('.lesson-quiz-footer p').textContent=`${score} bonne${score>1?'s':''} réponse${score>1?'s':''} sur ${fields.length}.`;
   });
-  const summaryToggle=document.querySelector('#lesson-summary-toggle'),summary=document.querySelector('#lesson-summary');
-  summaryToggle.addEventListener('click',()=>{const open=summaryToggle.getAttribute('aria-expanded')!=='true';summaryToggle.setAttribute('aria-expanded',String(open));summaryToggle.querySelector('span').textContent=open?'−':'＋';summary.hidden=!open;});
-  summary.addEventListener('click',event=>{if(event.target.closest('a')&&matchMedia('(max-width: 760px)').matches){summary.hidden=true;summaryToggle.setAttribute('aria-expanded','false');summaryToggle.querySelector('span').textContent='＋';}});
   document.querySelector('#practice-prompt').textContent=`Quel premier changement concret pourriez-vous essayer autour de « ${module.title.toLowerCase()} » ?`;
   const notes=document.querySelector('#lesson-notes'),noteKey=`stoa-note-${module.id||id}`,noteStatus=document.querySelector('#note-status'),savedNote=readSaved(noteKey,''),lessonUuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(module.id||'')?module.id:null;notes.value=typeof savedNote==='string'?savedNote:'';
   const noteSession=(await supabase.auth.getSession()).data.session;
