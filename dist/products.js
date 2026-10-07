@@ -86,7 +86,7 @@ const fallbackProducts = [
   },
 ];
 
-const RECIPIENT = 'coaching.stoa@gmail.com';
+const RECIPIENT = 'contact@stoa-coaching.fr';
 const grid = document.querySelector('#product-grid');
 const dialog = document.querySelector('#order-dialog');
 const form = document.querySelector('#order-form');
