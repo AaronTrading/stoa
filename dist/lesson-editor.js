@@ -9,6 +9,7 @@ const imageButton = document.querySelector('label[for="lesson-image-input"]');
 const artwork = document.querySelector('#lesson-artwork');
 const coverInput = document.querySelector('#lesson-cover-input');
 const coverButton = document.querySelector('#lesson-artwork-change');
+const quizToggle = document.querySelector('#lesson-quiz-enabled');
 const fontSelect = document.querySelector('#lesson-font-select');
 let lessonData;
 let editing = false;
@@ -96,6 +97,10 @@ const prepareFigures = () => {
   });
 };
 
+const syncQuizToggle = () => {
+  if (quizToggle) quizToggle.checked = Boolean(document.querySelector('.lesson-quiz[data-quiz]'));
+};
+
 const enterEditMode = () => {
   if (!lessonData || editing) return;
   editing = true;
@@ -103,6 +108,7 @@ const enterEditMode = () => {
   lesson.classList.add('lesson-editing'); pencil.hidden = true; bar.hidden = false;
   editableAreas().forEach((element) => { element.contentEditable = 'true'; element.spellcheck = true; });
   document.querySelectorAll('.lesson-quiz[data-quiz]').forEach((element) => renderQuizEditor(element, normalizeQuiz(element.dataset.quiz)));
+  syncQuizToggle();
   prepareFigures();
   document.querySelector('#lesson-title').focus();
   setStatus('Cliquez dans le texte pour le modifier.');
@@ -247,14 +253,20 @@ fontSelect?.addEventListener('change', () => {
   fontSelect.value = '';
 });
 
-document.querySelector('#lesson-quiz-add')?.addEventListener('click', () => {
-  activeEditor ||= document.querySelector('.lesson-subchapter-content');
-  if (!activeEditor) { setStatus('Aucun sous-module disponible.', 'error'); return; }
-  if (activeEditor.querySelector('.lesson-quiz')) { setStatus('Ce sous-module possède déjà un quiz.', 'error'); return; }
+quizToggle?.addEventListener('change', () => {
+  if (!editing) return;
+  if (!quizToggle.checked) {
+    document.querySelectorAll('.lesson-quiz[data-quiz]').forEach((quiz) => quiz.remove());
+    setStatus('Cette leçon sera publiée sans quiz.');
+    return;
+  }
+  if (document.querySelector('.lesson-quiz[data-quiz]')) return;
+  activeEditor = [...document.querySelectorAll('.lesson-subchapter-content')].at(-1);
+  if (!activeEditor) { quizToggle.checked = false; setStatus('Aucun contenu disponible pour ajouter le quiz.', 'error'); return; }
   const quiz = document.createElement('section'); quiz.className = 'lesson-quiz';
   const data = { questions: [{ question: '', answers: ['', ''], correct: 0 }] };
   activeEditor.append(quiz); renderQuizEditor(quiz, data); quiz.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setStatus('Quiz ajouté à la fin du sous-module.');
+  setStatus('Quiz activé pour cette leçon. Complétez sa première question.');
 });
 
 document.querySelector('#lesson-link-add')?.addEventListener('click', () => {
@@ -277,7 +289,7 @@ document.querySelector('#lesson-link-add')?.addEventListener('click', () => {
 lesson?.addEventListener('click', (event) => {
   if (!editing) return;
   const quizElement = event.target.closest('.lesson-quiz'); if (!quizElement) return;
-  if (event.target.closest('[data-quiz-delete]')) { quizElement.remove(); setStatus('Quiz supprimé.'); return; }
+  if (event.target.closest('[data-quiz-delete]')) { quizElement.remove(); syncQuizToggle(); setStatus('Cette leçon sera publiée sans quiz.'); return; }
   const quiz = readQuizEditor(quizElement);
   const questionElement = event.target.closest('.quiz-editor-question');
   const questionIndex = questionElement ? [...quizElement.querySelectorAll('.quiz-editor-question')].indexOf(questionElement) : -1;
