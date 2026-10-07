@@ -59,14 +59,14 @@ const rebuildModuleIndex = () => {
 rebuildModuleIndex();
 
 const hydrateCatalog = async () => {
-  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,pillar_id,visual_key,is_visible,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible)').eq('is_visible',true).order('order_index');
+  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,pillar_id,visual_key,is_visible,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible,cover_image_url)').eq('is_visible',true).order('order_index');
   if (error || !data?.length) return;
   const dbPillars=[...new Map(data.filter(item=>item.pillar).map(item=>[item.pillar.id,item.pillar])).values()].sort((a,b)=>a.order_index-b.order_index);
   if(dbPillars.length) pillars=dbPillars.map(item=>({id:item.id,name:item.title,orderIndex:item.order_index}));
   chapters=data.map(dbChapter=>({
     id:dbChapter.id,pillarId:dbChapter.pillar_id,slug:dbChapter.visual_key||'autonomie',icon:icons[dbChapter.visual_key]||'◇',
     name:dbChapter.title||dbChapter.category,description:dbChapter.description||'',
-    modules:(dbChapter.modules||[]).filter(module=>module.is_visible!==false).sort((a,b)=>a.order_index-b.order_index).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1}))
+    modules:(dbChapter.modules||[]).filter(module=>module.is_visible!==false).sort((a,b)=>a.order_index-b.order_index).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1,coverImage:module.cover_image_url||''}))
   }));
   rebuildModuleIndex();
   window.dispatchEvent(new CustomEvent('stoa:catalog-ready'));
@@ -231,7 +231,7 @@ if (document.querySelector('#lesson-content')) {
   document.title=`${module.title} — STOA`;
   document.querySelector('#lesson-title').textContent=module.title;
   document.querySelector('#lesson-kicker').textContent=`PILIER ${lessonPillar?.name||''} / CHAPITRE ${number(chapter.pillarChapterIndex+1)} — ${chapter.name.toUpperCase()} / LEÇON ${number(moduleIndex+1)}`;
-  const artwork=document.querySelector('#lesson-artwork');artwork.src=imagePath(chapter);artwork.alt=`Illustration du chapitre ${chapter.name}`;
+  const artwork=document.querySelector('#lesson-artwork');artwork.src=module.coverImage||imagePath(chapter);artwork.alt=`Illustration de la leçon ${module.title}`;
   document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">${lessonPillar?.name||''} · CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
@@ -291,13 +291,14 @@ if (document.querySelector('#lesson-content')) {
   const loadLessonContent=async()=>{
     const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('is_visible',true).eq('order_index',chapterIndex).maybeSingle();
     if(!dbChapter)return;
-    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes').eq('chapter_id',dbChapter.id).eq('is_visible',true).eq('order_index',moduleIndex).maybeSingle();
+    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes,cover_image_url').eq('chapter_id',dbChapter.id).eq('is_visible',true).eq('order_index',moduleIndex).maybeSingle();
     if(!dbModule)return;
     const {data:sections}=await supabase.from('subchapters').select('id,title,content,order_index').eq('module_id',dbModule.id).order('order_index');
     if(!sections?.length)return;
     const {data:imageRows}=await supabase.from('subchapter_images').select('subchapter_id,image_url,alt_text,caption,position_index,order_index').in('subchapter_id',sections.map(section=>section.id)).order('order_index');
     const images=imageRows||[];
     document.title=`${dbModule.title} — STOA`; document.querySelector('#lesson-title').textContent=dbModule.title;
+    artwork.src=dbModule.cover_image_url||imagePath(chapter); artwork.alt=`Illustration de la leçon ${dbModule.title}`;
     document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction" data-module-description>${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
       const storedAsHtml=/^\s*<(?:p|div|h[2-4]|ul|ol|blockquote|figure)\b/i.test(section.content);
@@ -312,7 +313,7 @@ if (document.querySelector('#lesson-content')) {
       const heading=section.title==='Cours'?'':`<h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
       return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
-    window.__STOA_LESSON_DATA__={moduleId:dbModule.id,sections:sections.map(section=>({id:section.id,title:section.title}))};
+    window.__STOA_LESSON_DATA__={moduleId:dbModule.id,coverImageUrl:dbModule.cover_image_url||'',sections:sections.map(section=>({id:section.id,title:section.title}))};
     renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };

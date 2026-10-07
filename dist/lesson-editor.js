@@ -6,6 +6,9 @@ const bar = document.querySelector('#lesson-editor-bar');
 const status = document.querySelector('#lesson-editor-status');
 const imageInput = document.querySelector('#lesson-image-input');
 const imageButton = document.querySelector('label[for="lesson-image-input"]');
+const artwork = document.querySelector('#lesson-artwork');
+const coverInput = document.querySelector('#lesson-cover-input');
+const coverButton = document.querySelector('#lesson-artwork-change');
 const fontSelect = document.querySelector('#lesson-font-select');
 let lessonData;
 let editing = false;
@@ -13,6 +16,8 @@ let original = {};
 let savedRange;
 let activeEditor;
 let draggedFigure;
+let pendingCoverFile;
+let coverPreviewUrl;
 
 const editableAreas = () => [...document.querySelectorAll('#lesson-title, [data-module-description], [data-subchapter-title], .lesson-subchapter-content')];
 const setStatus = (text, tone = '') => { status.textContent = text; status.dataset.tone = tone; };
@@ -94,7 +99,7 @@ const prepareFigures = () => {
 const enterEditMode = () => {
   if (!lessonData || editing) return;
   editing = true;
-  original = { title: document.querySelector('#lesson-title').textContent, copy: document.querySelector('#lesson-copy').innerHTML };
+  original = { title: document.querySelector('#lesson-title').textContent, copy: document.querySelector('#lesson-copy').innerHTML, coverSrc: artwork.src, coverAlt: artwork.alt };
   lesson.classList.add('lesson-editing'); pencil.hidden = true; bar.hidden = false;
   editableAreas().forEach((element) => { element.contentEditable = 'true'; element.spellcheck = true; });
   document.querySelectorAll('.lesson-quiz[data-quiz]').forEach((element) => renderQuizEditor(element, normalizeQuiz(element.dataset.quiz)));
@@ -115,7 +120,19 @@ const leaveEditMode = () => {
 const restoreOriginal = () => {
   document.querySelector('#lesson-title').textContent = original.title;
   document.querySelector('#lesson-copy').innerHTML = original.copy;
+  if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+  coverPreviewUrl = undefined; pendingCoverFile = undefined;
+  artwork.src = original.coverSrc; artwork.alt = original.coverAlt;
+  if (coverInput) coverInput.value = '';
   leaveEditMode();
+};
+
+const uploadCover = async (file) => {
+  const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').toLowerCase();
+  const path = `modules/${lessonData.moduleId}/cover-${crypto.randomUUID()}-${safeName}`;
+  const { error } = await supabase.storage.from('module-assets').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
+  if (error) throw error;
+  return supabase.storage.from('module-assets').getPublicUrl(path).data.publicUrl;
 };
 
 const saveLesson = async () => {
@@ -126,9 +143,15 @@ const saveLesson = async () => {
   const quizzes = quizEditors.map(readQuizEditor);
   const invalidQuiz = quizzes.find((quiz) => !quiz.questions.length || quiz.questions.some((question) => !question.question || question.answers.length < 2 || question.answers.some((answer) => !answer) || question.correct < 0 || question.correct >= question.answers.length));
   if (invalidQuiz) { setStatus('Complétez chaque question, avec au moins deux réponses et une bonne réponse.', 'error'); return; }
+  let coverImageUrl = lessonData.coverImageUrl || null;
+  if (pendingCoverFile) {
+    setStatus('Import de l’image principale…');
+    try { coverImageUrl = await uploadCover(pendingCoverFile); }
+    catch (error) { setStatus(`Échec : ${error.message}`, 'error'); return; }
+  }
   quizEditors.forEach((element, index) => { element.dataset.quiz = JSON.stringify(quizzes[index]); element.replaceChildren(); });
   setStatus('Enregistrement…');
-  const promises = [supabase.from('modules').update({ title, description }).eq('id', lessonData.moduleId)];
+  const promises = [supabase.from('modules').update({ title, description, cover_image_url: coverImageUrl }).eq('id', lessonData.moduleId)];
   document.querySelectorAll('[data-subchapter-id]').forEach((section) => {
     const known = lessonData.sections.find((item) => item.id === section.dataset.subchapterId);
     const titleElement = section.querySelector('[data-subchapter-title]');
@@ -142,7 +165,10 @@ const saveLesson = async () => {
   await supabase.from('subchapter_images').delete().in('subchapter_id', lessonData.sections.map((item) => item.id));
   document.querySelectorAll('.lesson-subchapter-content').forEach((element) => { element.innerHTML = cleanHtml(element.innerHTML); });
   document.querySelectorAll('.lesson-quiz[data-quiz]').forEach(renderQuizForReader);
-  original = { title, copy: document.querySelector('#lesson-copy').innerHTML };
+  if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+  coverPreviewUrl = undefined; pendingCoverFile = undefined; lessonData.coverImageUrl = coverImageUrl || '';
+  artwork.src = coverImageUrl || artwork.src;
+  original = { title, copy: document.querySelector('#lesson-copy').innerHTML, coverSrc: artwork.src, coverAlt: artwork.alt };
   document.title = `${title} — STOA`;
   leaveEditMode();
 };
@@ -174,6 +200,16 @@ pencil?.addEventListener('click', enterEditMode);
 document.querySelector('#lesson-edit-cancel')?.addEventListener('click', restoreOriginal);
 document.querySelector('#lesson-edit-save')?.addEventListener('click', saveLesson);
 document.querySelector('#lesson-edit-delete')?.addEventListener('click', deleteLesson);
+coverButton?.addEventListener('click', () => coverInput?.click());
+coverInput?.addEventListener('change', () => {
+  const file = coverInput.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) { coverInput.value = ''; setStatus('Choisissez une image de moins de 10 Mo.', 'error'); return; }
+  if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+  pendingCoverFile = file; coverPreviewUrl = URL.createObjectURL(file);
+  artwork.src = coverPreviewUrl; artwork.alt = `Nouvelle image principale de ${document.querySelector('#lesson-title').textContent.trim()}`;
+  setStatus('Nouvelle image prête. Enregistrez la leçon pour la publier.');
+});
 
 document.addEventListener('selectionchange', () => {
   if (!editing) return;
