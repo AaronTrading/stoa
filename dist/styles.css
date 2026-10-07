@@ -493,6 +493,18 @@ footer .site-logo-image{width:112px;height:42px}
 .academy-experience .lesson{max-width:900px;width:100%}
 .academy-experience .lesson-artwork{width:100%;max-height:560px;object-fit:contain;background:var(--stone)}
 
+/* Lesson editor: one predictable text color, including legacy pasted markup. */
+#lesson-copy [data-module-description],
+#lesson-copy .lesson-subchapter-content,
+#lesson-copy .lesson-subchapter-content :is(p,div,li,blockquote,span,strong,b,em,i,u,h2,h3,h4){color:var(--ink)!important}
+.lesson-editing [contenteditable=true]{caret-color:var(--ink)}
+.lesson-editing [contenteditable=true]:focus{background:color-mix(in srgb,var(--white) 86%,transparent);color:var(--ink)!important}
+html.stoa-dark #lesson-copy [data-module-description],
+html.stoa-dark #lesson-copy .lesson-subchapter-content,
+html.stoa-dark #lesson-copy .lesson-subchapter-content :is(p,div,li,blockquote,span,strong,b,em,i,u,h2,h3,h4){color:#fff!important}
+html.stoa-dark .lesson-editing [contenteditable=true]{caret-color:#fff;color:#fff!important}
+html.stoa-dark .lesson-editing [contenteditable=true]:focus{background:rgba(255,255,255,.065);box-shadow:0 0 0 5px rgba(255,255,255,.055);color:#fff!important}
+
 .academy-experience.community-page .community-shell{max-width:1240px;height:100dvh;padding:18px 4% 22px;gap:11px}
 .academy-experience .channel-sidebar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;width:100%;gap:12px;align-items:center;padding:11px 14px;border-radius:16px}
 .academy-experience .channel-sidebar>.community-mode-nav{grid-column:1;grid-row:1;margin:0}
