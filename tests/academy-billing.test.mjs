@@ -9,6 +9,8 @@ const roleSyncFix = read('supabase/migrations/202610040043_fix_membership_role_s
 const offersMigration = read('supabase/migrations/202610040044_billing_offers.sql');
 const manualAccessMigration = read('supabase/migrations/202610040045_manual_academy_access_and_onboarding.sql');
 const emailAccessMigration = read('supabase/migrations/202610080055_manual_academy_access_by_email.sql');
+const billingProfileSyncMigration = read('supabase/migrations/202610080056_allow_server_billing_profile_sync.sql');
+const membershipProjectionMigration = read('supabase/migrations/202610080057_fix_server_membership_projection.sql');
 const checkout = read('supabase/functions/create-checkout/index.ts');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const shell = read('dist/academy-shell.js');
@@ -22,6 +24,9 @@ test('new accounts are registered instead of members', () => {
 test('billing synchronization preserves privileged roles', () => {
   assert.match(roleSyncFix, /v_profile_role in \('admin','coaching'\)/);
   assert.doesNotMatch(roleSyncFix, /declare\s+current_role/i);
+  assert.match(billingProfileSyncMigration, /billing\.stripe_customer_id=new\.stripe_customer_id/);
+  assert.match(membershipProjectionMigration, /subscription\.status in \('active','trialing'\)/);
+  assert.doesNotMatch(membershipProjectionMigration, /has_active_academy_access/);
 });
 
 test('Academy access is centralized on active entitlements', () => {
@@ -42,6 +47,9 @@ test('Stripe synchronization is signed and idempotent', () => {
   assert.match(checkout, /client_reference_id: user\.id/);
   assert.match(checkout, /subscription_data: \{ metadata:/);
   assert.match(checkout, /discounts: \[\{ coupon: academyFirstMonthCouponId \}\]/);
+  assert.match(checkout, /billing_address_collection: 'required'/);
+  assert.match(checkout, /customer_update: \{ address: 'auto', name: 'auto' \}/);
+  assert.match(checkout, /consent_collection: \{ terms_of_service: 'required' \}/);
   assert.match(checkout, /offer === 'coaching'/);
   assert.match(checkout, /managed_payments: \{ enabled: false \}/);
   assert.match(offersMigration, /product_type in \('academy','coaching'\)/);

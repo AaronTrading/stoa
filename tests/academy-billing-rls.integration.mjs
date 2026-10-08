@@ -41,6 +41,9 @@ test('RLS denies a signed-in non-subscriber and follows webhook entitlement chan
     const allowed = await academyRows();
     assert.equal(allowed.status, 200);
     assert.equal(allowed.body.length, 1);
+    const paidProfile = await rest(`/rest/v1/profiles?id=eq.${userId}&select=role,onboarding_completed`);
+    await assertStatus(paidProfile, 200);
+    assert.deepEqual(await paidProfile.json(), [{ role: 'member', onboarding_completed: false }]);
 
     const duplicate = await rest('/rest/v1/rpc/process_stripe_subscription_event', { method: 'POST', body: JSON.stringify({ ...eventBase, p_event_id: `evt_active_${suffix}`, p_status: 'active' }) });
     await assertStatus(duplicate, 200);
@@ -50,6 +53,9 @@ test('RLS denies a signed-in non-subscriber and follows webhook entitlement chan
     await assertStatus(cancel, 200);
     const deniedAgain = await academyRows();
     assert.deepEqual(deniedAgain.body, []);
+    const canceledProfile = await rest(`/rest/v1/profiles?id=eq.${userId}&select=role`);
+    await assertStatus(canceledProfile, 200);
+    assert.deepEqual(await canceledProfile.json(), [{ role: 'registered' }]);
   } finally {
     await rest(`/rest/v1/stripe_webhook_events?stripe_event_id=in.(evt_active_${suffix},evt_cancel_${suffix})`, { method: 'DELETE' });
     if (userId) await rest(`/auth/v1/admin/users/${userId}`, { method: 'DELETE' });

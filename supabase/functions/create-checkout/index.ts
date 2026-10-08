@@ -31,10 +31,12 @@ Deno.serve(async (request) => {
       customer,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
+      billing_address_collection: 'required',
+      customer_update: { address: 'auto', name: 'auto' },
+      consent_collection: { terms_of_service: 'required' },
       ...(offer === 'academy' ? { discounts: [{ coupon: academyFirstMonthCouponId }] } : {}),
       ...(offer === 'coaching' ? {
         managed_payments: { enabled: false },
-        billing_address_collection: 'required',
         shipping_address_collection: { allowed_countries: ['AT','BE','BG','HR','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'] },
       } : {}),
       success_url: `${siteUrl}/abonnement-succes?offre=${offer}&session_id={CHECKOUT_SESSION_ID}`,
