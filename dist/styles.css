@@ -1091,3 +1091,5 @@ html.academy-access-pending body{visibility:hidden}
   .stoa-tour-card{max-height:calc(100dvh - 24px);scrollbar-width:none}
   .stoa-tour-card::-webkit-scrollbar{display:none}
 }
+
+.support-avatar-staff{overflow:hidden}.support-avatar-staff img{display:block;width:100%;height:100%;object-fit:cover}

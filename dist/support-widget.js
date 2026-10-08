@@ -32,7 +32,7 @@ async function initialize(user) {
     const tag = clickable ? 'button' : 'span', attrs = clickable ? `type="button" data-member-profile="${id}" aria-label="Voir le profil de ${esc(item.display_name)}"` : 'aria-hidden="true"';
     return item.avatar_url ? `<${tag} class="support-avatar has-image" ${attrs} style="background-image:url('${esc(item.avatar_url)}')"></${tag}>` : `<${tag} class="support-avatar" ${attrs}>${esc((item.display_name || 'S')[0].toUpperCase())}</${tag}>`;
   };
-  const supportAvatar = '<span class="support-avatar support-avatar-staff" aria-hidden="true">?</span>';
+  const supportAvatar = '<span class="support-avatar support-avatar-staff" aria-hidden="true"><img src="/assets/branding/stoa-mark-400.png" alt=""></span>';
   const loadProfiles = async (ids) => { const missing = [...new Set(ids)].filter((id) => id && !profiles.has(id)); if (!missing.length) return; const { data } = await supabase.rpc('get_community_profiles', { profile_ids: missing }); (data || []).forEach((item) => profiles.set(item.id, item)); };
   const incoming = (item) => isAdmin ? item.sender_id === item.member_id : item.sender_id !== item.member_id;
   const setUnread = () => { const count = messages.filter((item) => !item.read_at && incoming(item)).length, badge = trigger.querySelector('b'); badge.textContent = count ? (count > 9 ? '9+' : String(count)) : ''; badge.hidden = count === 0; trigger.classList.toggle('has-unread', count > 0); };
