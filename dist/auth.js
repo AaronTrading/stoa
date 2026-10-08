@@ -1,5 +1,4 @@
 import { siteUrl, supabase } from './supabase.js';
-import { attachDepartmentPicker, departmentCode } from './departments.js';
 
 const statusToast = document.createElement('div');
 statusToast.className = 'auth-status';
@@ -22,7 +21,6 @@ dialog.innerHTML = `
       <div class="auth-signup-fields" hidden>
         <div><label for="auth-first-name">Prénom</label><input id="auth-first-name" name="firstName" type="text" autocomplete="given-name" placeholder="Votre prénom"></div>
         <div><label for="auth-last-name">Nom</label><input id="auth-last-name" name="lastName" type="text" autocomplete="family-name" placeholder="Votre nom"></div>
-        <div><label for="auth-department">Département</label><input id="auth-department" name="department" type="text" inputmode="text" autocomplete="address-level2" placeholder="Numéro ou nom du département"></div>
       </div>
       <label for="auth-email">Adresse email</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
@@ -47,7 +45,6 @@ dialog.innerHTML = `
   <p class="auth-message" role="status" aria-live="polite"></p>
 `;
 document.body.append(dialog);
-attachDepartmentPicker(dialog.querySelector('#auth-department'));
 
 const form = dialog.querySelector('.auth-form');
 const message = dialog.querySelector('.auth-message');
@@ -62,7 +59,11 @@ let googleIdentityReady = false;
 
 const authenticatedDestination = (session = currentSession, profile = currentProfile) => {
   const hasAcademyAccess = Boolean(session?.user && currentAcademyAccess);
-  return hasAcademyAccess ? '/accueil' : '/profil';
+  return hasAcademyAccess ? '/accueil' : '/#offres';
+};
+const redirectAuthenticatedMember = () => {
+  if (!currentSession || location.pathname !== '/' || location.search.includes('recovery=1') || location.hash.includes('type=recovery')) return;
+  if (currentAcademyAccess) location.replace('/accueil');
 };
 
 const setAuthMode = (mode) => {
@@ -104,18 +105,18 @@ const updateAuthUI = (session, profile = currentProfile) => {
   }
   const activeProfile = user && currentProfileUserId === user.id ? profile : null;
   const hasAcademyAccess = Boolean(user && currentAcademyAccess);
-  const memberDestination = hasAcademyAccess ? '/accueil' : '/profil';
+  const memberDestination = hasAcademyAccess ? '/accueil' : '/#offres';
   const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
 
   document.querySelectorAll('[data-auth-link]').forEach((link) => {
     link.href = user ? memberDestination : '#connexion';
-    const label = user ? (hasAcademyAccess ? 'Mon espace' : 'Rejoindre STOA') : 'Connexion';
+    const label = user ? `Bonjour ${firstName || 'membre'}` : 'Connexion';
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
     link.replaceChildren(document.createTextNode(`${label} `), arrow);
-    link.setAttribute('aria-label', user ? (hasAcademyAccess ? 'Ouvrir mon académie' : 'Découvrir l’abonnement STOA') : 'Se connecter à STOA');
+    link.setAttribute('aria-label', user ? (hasAcademyAccess ? 'Ouvrir mon académie' : 'Découvrir les offres STOA') : 'Se connecter à STOA');
   });
 
   document.querySelectorAll('[data-member-academy-link]').forEach((link) => {
@@ -161,10 +162,6 @@ const hydrateAuthUI = async (session) => {
   currentProfileUserId = user.id;
   currentAcademyAccess = Boolean(academyAccess);
   updateAuthUI(session, data);
-  if (['discord', 'google'].includes(user.app_metadata?.provider) && !data.department && location.pathname !== '/profil') {
-    location.replace('/profil?nouveau=1');
-    return;
-  }
 };
 
 const showRecovery = () => {
@@ -198,6 +195,7 @@ const handleGoogleCredential = async (response) => {
   await hydrateAuthUI(data.session);
   if (dialog.open) dialog.close();
   showToast('Connexion Google réussie. Bienvenue dans STOA.', 'success');
+  location.assign(authenticatedDestination());
 };
 
 const loadGoogleIdentity = async () => {
@@ -257,6 +255,7 @@ const redirectTo = new URL('/', siteUrl).href;
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   await hydrateAuthUI(sessionData.session);
+  redirectAuthenticatedMember();
   if (!sessionData.session) loadGoogleIdentity().catch(() => {});
   window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
   if (document.body.classList.contains('member-page') && !sessionData.session) {
@@ -266,7 +265,7 @@ const initializeAuth = async () => {
   supabase.auth.onAuthStateChange((authEvent, session) => {
     if (authEvent === 'PASSWORD_RECOVERY') showRecovery();
     updateAuthUI(session);
-    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
+    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));redirectAuthenticatedMember();}, 0);
   });
 
   document.addEventListener('click', (event) => {
@@ -291,14 +290,13 @@ const initializeAuth = async () => {
     if (authMode === 'signup') {
       const firstName = String(data.get('firstName') || '').trim();
       const lastName = String(data.get('lastName') || '').trim();
-      const department = departmentCode(data.get('department'));
-      if (!firstName || !lastName || !department) {
-        setMessage('Ajoutez votre prénom, votre nom et votre département.', 'error');
+      if (!firstName || !lastName) {
+        setMessage('Ajoutez votre prénom et votre nom.', 'error');
         return;
       }
       setBusy(true);
       const fullName = `${firstName} ${lastName}`;
-      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName, department }, emailRedirectTo: redirectTo } });
+      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName }, emailRedirectTo: redirectTo } });
       setBusy(false);
       if (error) { setMessage(error.message, 'error'); return; }
       if (authData.session) { updateAuthUI(authData.session); dialog.close(); showToast('Votre compte STOA est créé.', 'success'); }
@@ -314,9 +312,10 @@ const initializeAuth = async () => {
       return;
     }
 
-    updateAuthUI(authData.session);
+    await hydrateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
+    location.assign(authenticatedDestination());
   });
 
   dialog.querySelectorAll('[data-auth-mode]').forEach((button) => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));

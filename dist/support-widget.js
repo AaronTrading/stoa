@@ -91,7 +91,11 @@ async function initialize(user) {
   };
   const toggle = (open) => { panel.hidden = !open; trigger.setAttribute('aria-expanded', String(open)); widget.classList.toggle('support-open', open); if (open) { render(); requestAnimationFrame(fitMobileViewport); } else fitMobileViewport(); };
 
-  trigger.addEventListener('click', () => toggle(panel.hidden));
+  trigger.addEventListener('click', () => {
+    const opening = panel.hidden;
+    toggle(opening);
+    if (opening) window.dispatchEvent(new CustomEvent('stoa:support-opened'));
+  });
   widget.querySelector('[data-support-close]').addEventListener('click', () => toggle(false));
   content.addEventListener('click', (event) => { const profileButton = event.target.closest('[data-member-profile]'); if (profileButton && isAdmin) return openMemberProfile(profileButton.dataset.memberProfile); const button = event.target.closest('[data-support-member]'); if (button && isAdmin) { activeMember = button.dataset.supportMember; render(); } });
   back.addEventListener('click', () => { activeMember = null; render(); });

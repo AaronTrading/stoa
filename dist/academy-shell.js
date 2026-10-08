@@ -3,6 +3,7 @@ import { loadMemberSnapshot } from './member-data.js';
 import './support-widget.js';
 
 const body=document.body;
+document.documentElement.classList.add('academy-access-pending');
 
 const icon=(name)=>({home:'<path d="M4 11 12 4l8 7v9h-6v-6h-4v6H4Z"/>',route:'<path d="M6 19c4-1 1-7 6-7s2-6 6-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/>',academy:'<path d="M4 5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4Zm16 0h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4Z"/>',community:'<path d="M16 18c2.5 0 4-1.2 4-3s-1.5-3-4-3-4 1.2-4 3 1.5 3 4 3ZM8 12c2.2 0 3.5-1.2 3.5-3S10.2 6 8 6 4.5 7.2 4.5 9 5.8 12 8 12Zm0 2c-3.3 0-6 1.7-6 4v1h9"/>',coach:'<path d="M12 3v18M4.5 8.5h15M6 8.5l-3 5h6l-3-5Zm12 0-3 5h6l-3-5ZM8 21h8"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',shop:'<path d="M5 8h14l-1 12H6Zm3 0V6a4 4 0 0 1 8 0v2"/>',map:'<path d="m3 6 5-2 8 3 5-2v13l-5 2-8-3-5 2Zm5-2v13m8-10v13"/>',scanner:'<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4M8 12h8"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/>',moon:'<path d="M20 15.5A8 8 0 0 1 8.5 4 8 8 0 1 0 20 15.5Z"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.5-5 3-7 8-7s7.5 2 8 7"/>',chevron:'<path d="m9 6 6 6-6 6"/>',menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',collapse:'<path d="m14 7-5 5 5 5"/>',back:'<path d="m15 18-6-6 6-6"/>'}[name]||'');
 const svg=(name)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icon(name)}</svg>`;
@@ -83,12 +84,13 @@ const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.di
 
 async function hydrate(){
   sessionUser=(await supabase.auth.getSession()).data.session?.user;
-  if(!sessionUser){shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#connexion">Connectez-vous pour ouvrir vos piliers →</a>';shell.querySelector('.academy-profile-compact').href='/#connexion';shell.querySelector('[data-shell-profile-name]').textContent='Espace membre';setupGlobalSearch();return;}
+  if(!sessionUser){location.replace('/#connexion');return;}
   const {data:academyAccess,error:accessError}=await supabase.rpc('has_active_academy_access',{p_user_id:sessionUser.id});
-  if(path!=='/profil'&&(accessError||!academyAccess)){
+  if(accessError||!academyAccess){
     location.replace('/#offres');
     return;
   }
+  document.documentElement.classList.remove('academy-access-pending');
   const contentSnapshot=academyAccess?loadMemberSnapshot(sessionUser.id):Promise.resolve({chapters:[],states:[]});
   const contentSections=academyAccess?supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index'):Promise.resolve({data:[]});
   const [{data:profileRow},{data:themeRow},snapshot,{data:sectionRows},{data:coachingRows},{data:isStaff}]=await Promise.all([

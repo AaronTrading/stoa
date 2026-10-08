@@ -476,6 +476,10 @@ const saveUsername = async () => {
   if (usernameSaveInFlight) { usernameSaveAgain = true; return; }
   const username = normalizeUsername(usernameInput.value);
   usernameInput.value = username;
+  if (/^membre/u.test(username)) {
+    setMessage('Choisissez un vrai pseudo : « membre » est réservé.', 'error');
+    return;
+  }
   if (!usernamePattern.test(username)) {
     setMessage('Le pseudo doit contenir 3 à 30 caractères, sans espace. Utilisez uniquement des lettres, chiffres, points, points-virgules, tirets ou tirets bas.', 'error');
     return;

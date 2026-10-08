@@ -1056,3 +1056,38 @@ body.academy-experience.coaching-coach-page .coach-response-grid{
 .lesson-save-tools #lesson-edit-delete{color:#9a4438}
 .academy-create-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 20px;padding:5px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.42)}.academy-create-tabs button{min-height:38px;border-radius:8px;background:transparent;color:var(--muted);font-size:11px;font-weight:600}.academy-create-tabs button.active{background:var(--olive);color:var(--ivory)}.academy-content-dialog form[hidden]{display:none}
 .pillar-empty-chapter{margin:0;padding:14px 10px;color:var(--muted);font-size:11px}
+
+/* Accès membre : aucun contenu privé n'est peint avant la validation serveur. */
+html.academy-access-pending body{visibility:hidden}
+
+/* Onboarding obligatoire, stable au clavier et sur petits écrans. */
+.stoa-onboarding-card{overscroll-behavior:contain}
+.stoa-onboarding-card .username-entry input{width:100%!important;min-width:0!important;outline:0!important;box-shadow:none!important}
+.stoa-onboarding-card .username-entry:focus-within{border-color:#727967;box-shadow:0 0 0 3px #343b2d18}
+.stoa-onboarding-card .onboarding-field[hidden]{display:none!important}
+.stoa-tour-card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
+
+/* Les deux offres du site vitrine gardent la même hauteur et les mêmes alignements. */
+.price-card{display:flex;min-width:0;flex-direction:column}
+.price-card>ul{flex:1}
+.price-card>.button:last-of-type{margin-top:auto}
+.public-olive{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr);gap:clamp(30px,7vw,95px);align-items:center;border-top:1px solid var(--line)}
+.public-olive-visual{position:relative;min-height:520px;overflow:hidden;border-radius:18px;background:radial-gradient(circle,#e4d8c2,#b8a88e)}
+.public-olive-visual img{display:block;width:100%;height:100%;min-height:520px;object-fit:cover}
+.public-olive-visual span{position:absolute;top:18px;left:18px;padding:8px 12px;border:1px solid #ffffff8a;border-radius:30px;background:#f8f7f3b8;backdrop-filter:blur(14px);font-size:9px;font-weight:650;letter-spacing:.14em}
+.public-olive-copy h2{margin-bottom:22px}
+.public-olive-copy>p{max-width:650px;color:var(--muted);font-size:16px;line-height:1.85}
+.public-olive-points{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:28px}
+.public-olive-points span{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#ffffff80;font-size:12px}
+@media(max-width:760px){
+  .public-olive{grid-template-columns:1fr}
+  .public-olive-visual,.public-olive-visual img{min-height:390px}
+  .public-olive-points{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .stoa-onboarding-overlay{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+  .stoa-onboarding-card{width:100%;max-height:calc(100dvh - max(16px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));padding:24px 18px}
+  .onboarding-actions>button:only-child{grid-column:1/-1}
+  .stoa-tour-card{max-height:calc(100dvh - 24px);scrollbar-width:none}
+  .stoa-tour-card::-webkit-scrollbar{display:none}
+}
