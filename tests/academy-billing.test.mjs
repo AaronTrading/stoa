@@ -8,6 +8,7 @@ const roleMigration = read('supabase/migrations/202610040041_registered_role.sql
 const roleSyncFix = read('supabase/migrations/202610040043_fix_membership_role_sync.sql');
 const offersMigration = read('supabase/migrations/202610040044_billing_offers.sql');
 const manualAccessMigration = read('supabase/migrations/202610040045_manual_academy_access_and_onboarding.sql');
+const emailAccessMigration = read('supabase/migrations/202610080055_manual_academy_access_by_email.sql');
 const checkout = read('supabase/functions/create-checkout/index.ts');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const shell = read('dist/academy-shell.js');
@@ -62,13 +63,15 @@ test('the public offer launches Academy Checkout without an intermediate sales p
   assert.doesNotMatch(landing, /location\.assign\('\/subscribe'\)/);
 });
 
-test('admins can grant Academy access by username without Stripe', () => {
+test('admins can grant Academy access by email without Stripe', () => {
   assert.match(manualAccessMigration, /create table public\.academy_entitlements/);
-  assert.match(manualAccessMigration, /function public\.admin_set_academy_access_by_username/);
-  assert.match(manualAccessMigration, /if not public\.is_admin\(\)/);
+  assert.match(emailAccessMigration, /function public\.admin_set_academy_access_by_email/);
+  assert.match(emailAccessMigration, /from auth\.users users/);
+  assert.match(emailAccessMigration, /if not public\.is_admin\(\)/);
   assert.match(manualAccessMigration, /public\.academy_entitlements e/);
   const admin = read('dist/coaching-coach.js');
-  assert.match(admin, /admin_set_academy_access_by_username/);
+  assert.match(admin, /admin_set_academy_access_by_email/);
+  assert.match(admin, /client_email/);
   assert.match(admin, /Accès Académie accordé gratuitement/);
 });
 
