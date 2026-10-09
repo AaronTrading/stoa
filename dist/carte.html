@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="academy-access-pending">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -13,15 +13,11 @@
   <link rel="stylesheet" href="styles.css">
   <script src="env.js"></script>
   <script type="module" src="auth.js"></script>
-  <script type="module">if(new URLSearchParams(location.search).has('membre')){import('./community-notifications.js');import('./academy-shell.js');}</script>
+  <script type="module" src="community-notifications.js"></script>
+  <script type="module" src="academy-shell.js"></script>
 </head>
 <body class="tool-page map-page">
   <a class="skip" href="#main">Aller au contenu</a>
-  <header class="site-header">
-    <a class="logo" href="/" aria-label="STOA, accueil"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
-    <nav class="pill-nav" aria-label="Navigation principale"><a href="/">Accueil</a><a class="active" href="/carte" aria-current="page">Carte</a><a href="/scanner">Scanner</a><a href="/boutique">Boutique</a></nav>
-    <a class="login-link" data-auth-link href="/academie">Espace membre <span>↗</span></a>
-  </header>
   <main class="tool-main" id="main">
     <header class="tool-heading">
       <div><span class="eyebrow">CARTE STOA</span><h1>Vos producteurs,<br><span>près de vous.</span></h1></div>
@@ -37,7 +33,6 @@
     </section>
     <p class="tool-source">Répertoires issus de <a href="https://lait-cru.fr/" target="_blank" rel="noopener noreferrer">lait-cru.fr</a> (copie du 21 septembre 2026) et de <a href="https://boeufherbe.fr/" target="_blank" rel="noopener noreferrer">BoeufHerbe.fr</a> (copie du 9 octobre 2026). Vérifiez les informations avant de vous déplacer.</p>
   </main>
-  <footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="map.js"></script>
 </body>
