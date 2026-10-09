@@ -127,7 +127,7 @@ function setupGlobalSearch(){
   const plainText=value=>{const node=document.createElement('div');node.innerHTML=String(value||'');return(node.textContent||'').replace(/\s+/g,' ').trim();};
   const excerpt=(value,query,tokens)=>{const text=plainText(value),normalized=normalize(text);let index=normalized.indexOf(query);if(index<0)index=Math.min(...tokens.map(token=>normalized.indexOf(token)).filter(position=>position>=0));if(!Number.isFinite(index))index=0;const start=Math.max(0,index-58),end=Math.min(text.length,index+query.length+92);return`${start?'…':''}${text.slice(start,end).trim()}${end<text.length?'…':''}`;};
   const destinations=[
-    {title:'Carte du lait cru',meta:'Outil · Producteurs autour de moi',href:'/carte?membre=1',keywords:'lait cru carte ferme producteur fromagerie autour de moi geolocalisation adresse'},
+    {title:'Carte des producteurs',meta:'Outil · Lait cru et viande au pâturage',href:'/carte?membre=1',keywords:'lait cru viande paturage pâturage boeuf bœuf herbe carte ferme producteur elevage élevage fromagerie autour de moi geolocalisation adresse'},
     {title:'Scanner un produit',meta:'Outil · Code-barres et lecture nutritionnelle',href:'/scanner?membre=1',keywords:'scanner scan produit code barre qr code nutrition note ingredients aliment'},
     {title:'Mode sombre',meta:'Profil · Apparence par défaut',href:'/profil#apparence',keywords:'sombre dark darkmode mode nuit theme apparence couleur affichage interface clair light'},
     {title:'Photo de profil',meta:'Profil · Modifier mon avatar',href:'/profil#photo',keywords:'photo profil avatar image televerser recadrer visage'},
