@@ -24,3 +24,7 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Protéines** — Large plat artisanal en grès anthracite avec un steak grillé, un poisson méditerranéen entier, deux œufs bruns et une branche de romarin.
 - **Lipides** — Carafe en verre soufflé remplie d’huile d’olive extra vierge, bol d’olives vertes et noires, quelques noix, deux jaunes d’œufs et une noix de beurre sur du lin naturel.
 - **Plan alimentaire / Courses** — Panier en roseau olive contenant des œufs, une pièce de viande emballée, un poisson, des légumes verts, des fruits de saison et une bouteille d’huile, accompagné de trois tablettes de cire vierges et d’un stylet en bronze.
+- **Les Piliers de Votre Nutrition** — Quatre petits piliers en travertin portant respectivement poisson et œuf, huile d’olive et noix, légumes racines et fruits rouges, puis eau et herbes fraîches.
+- **Les Aliments à Éliminer** — Hamburger, frites et bouteille d’huile de tournesol raffinée sans marque, présentés sobrement sur un plateau de pierre avec un tournesol.
+- **Structurer vos Repas** — Trois assiettes complètes disposées dans un rythme ordonné, avec protéines, légumes et glucides entiers, accompagnées d’eau et de lin naturel.
+- **Listes de courses** — Panier de marché rempli d’aliments entiers accompagné d’une tablette de cire aux cases et lignes vierges et de son stylet en bronze.
