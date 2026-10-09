@@ -21,3 +21,6 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Relations** — Deux maillons entrelacés sculptés dans le marbre ivoire.
 - **Argent** — Balance en bronze avec disques vierges et registre en cuir sombre sans marquage.
 - **Toxines** — Pierre de charbon poreuse isolée sous une cloche de verre.
+- **Protéines** — Large plat artisanal en grès anthracite avec un steak grillé, un poisson méditerranéen entier, deux œufs bruns et une branche de romarin.
+- **Lipides** — Carafe en verre soufflé remplie d’huile d’olive extra vierge, bol d’olives vertes et noires, quelques noix, deux jaunes d’œufs et une noix de beurre sur du lin naturel.
+- **Plan alimentaire / Courses** — Panier en roseau olive contenant des œufs, une pièce de viande emballée, un poisson, des légumes verts, des fruits de saison et une bouteille d’huile, accompagné de trois tablettes de cire vierges et d’un stylet en bronze.
