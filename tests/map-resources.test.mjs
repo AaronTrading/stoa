@@ -21,8 +21,8 @@ test('la carte privée réunit le lait cru et les producteurs de viande au pâtu
   assert.match(page, /BoeufHerbe\.fr/);
   assert.match(page, /class="academy-access-pending"/);
   assert.match(page, /src="academy-shell\.js"/);
-  assert.match(page, /location\.replace\('\/carte\?membre=1'\)/);
-  assert.match(page, /rel="canonical" href="https:\/\/stoa-coaching\.fr\/carte\?membre=1"/);
+  assert.match(page, /location\.replace\('\/carte'\)/);
+  assert.match(page, /rel="canonical" href="https:\/\/stoa-coaching\.fr\/carte"/);
   assert.doesNotMatch(page, /<header class="site-header">/);
   assert.doesNotMatch(scanner, /href="\/carte"/);
 });
