@@ -229,6 +229,7 @@ bar?.addEventListener('mousedown', (event) => { if (event.target.closest('button
 bar?.addEventListener('click', (event) => {
   const commandButton = event.target.closest('[data-edit-command]');
   const blockButton = event.target.closest('[data-edit-block]');
+  if (!commandButton && !blockButton) return;
   if (commandButton) document.execCommand(commandButton.dataset.editCommand, false);
   if (blockButton) document.execCommand('formatBlock', false, blockButton.dataset.editBlock);
   activeEditor?.focus();
