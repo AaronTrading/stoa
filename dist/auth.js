@@ -61,10 +61,6 @@ const authenticatedDestination = (session = currentSession, profile = currentPro
   const hasAcademyAccess = Boolean(session?.user && currentAcademyAccess);
   return hasAcademyAccess ? '/accueil' : '/#offres';
 };
-const redirectAuthenticatedMember = () => {
-  if (!currentSession || location.pathname !== '/' || location.search.includes('recovery=1') || location.hash.includes('type=recovery')) return;
-  if (currentAcademyAccess) location.replace('/accueil');
-};
 
 const setAuthMode = (mode) => {
   authMode = mode === 'signup' ? 'signup' : 'login';
@@ -255,7 +251,6 @@ const redirectTo = new URL('/', siteUrl).href;
 const initializeAuth = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   await hydrateAuthUI(sessionData.session);
-  redirectAuthenticatedMember();
   if (!sessionData.session) loadGoogleIdentity().catch(() => {});
   window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
   if (document.body.classList.contains('member-page') && !sessionData.session) {
@@ -265,7 +260,7 @@ const initializeAuth = async () => {
   supabase.auth.onAuthStateChange((authEvent, session) => {
     if (authEvent === 'PASSWORD_RECOVERY') showRecovery();
     updateAuthUI(session);
-    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));redirectAuthenticatedMember();}, 0);
+    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
   });
 
   document.addEventListener('click', (event) => {

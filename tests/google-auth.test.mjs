@@ -29,7 +29,7 @@ test('the public Google client ID is available to the static frontend', () => {
 test('signed-in visitors can revisit the public site without an intermediate account panel', () => {
   assert.doesNotMatch(authSource, /auth-member-view/);
   assert.match(authSource, /const authenticatedDestination/);
-  assert.doesNotMatch(authSource, /if \(location\.pathname === '\/'\) location\.replace\(authenticatedDestination/);
+  assert.doesNotMatch(authSource, /redirectAuthenticatedMember/);
 });
 
 test('Google can be linked from the profile like Discord', () => {
