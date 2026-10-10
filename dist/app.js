@@ -235,7 +235,7 @@ if (document.querySelector('#lesson-content')) {
   document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">${lessonPillar?.name||''} · CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
-  document.querySelector('#lesson-copy').innerHTML=`<h2>${module.description}</h2><p>Cette leçon pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu est servi depuis Supabase sous forme de sections ordonnées.</p>`;
+  document.querySelector('#lesson-copy').innerHTML=`<p>Cette leçon pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu est servi depuis Supabase sous forme de sections ordonnées.</p>`;
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
   const normalizeQuiz=(value)=>{
@@ -299,7 +299,7 @@ if (document.querySelector('#lesson-content')) {
     const images=imageRows||[];
     document.title=`${dbModule.title} — STOA`; document.querySelector('#lesson-title').textContent=dbModule.title;
     artwork.src=dbModule.cover_image_url||imagePath(chapter); artwork.alt=`Illustration de la leçon ${dbModule.title}`;
-    document.querySelector('#lesson-copy').innerHTML=`<p class="lesson-introduction" data-module-description>${escapeContent(dbModule.description)}</p>`+sections.map((section,sectionIndex)=>{
+    document.querySelector('#lesson-copy').innerHTML=sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
       const storedAsHtml=/^\s*<(?:p|div|h[2-4]|ul|ol|blockquote|figure)\b/i.test(section.content);
       const sectionImages=storedAsHtml?[]:images.filter(image=>image.subchapter_id===section.id);

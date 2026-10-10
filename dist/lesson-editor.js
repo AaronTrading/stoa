@@ -20,7 +20,7 @@ let draggedFigure;
 let pendingCoverFile;
 let coverPreviewUrl;
 
-const editableAreas = () => [...document.querySelectorAll('#lesson-title, [data-module-description], [data-subchapter-title], .lesson-subchapter-content')];
+const editableAreas = () => [...document.querySelectorAll('#lesson-title, [data-subchapter-title], .lesson-subchapter-content')];
 const setStatus = (text, tone = '') => { status.textContent = text; status.dataset.tone = tone; };
 const escapeHtml = (value = '') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const normalizeQuiz = (value) => {
@@ -143,7 +143,6 @@ const uploadCover = async (file) => {
 
 const saveLesson = async () => {
   const title = document.querySelector('#lesson-title').textContent.trim();
-  const description = document.querySelector('[data-module-description]')?.textContent.trim() || '';
   if (!title) { setStatus('Le titre ne peut pas être vide.', 'error'); return; }
   const quizEditors = [...document.querySelectorAll('.lesson-quiz[data-quiz]')];
   const quizzes = quizEditors.map(readQuizEditor);
@@ -157,7 +156,7 @@ const saveLesson = async () => {
   }
   quizEditors.forEach((element, index) => { element.dataset.quiz = JSON.stringify(quizzes[index]); element.replaceChildren(); });
   setStatus('Enregistrement…');
-  const promises = [supabase.from('modules').update({ title, description, cover_image_url: coverImageUrl }).eq('id', lessonData.moduleId)];
+  const promises = [supabase.from('modules').update({ title, cover_image_url: coverImageUrl }).eq('id', lessonData.moduleId)];
   document.querySelectorAll('[data-subchapter-id]').forEach((section) => {
     const known = lessonData.sections.find((item) => item.id === section.dataset.subchapterId);
     const titleElement = section.querySelector('[data-subchapter-title]');

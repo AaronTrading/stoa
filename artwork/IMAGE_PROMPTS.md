@@ -28,3 +28,5 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Les Aliments à Éliminer** — Hamburger, frites et bouteille d’huile de tournesol raffinée sans marque, présentés sobrement sur un plateau de pierre avec un tournesol.
 - **Structurer vos Repas** — Trois assiettes complètes disposées dans un rythme ordonné, avec protéines, légumes et glucides entiers, accompagnées d’eau et de lin naturel.
 - **Listes de courses** — Panier de marché rempli d’aliments entiers accompagné d’une tablette de cire aux cases et lignes vierges et de son stylet en bronze.
+- **Comment bien lire et choisir** — Emballages alimentaires neutres en papier et en verre avec repères graphiques abstraits, observés à la loupe et accompagnés de quelques aliments entiers.
+- **Idées de recettes** — Carnet de recettes ouvert aux pages vierges, crayon en bronze, bol en grès anthracite, marmite noire et ingrédients méditerranéens prêts à être combinés.
