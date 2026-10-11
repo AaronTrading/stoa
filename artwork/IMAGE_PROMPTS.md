@@ -34,3 +34,5 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Quelles boissons choisir** — Eau plate, eau pétillante, infusion végétale et café disposés sobrement sur un plateau de travertin, avec citron, herbes et linge naturel.
 - **Pilier Nourrir** — Nature morte centrale réunissant poisson, œufs, légumes, figues, olives, panier de marché, eau, huile d’olive et marmite noire dans un portique méditerranéen.
 - **Musculation** — Paire d’haltères antiques en pierre, disque de charge, banc bas en travertin et corde naturelle olive dans un portique grec lumineux.
+- **Bibliothèque d’exercices** — Collection ordonnée d’haltères antiques, anneaux, corde, sphère, marche et disque de pierre présentée sur des gradins en travertin.
+- **Posture et position** — Mannequin anatomique articulé en bois aligné avec un fil à plomb, des repères de pieds et une équerre en bronze.
