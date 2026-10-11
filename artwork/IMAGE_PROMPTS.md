@@ -33,3 +33,4 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Choisir son eau** — Trois récipients en verre soufflé remplis d’eau claire, accompagnés de pierres minérales pâles et anthracite et d’une branche de menthe.
 - **Quelles boissons choisir** — Eau plate, eau pétillante, infusion végétale et café disposés sobrement sur un plateau de travertin, avec citron, herbes et linge naturel.
 - **Pilier Nourrir** — Nature morte centrale réunissant poisson, œufs, légumes, figues, olives, panier de marché, eau, huile d’olive et marmite noire dans un portique méditerranéen.
+- **Musculation** — Paire d’haltères antiques en pierre, disque de charge, banc bas en travertin et corde naturelle olive dans un portique grec lumineux.
