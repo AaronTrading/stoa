@@ -171,6 +171,7 @@ function renderCourses() {
   const learningStates=window.__STOA_LEARNING_STATES__||[];
   let resultCount=0;
   const roman=['I','II','III','IV','V'];
+  const pillarVisuals={NOURRIR:'nourrir',CORPS:'sport','PROTÉGER':'toxines',VIVRE:'productivite','SE CONSTRUIRE':'autonomie'};
   const pillarData=pillars.map((pillar,pillarIndex)=>{
     const pillarChapters=chapters.map((chapter,chapterIndex)=>({chapter,chapterIndex})).filter(({chapter})=>chapter.pillarId===pillar.id);
     const visibleChapters=pillarChapters.map(({chapter,chapterIndex})=>{
@@ -193,7 +194,7 @@ function renderCourses() {
     let continueItem=state?allModules.find(item=>item.chapter.modules[item.moduleIndex]?.id===state.module_id):null;
     continueItem ||= allModules.find(item=>item.chapter.pillarId===pillar.id&&!completed.has(item.id))||allModules.find(item=>item.chapter.pillarId===pillar.id);
     const description={NOURRIR:'Alimentation, hydratation et cuisine.',CORPS:'Mouvement, récupération et santé.',PROTÉGER:'Expositions, sécurité et résilience.',VIVRE:'Organisation, ressources et relations.','SE CONSTRUIRE':'Autonomie, sens et temps long.'}[pillar.name]||'Un parcours pour construire des fondations durables.';
-    return {pillar,pillarIndex,pillarChapters,visibleChapters,moduleTotal,pillarFinished,pillarPercentage,state,continueItem,description,image:pillarChapters[0]?.chapter?.slug||'alimentation'};
+    return {pillar,pillarIndex,pillarChapters,visibleChapters,moduleTotal,pillarFinished,pillarPercentage,state,continueItem,description,image:pillarVisuals[pillar.name]||pillarChapters[0]?.chapter?.slug||'alimentation'};
   });
   const available=pillarData.filter(item=>item.visibleChapters.length);
   const selected=pillarData.find(item=>item.pillar.id===selectedPillarId)||available[0]||pillarData[0];

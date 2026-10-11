@@ -32,3 +32,4 @@ Direction commune : photographie éditoriale réaliste et austère, portique gre
 - **Idées de recettes** — Carnet de recettes ouvert aux pages vierges, crayon en bronze, bol en grès anthracite, marmite noire et ingrédients méditerranéens prêts à être combinés.
 - **Choisir son eau** — Trois récipients en verre soufflé remplis d’eau claire, accompagnés de pierres minérales pâles et anthracite et d’une branche de menthe.
 - **Quelles boissons choisir** — Eau plate, eau pétillante, infusion végétale et café disposés sobrement sur un plateau de travertin, avec citron, herbes et linge naturel.
+- **Pilier Nourrir** — Nature morte centrale réunissant poisson, œufs, légumes, figues, olives, panier de marché, eau, huile d’olive et marmite noire dans un portique méditerranéen.
