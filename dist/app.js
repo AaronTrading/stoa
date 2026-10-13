@@ -32,7 +32,7 @@ let chapters = [
   makeChapter('nourrir','courses','Approvisionnement et Cuisine',['Approvisionnement et Préparation','Préparer ses courses','Lire et choisir','Construire son répertoire','Cuisiner avec souplesse']),
   makeChapter('nourrir','hydratation','Hydratation',['Comprendre l’hydratation','Choisir son eau','Créer ses repères']),
   makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression','Prendre du muscle','Perdre du poids']),
-  makeChapter('corps','sommeil','Sommeil',['Comprendre son sommeil','Réveil et matin','Construire son rituel du soir','Gérer ses ressources']),
+  makeChapter('corps','sommeil','Sommeil',['Comprendre son sommeil','Construire son rituel du soir','Réveil et matin']),
   makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Les gestes essentiels','Un environnement sain']),
   makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Corriger ses problèmes de peau']),
   makeChapter('proteger','toxines','Expositions',['Comprendre l’exposition','alimentation','environnement','produits ménagers','pollution','cosmétiques','matériaux','Champs électromagnétiques (EMF)']),
