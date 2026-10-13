@@ -33,7 +33,7 @@ let chapters = [
   makeChapter('nourrir','hydratation','Hydratation',['Comprendre l’hydratation','Choisir son eau','Créer ses repères']),
   makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression','Prendre du muscle','Perdre du poids']),
   makeChapter('corps','sommeil','Sommeil',['Comprendre son sommeil','Construire son rituel du soir','Réveil et matin']),
-  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Les gestes essentiels','Un environnement sain']),
+  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Maladies auto-immunes','Automédication utile','Les gestes essentiels','Un environnement sain']),
   makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Corriger ses problèmes de peau']),
   makeChapter('proteger','toxines','Expositions',['Comprendre l’exposition','alimentation','environnement','produits ménagers','pollution','cosmétiques','matériaux','Champs électromagnétiques (EMF)']),
   makeChapter('proteger','autonomie','Sécurité personnelle',['Identifier une situation à risque','Éviter les situations dangereuses','Vigilance et conscience de l’environnement','Réagir face à une menace','Se déplacer en sécurité','Premiers réflexes en situation d’urgence'],'Savoir réduire les risques et réagir face aux situations dangereuses.'),
@@ -253,7 +253,7 @@ if (document.querySelector('#lesson-content')) {
       if(!kind){font.replaceWith(...font.childNodes);return;}
       const span=document.createElement('span');span.dataset.font=kind;span.append(...font.childNodes);font.replaceWith(span);
     });
-    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','A','SPAN']);
+    const allowed=new Set(['P','DIV','BR','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','BLOCKQUOTE','FIGURE','IMG','FIGCAPTION','SECTION','A','SPAN','TABLE','THEAD','TBODY','TR','TH','TD']);
     [...template.content.querySelectorAll('*')].forEach(element=>{
       if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
       const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
@@ -274,6 +274,11 @@ if (document.querySelector('#lesson-content')) {
       if(element.tagName==='FIGURE') element.className='lesson-inline-image';
       if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
       if(element.tagName==='SPAN') element.dataset.font=font;
+    });
+    template.content.querySelectorAll('table').forEach(table=>{
+      table.className='lesson-data-table';
+      const labels=[...table.querySelectorAll('thead th')].map(cell=>cell.textContent.trim());
+      table.querySelectorAll('tbody tr').forEach(row=>[...row.children].forEach((cell,index)=>cell.dataset.label=labels[index]||''));
     });
     return template.innerHTML;
   };
