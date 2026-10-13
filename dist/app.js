@@ -33,7 +33,7 @@ let chapters = [
   makeChapter('nourrir','hydratation','Hydratation',['Comprendre l’hydratation','Choisir son eau','Créer ses repères']),
   makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression','Prendre du muscle','Perdre du poids']),
   makeChapter('corps','sommeil','Sommeil',['Comprendre son sommeil','Construire son rituel du soir','Réveil et matin']),
-  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Maladies auto-immunes','Automédication utile','Les gestes essentiels','Un environnement sain']),
+  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Maladies auto-immunes','Les gestes essentiels','Un environnement sain']),
   makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Corriger ses problèmes de peau']),
   makeChapter('proteger','toxines','Expositions',['Comprendre l’exposition','alimentation','environnement','produits ménagers','pollution','cosmétiques','matériaux','Champs électromagnétiques (EMF)']),
   makeChapter('proteger','autonomie','Sécurité personnelle',['Identifier une situation à risque','Éviter les situations dangereuses','Vigilance et conscience de l’environnement','Réagir face à une menace','Se déplacer en sécurité','Premiers réflexes en situation d’urgence'],'Savoir réduire les risques et réagir face aux situations dangereuses.'),
