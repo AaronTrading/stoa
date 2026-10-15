@@ -1100,3 +1100,26 @@ html.academy-access-pending body{visibility:hidden}
 }
 
 .support-avatar-staff{overflow:hidden}.support-avatar-staff img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* Navigation mobile : un seul flux défilable et des ressources alignées sur le menu principal. */
+.academy-resources{margin:7px 4px;padding:8px 6px;border-top:1px solid rgba(70,75,64,.09)}
+.academy-resources-title{padding:0 6px 7px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.16em}
+.academy-resources nav{display:grid;gap:2px}
+.academy-resources a{position:relative;display:flex;align-items:center;gap:13px;min-height:43px;padding:0 12px;border-radius:12px;color:#5e6257;font-size:13px;font-weight:500;transition:transform .2s,background .2s,color .2s,box-shadow .2s}
+.academy-resources a::before{content:none}
+.academy-resources a svg{width:19px;height:19px;flex:0 0 auto}
+.academy-resources a:hover{transform:translateX(3px);color:var(--ink);background:rgba(255,255,255,.62)}
+.academy-resources a.active{color:var(--ink);background:rgba(255,255,255,.88);box-shadow:0 8px 24px rgba(45,50,41,.08),inset 0 0 0 1px rgba(255,255,255,.9)}
+.academy-resources a.active::after{content:"";position:absolute;left:0;width:3px;height:17px;border-radius:4px;background:var(--olive)}
+html.stoa-dark .academy-resources a{color:#c2c8bb}
+html.stoa-dark .academy-resources a:hover,html.stoa-dark .academy-resources a.active{color:#fff;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+@media(max-width:1120px){
+  .academy-sidebar,.academy-sidebar-collapsed .academy-sidebar{inset:max(8px,env(safe-area-inset-top)) auto max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .academy-sidebar::-webkit-scrollbar{display:none}
+  .academy-sidebar-brand,.academy-global-search,.academy-primary-nav,.academy-resources,.academy-shop-link,.academy-profile-compact{flex-shrink:0}
+  .academy-tree{flex:0 0 auto;min-height:auto;overflow:visible}
+  .academy-resources a{min-height:44px}
+  .academy-mobile-menu{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));min-width:0;overflow:hidden}
+  .academy-mobile-menu img{flex:0 1 92px;min-width:0}
+  .academy-mobile-menu span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
