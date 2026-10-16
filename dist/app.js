@@ -246,8 +246,16 @@ if (document.querySelector('#lesson-content')) {
       return {questions:parsed.questions.map(question=>({question:String(question.question||''),answers:Array.isArray(question.answers)?question.answers.map(String):[],correct:Number(question.correct)})).filter(question=>question.question&&question.answers.length>=2&&Number.isInteger(question.correct)&&question.correct>=0&&question.correct<question.answers.length)};
     }catch{return null;}
   };
+  const storedMarkupPattern=/<\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b|&lt;\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b/i;
+  const decodeStoredMarkup=(value='')=>{
+    let html=String(value);
+    if(/&lt;\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b/i.test(html)){
+      const decoder=document.createElement('textarea');decoder.innerHTML=html;html=decoder.value;
+    }
+    return html;
+  };
   const sanitizeStoredHtml=(html)=>{
-    const template=document.createElement('template'); template.innerHTML=html;
+    const template=document.createElement('template'); template.innerHTML=decodeStoredMarkup(html);
     template.content.querySelectorAll('font[face]').forEach(font=>{
       const face=(font.getAttribute('face')||'').toLowerCase(),kind=face.includes('cormorant')?'serif':face.includes('segoe')?'sans':'';
       if(!kind){font.replaceWith(...font.childNodes);return;}
@@ -274,6 +282,11 @@ if (document.querySelector('#lesson-content')) {
       if(element.tagName==='FIGURE') element.className='lesson-inline-image';
       if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
       if(element.tagName==='SPAN') element.dataset.font=font;
+    });
+    [...template.content.childNodes].forEach(node=>{
+      if(node.nodeType!==Node.TEXT_NODE)return;
+      if(!node.textContent.trim()){node.remove();return;}
+      const paragraph=document.createElement('p');paragraph.textContent=node.textContent.trim();node.replaceWith(paragraph);
     });
     template.content.querySelectorAll('table').forEach(table=>{
       table.className='lesson-data-table';
@@ -307,7 +320,7 @@ if (document.querySelector('#lesson-content')) {
     artwork.src=dbModule.cover_image_url||imagePath(chapter); artwork.alt=`Illustration de la leçon ${dbModule.title}`;
     document.querySelector('#lesson-copy').innerHTML=sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
-      const storedAsHtml=/^\s*<(?:p|div|h[2-4]|ul|ol|blockquote|figure)\b/i.test(section.content);
+      const storedAsHtml=storedMarkupPattern.test(section.content);
       const sectionImages=storedAsHtml?[]:images.filter(image=>image.subchapter_id===section.id);
       const imageMarkup=(image)=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`;
       const leading=sectionImages.filter(image=>image.position_index===0).map(imageMarkup).join('');

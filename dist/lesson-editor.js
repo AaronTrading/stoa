@@ -23,6 +23,14 @@ let coverPreviewUrl;
 const editableAreas = () => [...document.querySelectorAll('#lesson-title, [data-subchapter-title], .lesson-subchapter-content')];
 const setStatus = (text, tone = '') => { status.textContent = text; status.dataset.tone = tone; };
 const escapeHtml = (value = '') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+const pastedMarkupPattern = /<\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b|&lt;\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b/i;
+const decodePastedMarkup = (value = '') => {
+  let html = String(value);
+  if (/&lt;\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b/i.test(html)) {
+    const decoder = document.createElement('textarea'); decoder.innerHTML = html; html = decoder.value;
+  }
+  return html;
+};
 const normalizeQuiz = (value) => {
   try {
     const parsed = typeof value === 'string' ? JSON.parse(value) : value;
@@ -359,8 +367,15 @@ lesson?.addEventListener('paste', (event) => {
   if (!editing || !event.target.closest('[contenteditable="true"]')) return;
   event.preventDefault();
   let text = event.clipboardData?.getData('text/plain') || '';
-  if (!event.target.closest('.lesson-subchapter-content')) text = text.replace(/\s+/g, ' ').trim();
-  document.execCommand('insertText', false, text.replace(/\r/g, ''));
+  const contentEditor = event.target.closest('.lesson-subchapter-content');
+  if (!contentEditor) {
+    document.execCommand('insertText', false, text.replace(/\s+/g, ' ').trim());
+    return;
+  }
+  const clipboardHtml = event.clipboardData?.getData('text/html') || '';
+  const markup = clipboardHtml || (pastedMarkupPattern.test(text) ? decodePastedMarkup(text) : '');
+  if (markup) document.execCommand('insertHTML', false, cleanHtml(markup));
+  else document.execCommand('insertText', false, text.replace(/\r/g, ''));
 });
 lesson?.addEventListener('dragstart', (event) => { if (editing) draggedFigure = event.target.closest('.lesson-subchapter-content figure'); });
 lesson?.addEventListener('dragover', (event) => { if (editing && draggedFigure && event.target.closest('.lesson-subchapter-content')) event.preventDefault(); });
