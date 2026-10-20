@@ -19,20 +19,10 @@ export async function openMemberProfile(userId){
   const panel=ensureDialog(),content=panel.querySelector('[data-member-card-content]');
   content.innerHTML='<p class="member-card-loading">Ouverture du profil…</p>';panel.showModal();
   const session=(await supabase.auth.getSession()).data.session;if(!session)return;
-  const [{data:rows,error},{data:own},{data:locations}]=await Promise.all([
-    supabase.rpc('get_community_profiles',{profile_ids:[userId]}),
-    supabase.from('profiles').select('role').eq('id',session.user.id).maybeSingle(),
-    supabase.rpc('get_profile_locations',{profile_ids:[userId]})
-  ]);
-  if(error||!rows?.[0]){content.innerHTML='<p class="member-card-loading">Ce profil n’est pas disponible.</p>';return;}
-  const profile=rows[0],name=profile.display_name||'Membre STOA',locationLabel=locations?.[0]?.location_label||'';let contact=null,restriction=null;
-  if(own?.role==='admin'){
-    const [contactResult,restrictionResult]=await Promise.all([
-      supabase.rpc('get_admin_member_contact',{target_user_id:userId}),
-      supabase.from('chat_restrictions').select('restricted_until').eq('user_id',userId).maybeSingle()
-    ]);
-    contact=contactResult.data?.[0]||null;restriction=restrictionResult.data||null;
-  }
+  const {data:profile,error}=await supabase.rpc('get_member_profile_card',{target_user_id:userId});
+  if(error||!profile){content.innerHTML='<p class="member-card-loading">Ce profil n’est pas disponible.</p>';return;}
+  const own={role:profile.viewer_is_admin?'admin':'member'},name=profile.display_name||'Membre STOA',locationLabel=profile.location_label||'';
+  const contact=profile.viewer_is_admin?profile:null,restriction=profile.is_restricted?{restricted_until:profile.restricted_until}:null;
   const avatar=profile.avatar_url?`<span class="member-card-avatar has-image"><img src="${esc(profile.avatar_url)}" alt=""></span>`:`<span class="member-card-avatar">${esc(name[0]?.toUpperCase()||'S')}</span>`;
   const completed=Number(profile.completed_modules)||0;
   const contactRows=contact?[

@@ -30,7 +30,7 @@ async function hydrate(user) {
   $('#home-progress-caption').textContent = `${snapshot.completed.size} leçon${snapshot.completed.size > 1 ? 's' : ''} terminée${snapshot.completed.size > 1 ? 's' : ''}`;
   if (snapshot.next) {
     $('#home-next-title').textContent = snapshot.next.title;
-    $('#home-next-meta').textContent = `${snapshot.next.pillar?.title || 'Académie'} · ${snapshot.next.chapter.title} · ${snapshot.next.duration_minutes || 10} min`;
+    $('#home-next-meta').textContent = `${snapshot.next.pillar?.title || 'Académie'} · ${snapshot.next.chapter.title}`;
     $('#home-next-link').href = snapshot.next.url;
   }
   if (pinned) {

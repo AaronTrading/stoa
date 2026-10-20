@@ -155,7 +155,7 @@ function renderChannels() {
   const marks = { chat: '#', announcements: '!', questions: '?', polls: '◌' };
   els.channels.innerHTML = channels.map((c) => { const count = Number(notificationCounts[c.id]) || 0; return `<button class="channel-button${c.id === active?.id ? ' active' : ''}${count ? ' has-notification' : ''}" type="button" data-channel-id="${c.id}"><span aria-hidden="true">${marks[c.kind] || '#'}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.description || '')}</small></span>${count ? `<em class="channel-notification-badge" aria-label="${count} notification${count > 1 ? 's' : ''} non lue${count > 1 ? 's' : ''}">${count > 9 ? '9+' : count}</em>` : ''}</button>`; }).join('');
 }
-async function unsubscribe() { if (room) { const old = room; room = null; await supabase.removeChannel(old); } }
+function unsubscribe() { if (room) { const old = room; room = null; supabase.removeChannel(old); } }
 function fetchMessages(before) { return supabase.rpc('get_channel_messages', { p_channel_id: active.id, p_before: before || null, p_limit: PAGE_SIZE }); }
 async function loadMessages({ preserve = false, smooth = false } = {}) {
   if (active.kind === 'polls') return loadPolls();
@@ -184,6 +184,15 @@ function applyReaction(payload) {
   else if (!m.message_reactions.some((item) => item.id === r.id)) m.message_reactions.push(r);
   const top = els.history.scrollTop; renderMessages(); els.history.scrollTop = top;
 }
+async function applyMessageChange(payload) {
+  if (payload.eventType !== 'INSERT') return loadMessages({ preserve: true, smooth: false });
+  const incoming = payload.new;
+  if (!incoming?.id || incoming.channel_id !== active?.id || messages.some((item) => item.id === incoming.id)) return;
+  await loadProfiles([incoming.user_id]);
+  const repliedMessage = incoming.reply_to_message_id ? messages.find((item) => item.id === incoming.reply_to_message_id) : null;
+  messages.push({ ...incoming, message_reactions: [], replied_message: repliedMessage ? { id: repliedMessage.id, user_id: repliedMessage.user_id, content: repliedMessage.content, deleted_at: repliedMessage.deleted_at } : null, shared_message: null });
+  renderMessages(); requestAnimationFrame(() => bottom(true));
+}
 function subscribe(channel) {
   els.realtime.textContent = 'Connexion…';
   const sub = supabase.channel(`community:${channel.id}`, { config: { presence: { key: user.id } } }); room = sub;
@@ -192,11 +201,12 @@ function subscribe(channel) {
     const people = Object.values(sub.presenceState()).flat();
     const unique = new Set(people.map((item) => item.user_id));
     els.count.textContent = unique.size; els.plural.textContent = unique.size > 1 ? 's' : '';
+    els.count.closest('.presence-note')?.classList.toggle('is-online', unique.size > 0);
     const typing = people.filter((item) => item.user_id !== user.id && item.typing).map((item) => item.name).filter(Boolean);
     els.typing.hidden = !typing.length;
     els.typing.innerHTML = typing.length ? `<strong>${esc(typing.slice(0, 2).join(typing.length > 1 ? ' et ' : ''))}</strong> ${typing.length > 1 ? 'sont en train' : 'est en train'} d’écrire<span class="typing-dots"><i></i><i></i><i></i></span>` : '';
   };
-  sub.on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` }, () => loadMessages({ preserve: true, smooth: true }))
+  sub.on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` }, applyMessageChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, applyReaction)
     .on('presence', { event: 'sync' }, presence).on('presence', { event: 'join' }, presence).on('presence', { event: 'leave' }, presence)
     .subscribe(async (status) => { if (sub !== room) return; if (status === 'SUBSCRIBED') { els.realtime.textContent = 'En direct'; await sub.track({ user_id: user.id, name: profile(user.id).display_name, typing: false }); } else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) els.realtime.textContent = 'Reconnexion…'; });
@@ -213,11 +223,11 @@ function resetComposer() {
 }
 async function switchChannel(id) {
   const next = channels.find((c) => c.id === id || c.slug === id); if (!next || switching || active?.id === next.id) return;
-  switching = true; await unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.name.textContent = next.kind === 'chat' ? 'Discussion générale' : next.name; els.description.textContent = next.kind === 'chat' ? 'Échangez librement avec les membres de l’Académie.' : (next.description || ''); els.typing.hidden = true; els.pinned.hidden = true;
+  switching = true; unsubscribe(); active = next; messages = []; polls = []; oldest = undefined; els.count.textContent = '0'; els.count.closest('.presence-note')?.classList.remove('is-online'); els.name.textContent = next.kind === 'chat' ? 'Discussion générale' : next.name; els.description.textContent = next.kind === 'chat' ? 'Échangez librement avec les membres de l’Académie.' : (next.description || ''); els.typing.hidden = true; els.pinned.hidden = true;
   els.pollForm.hidden = true; els.form.hidden = false; els.guidance.hidden = true;
   if (next.kind === 'announcements' && isAdmin()) { els.guidance.textContent = 'Cette annonce sera affichée à tous les membres pendant 10 minutes.'; els.guidance.dataset.tone = ''; els.guidance.hidden = false; }
-  resetComposer(); await window.STOACommunityNotifications?.markChannelRead(next.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); const url = new URL(location.href); url.searchParams.delete('canal'); window.history.replaceState(null, '', url);
-  await loadMessages(); subscribe(next); switching = false;
+  resetComposer(); window.STOACommunityNotifications?.markChannelRead(next.id).then?.(() => { notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; renderChannels(); }); renderChannels(); const url = new URL(location.href); url.searchParams.delete('canal'); window.history.replaceState(null, '', url);
+  subscribe(next); await loadMessages(); switching = false;
 }
 async function loadMore() {
   if (!oldest || historyEnded) return; els.more.disabled = true; const oldHeight = els.history.scrollHeight; const { data, error } = await fetchMessages(oldest);
@@ -265,11 +275,12 @@ async function send() {
   const submit = els.form.querySelector('[type="submit"]'); submit.disabled = els.input.disabled = true;
   const replyTarget = messages.find((m) => m.id === replyId);
   const parentId = active.kind === 'questions' && replyTarget ? (replyTarget.parent_message_id || replyTarget.id) : null;
-  const result = editId ? await supabase.from('messages').update({ content }).eq('id', editId).eq('user_id', user.id).select('id').single() : await supabase.from('messages').insert({ channel_id: active.id, user_id: user.id, content, parent_message_id: parentId, reply_to_message_id: replyId || null }).select('id').single();
+  const result = editId ? await supabase.from('messages').update({ content }).eq('id', editId).eq('user_id', user.id).select('*').single() : await supabase.from('messages').insert({ channel_id: active.id, user_id: user.id, content, parent_message_id: parentId, reply_to_message_id: replyId || null }).select('*').single();
   submit.disabled = els.input.disabled = false;
   if (result.error) { errorMessage(`Le message n’a pas été enregistré : ${result.error.message}`); return els.input.focus(); }
-  if(!editId)window.dispatchEvent(new CustomEvent('stoa:community-message-sent',{detail:{messageId:result.data?.id,channelId:active.id}}));
-  resetComposer(); await loadMessages({ preserve: true, smooth: true }); els.input.focus();
+  if(editId){const index=messages.findIndex(item=>item.id===editId);if(index>=0)messages[index]={...messages[index],content,edited_at:new Date().toISOString()};}
+  else if(result.data&&!messages.some(item=>item.id===result.data.id)){messages.push({...result.data,message_reactions:[],replied_message:replyTarget?{id:replyTarget.id,user_id:replyTarget.user_id,content:replyTarget.content,deleted_at:replyTarget.deleted_at}:null,shared_message:null});window.dispatchEvent(new CustomEvent('stoa:community-message-sent',{detail:{messageId:result.data.id,channelId:active.id}}));}
+  resetComposer();renderMessages();requestAnimationFrame(()=>bottom(true));els.input.focus();
 }
 function startReply(id) {
   const target = messages.find((m) => m.id === id && !m.deleted_at); if (!target) return;
@@ -411,6 +422,6 @@ async function init() {
   try{hiddenDeletedMessages=new Set(JSON.parse(localStorage.getItem(`stoa-hidden-deleted:${user.id}`)||'[]'));}catch{hiddenDeletedMessages=new Set();}
   await loadProfiles([user.id]); ownProfile = profile(user.id); const { data, error } = await supabase.from('channels').select('id,slug,kind,name,description,order_index').order('order_index');
   if (error) return void (els.state.textContent = `La communauté ne peut pas être ouverte : ${error.message}`); allChannels = data || []; channels = allChannels.filter((channel) => channel.kind === 'chat' || norm(channel.slug) === 'general' || norm(channel.name) === 'general').slice(0, 1); if (!channels.length) return void (els.state.textContent = 'Le chat général est momentanément indisponible.');
-  const requested = new URLSearchParams(location.search).get('canal'); await Promise.all([subscribeAnnouncements(), subscribePolls()]); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id); await loadOwnRestriction();
+  const requested = new URLSearchParams(location.search).get('canal'); await switchChannel(channels.find((c) => c.slug === requested || c.id === requested)?.id || channels[0].id); Promise.allSettled([subscribeAnnouncements(),subscribePolls(),loadOwnRestriction()]);
 }
 init();
