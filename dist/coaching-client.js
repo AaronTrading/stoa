@@ -34,11 +34,11 @@ function render(){
 
 async function load(){
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),tables={
-    tasks:supabase.from('coaching_tasks').select('*').eq('client_id',user.id).neq('status','cancelled').order('due_at',{ascending:true,nullsFirst:false}),
-    goals:supabase.from('coaching_goals').select('*').eq('client_id',user.id).neq('status','cancelled').order('priority',{ascending:false}),
-    habits:supabase.from('coaching_habits').select('*').eq('client_id',user.id).eq('active',true).order('created_at'),
-    logs:supabase.from('coaching_habit_logs').select('*').eq('client_id',user.id).eq('completed_on',today),
-    assignments:supabase.from('coaching_assignments').select('*,modules(id,title,description,order_index,chapters(title,order_index))').eq('client_id',user.id).order('created_at',{ascending:false}),
+    tasks:supabase.from('coaching_tasks').select('*').eq('client_id',user.id).neq('status','cancelled').order('due_at',{ascending:true,nullsFirst:false}).limit(150),
+    goals:supabase.from('coaching_goals').select('*').eq('client_id',user.id).neq('status','cancelled').order('priority',{ascending:false}).limit(100),
+    habits:supabase.from('coaching_habits').select('*').eq('client_id',user.id).eq('active',true).order('created_at').limit(100),
+    logs:supabase.from('coaching_habit_logs').select('*').eq('client_id',user.id).eq('completed_on',today).limit(100),
+    assignments:supabase.from('coaching_assignments').select('*,modules(id,title,description,order_index,chapters(title,order_index))').eq('client_id',user.id).order('created_at',{ascending:false}).limit(150),
     plans:supabase.from('coaching_plans').select('*').eq('client_id',user.id).eq('status','active').eq('visible_to_client',true).order('created_at',{ascending:false}).limit(1),
     reviews:supabase.from('coaching_reviews').select('*').eq('client_id',user.id).eq('visible_to_client',true).order('created_at',{ascending:false}).limit(4),
     appointments:supabase.from('coaching_appointments').select('*').eq('client_id',user.id).eq('status','planned').gte('starts_at',new Date().toISOString()).order('starts_at').limit(1),

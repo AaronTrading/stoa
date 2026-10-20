@@ -53,7 +53,8 @@ test('signup defers location to onboarding and reserved placeholders cannot be c
 
 test('every member page stays hidden until the active entitlement is confirmed',()=>{
   assert.match(profilePage,/academy-access-pending/);
-  assert.match(shell,/if\(accessError\|\|!academyAccess\)/);
+  assert.match(shell,/get_academy_shell_context/);
+  assert.match(shell,/if\(accessError\|\|!context\)/);
   assert.doesNotMatch(shell,/path!=='\/profil'/);
   assert.match(styles,/html\.academy-access-pending body\{visibility:hidden\}/);
 });

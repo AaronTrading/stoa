@@ -61,7 +61,7 @@ test('frontend never grants access from the success redirect', () => {
   assert.match(success, /has_coaching_access/);
   assert.match(success, /for\(let attempt=0;attempt<15;attempt\+\+\)/);
   assert.match(shell, /location\.replace\('\/#offres'\)/);
-  assert.match(shell, /has_active_academy_access/);
+  assert.match(shell, /get_academy_shell_context/);
 });
 
 test('the public offer launches Academy Checkout without an intermediate sales page', () => {

@@ -1,8 +1,51 @@
 import { supabase } from './supabase.js';
-const form=document.querySelector('#booking-form'),slotsNode=document.querySelector('#booking-slots'),status=document.querySelector('#booking-status');
+
+const form=document.querySelector('#booking-form'),slotsNode=document.querySelector('#booking-slots'),status=document.querySelector('#booking-status'),captchaNode=document.querySelector('#booking-captcha');
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const fmt=value=>new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
-async function load(){try{const response=await fetch('/api/book-coaching-call'),payload=await response.json();if(!response.ok)throw new Error();const groups=new Map();for(const slot of payload.slots||[]){const key=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long'}).format(new Date(slot.starts_at));if(!groups.has(key))groups.set(key,[]);groups.get(key).push(slot);}slotsNode.innerHTML=groups.size?[...groups].map(([day,rows])=>`<fieldset><legend>${esc(day)}</legend><div>${rows.map(slot=>`<label><input type="radio" name="slotId" value="${slot.id}" required><span>${new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit'}).format(new Date(slot.starts_at))}</span></label>`).join('')}</div></fieldset>`).join(''):'<p>Aucune disponibilité publiée pour le moment. Revenez prochainement.</p>';}catch{slotsNode.innerHTML='<p>Les disponibilités ne peuvent pas être chargées. Actualisez la page.</p>';}}
-async function prefill(){const {data:{session}}=await supabase.auth.getSession();if(!session)return;const {data}=await supabase.from('profiles').select('first_name,last_name').eq('id',session.user.id).maybeSingle();form.elements.firstName.value=data?.first_name||'';form.elements.lastName.value=data?.last_name||'';form.elements.email.value=session.user.email||'';}
-form.addEventListener('submit',async event=>{event.preventDefault();const button=form.querySelector('[type=submit]'),values=Object.fromEntries(new FormData(form));if(!values.slotId)return status.textContent='Choisissez un créneau.';button.disabled=true;button.setAttribute('aria-busy','true');status.textContent='Confirmation en cours…';try{const {data:{session}}=await supabase.auth.getSession(),params=new URLSearchParams(location.search),response=await fetch('/api/book-coaching-call',{method:'POST',headers:{'Content-Type':'application/json',...(session?{Authorization:`Bearer ${session.access_token}`}:{})},body:JSON.stringify({...values,stage:params.get('etape')==='post'?'post_purchase':'pre_purchase'})}),payload=await response.json();if(!response.ok)throw new Error('Ce créneau n’est plus disponible. Choisissez-en un autre.');const requestedReturn=params.get('retour')||'/',returnTo=requestedReturn.startsWith('/')&&!requestedReturn.startsWith('//')?requestedReturn:'/';form.innerHTML=`<div class="booking-success"><span>✓</span><small>RENDEZ-VOUS CONFIRMÉ</small><h2>${esc(fmt(payload.startsAt))}</h2><p>Une confirmation vient d’être envoyée par courrier électronique. L’équipe STOA a également été prévenue.</p><a class="button dark" href="${esc(returnTo)}">Continuer <span>→</span></a></div>`;}catch(error){status.textContent=error.message||'La réservation n’a pas pu être confirmée.';status.dataset.tone='error';button.disabled=false;button.removeAttribute('aria-busy');}});
-load();prefill();
+let captchaToken='',session=null;
+
+async function setupCaptcha(siteKey){
+  if(session)return;
+  if(!siteKey){captchaNode.hidden=false;captchaNode.innerHTML='<p>Pour sécuriser les créneaux, <a href="/#connexion">connectez-vous ou créez votre compte STOA</a> avant de réserver.</p>';form.querySelector('[type=submit]').disabled=true;return;}
+  captchaNode.hidden=false;
+  await new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;script.onload=resolve;script.onerror=reject;document.head.append(script);
+  });
+  window.turnstile.render(captchaNode,{sitekey:siteKey,theme:document.documentElement.classList.contains('stoa-dark')?'dark':'light',callback:token=>{captchaToken=token;},'expired-callback':()=>{captchaToken='';}});
+}
+
+async function load(){
+  try{
+    const response=await fetch('/api/book-coaching-call'),payload=await response.json();if(!response.ok)throw new Error();
+    const groups=new Map();
+    for(const slot of payload.slots||[]){const key=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long'}).format(new Date(slot.starts_at));if(!groups.has(key))groups.set(key,[]);groups.get(key).push(slot);}
+    slotsNode.innerHTML=groups.size?[...groups].map(([day,rows])=>`<fieldset><legend>${esc(day)}</legend><div>${rows.map(slot=>`<label><input type="radio" name="slotId" value="${slot.id}" required><span>${new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit'}).format(new Date(slot.starts_at))}</span></label>`).join('')}</div></fieldset>`).join(''):'<p>Aucune disponibilité publiée pour le moment. Revenez prochainement.</p>';
+    await setupCaptcha(payload.turnstileSiteKey);
+  }catch{slotsNode.innerHTML='<p>Les disponibilités ne peuvent pas être chargées. Actualisez la page.</p>';}
+}
+
+async function prefill(){
+  session=(await supabase.auth.getSession()).data.session;if(!session)return;
+  const {data}=await supabase.from('profiles').select('first_name,last_name').eq('id',session.user.id).maybeSingle();
+  form.elements.firstName.value=data?.first_name||'';form.elements.lastName.value=data?.last_name||'';form.elements.email.value=session.user.email||'';
+}
+
+form.addEventListener('submit',async event=>{
+  event.preventDefault();const button=form.querySelector('[type=submit]'),values=Object.fromEntries(new FormData(form));
+  if(!values.slotId)return status.textContent='Choisissez un créneau.';
+  if(!session&&!captchaToken)return status.textContent='Validez la protection anti-robot.';
+  button.disabled=true;button.setAttribute('aria-busy','true');status.textContent='Confirmation en cours…';
+  try{
+    const params=new URLSearchParams(location.search),response=await fetch('/api/book-coaching-call',{method:'POST',headers:{'Content-Type':'application/json',...(session?{Authorization:`Bearer ${session.access_token}`}:{})},body:JSON.stringify({...values,captchaToken,stage:params.get('etape')==='post'?'post_purchase':'pre_purchase'})}),payload=await response.json();
+    if(!response.ok)throw new Error(payload.error||'La réservation n’a pas pu être confirmée.');
+    const requestedReturn=params.get('retour')||'/',returnTo=requestedReturn.startsWith('/')&&!requestedReturn.startsWith('//')?requestedReturn:'/';
+    form.innerHTML=`<div class="booking-success"><span>✓</span><small>RENDEZ-VOUS CONFIRMÉ</small><h2>${esc(fmt(payload.startsAt))}</h2><p>Une confirmation vient d’être envoyée par courrier électronique. L’équipe STOA a également été prévenue.</p><a class="button dark" href="${esc(returnTo)}">Continuer <span>→</span></a></div>`;
+  }catch(error){
+    status.textContent=error.message||'La réservation n’a pas pu être confirmée.';status.dataset.tone='error';button.disabled=false;button.removeAttribute('aria-busy');
+    if(window.turnstile&&!session){window.turnstile.reset();captchaToken='';}
+  }
+});
+
+await prefill();load();

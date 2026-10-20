@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
-const [access,billing,booking,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,questionnaire,styles,posts]=await Promise.all([
+const [access,billing,booking,hardening,webhook,checkout,emailApi,auth,bookingPage,bookingJs,coachPage,coachJs,questionnaire,styles,posts]=await Promise.all([
   read('../supabase/migrations/202610040049_access_and_data_integrity.sql'),
   read('../supabase/migrations/202610040050_monotone_billing_and_email_jobs.sql'),
   read('../supabase/migrations/202610040051_coaching_call_booking.sql'),
+  read('../supabase/migrations/202610200076_secure_booking_checkout_and_performance.sql'),
   read('../supabase/functions/stripe-webhook/index.ts'),
   read('../supabase/functions/create-checkout/index.ts'),
   read('../api/email-center-send.mjs'),
@@ -39,12 +40,16 @@ test('Stripe events are monotone and only configured prices are accepted',()=>{
   assert.match(billing,/excluded\.last_stripe_event_created_at,excluded\.last_stripe_event_priority,excluded\.last_stripe_event_id/);
   assert.match(webhook,/UNRECOGNIZED_STRIPE_PRICE/);
   assert.match(checkout,/subscriptions\.list/);
+  assert.match(checkout,/claim_checkout_session/);
+  assert.match(hardening,/primary key\(user_id,offer\)/);
 });
 
 test('Email campaigns use an atomic lease and skip delivered recipients',()=>{
   assert.match(billing,/claim_email_campaign/);
   assert.match(billing,/send_lease_expires_at/);
-  assert.match(emailApi,/status=eq\.sent/);
+  assert.match(emailApi,/delivery\?\.status!==['"]sent['"]/);
+  assert.match(emailApi,/attempt_count/);
+  assert.match(emailApi,/hasMore/);
   assert.match(emailApi,/multipart\/alternative/);
 });
 
@@ -63,7 +68,13 @@ test('Coaching booking is atomic, announced by email and mandatory for checkout'
   assert.match(checkout,/shipping_address_collection/);
   assert.match(bookingPage,/Adresse de livraison/);
   assert.match(bookingJs,/api\/book-coaching-call/);
+  assert.match(hardening,/consume_booking_rate_limit/);
+  assert.match(hardening,/pending_confirmation/);
+  assert.match(hardening,/confirm_coaching_booking_notifications/);
+  assert.match(emailApi,/slice\(0,8\)/);
+  assert.match(bookingJs,/turnstile/);
   assert.match(coachJs,/coaching_availability_slots/);
+  assert.match(coachJs,/create_recurring_coaching_availability/);
   assert.match(coachPage,/coach-calendar-grid/);
   assert.match(coachPage,/data-calendar-preset="morning"/);
   assert.match(coachJs,/toggleAvailability/);

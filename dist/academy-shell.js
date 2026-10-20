@@ -54,7 +54,7 @@ updateCommunityBadge(window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__||{});window.a
 const breadcrumb=document.createElement('nav');breadcrumb.className='academy-breadcrumbs';breadcrumb.setAttribute('aria-label','Fil d’Ariane');
 const main=document.querySelector('main');if(main)main.prepend(breadcrumb);
 
-let sessionUser,profile,catalog=[],learningStates=[],searchSections=[];
+let sessionUser,profile,catalog=[],learningStates=[];
 const roman=['I','II','III','IV','V'];
 const renderBreadcrumb=()=>{
   const chapter=catalog[chapterParam-1],pillar=chapter?.pillar;
@@ -86,25 +86,20 @@ const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.di
 async function hydrate(){
   sessionUser=(await supabase.auth.getSession()).data.session?.user;
   if(!sessionUser){location.replace('/#connexion');return;}
-  const {data:academyAccess,error:accessError}=await supabase.rpc('has_active_academy_access',{p_user_id:sessionUser.id});
-  if(accessError||!academyAccess){
+  const [{data:context,error:accessError},snapshot]=await Promise.all([supabase.rpc('get_academy_shell_context'),loadMemberSnapshot(sessionUser.id)]);
+  if(accessError||!context){
     location.replace('/#offres');
     return;
   }
   document.documentElement.classList.remove('academy-access-pending');
-  const contentSnapshot=academyAccess?loadMemberSnapshot(sessionUser.id):Promise.resolve({chapters:[],states:[]});
-  const [{data:profileRow},snapshot,{data:coachingRows},{data:isStaff}]=await Promise.all([
-    supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role,theme_preference,theme_updated_at').eq('id',sessionUser.id).maybeSingle(),
-    contentSnapshot,
-    supabase.rpc('get_my_coaching_access'),supabase.rpc('is_coaching_staff')
-  ]);
+  const profileRow=context.profile||{},isStaff=Boolean(context.is_staff);
   const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(profileRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(profileRow?.theme_preference||localTheme||'light');
   profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(profileRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',profileRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==profileRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
   catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;
-  if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#offres">Rejoindre l’Académie →</a>';
+  renderTree();
   renderBreadcrumb();publishState();
   const name=[profile?.first_name,profile?.last_name].filter(Boolean).join(' ')||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
-  const coachingLink=shell.querySelector('[data-coaching-link]'),hasCoaching=Boolean(coachingRows?.length);
+  const coachingLink=shell.querySelector('[data-coaching-link]'),hasCoaching=Boolean(context.has_coaching);
   coachingLink.hidden=false;
   coachingLink.href=hasCoaching?'/coaching':'/decouvrir-coaching';
   coachingLink.querySelector('span').textContent=hasCoaching?'Mon Coaching':'Coaching';
@@ -114,8 +109,7 @@ async function hydrate(){
   const avatar=shell.querySelector('.academy-profile-avatar'),url=profile?.avatar_url||sessionUser.user_metadata?.avatar_url||sessionUser.user_metadata?.picture||'';avatar.textContent=url?'':name[0].toUpperCase();avatar.style.backgroundImage=url?`url("${url.replaceAll('"','%22')}")`:'';avatar.classList.toggle('has-image',Boolean(url));
   if(path==='/module')setupReadingState();
   setupGlobalSearch();
-  supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index').then(({data})=>{searchSections=data||[];});
-  if(academyAccess){import('./academy-onboarding.js');import('./content-protection.js');}
+  import('./academy-onboarding.js');import('./content-protection.js');
 }
 
 function setupGlobalSearch(){
@@ -123,8 +117,6 @@ function setupGlobalSearch(){
   if(form.dataset.searchReady)return;form.dataset.searchReady='true';
   const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=(value,tokens)=>{const haystack=normalize(value);return tokens.every(token=>haystack.includes(token));};
-  const plainText=value=>{const node=document.createElement('div');node.innerHTML=String(value||'');return(node.textContent||'').replace(/\s+/g,' ').trim();};
-  const excerpt=(value,query,tokens)=>{const text=plainText(value),normalized=normalize(text);let index=normalized.indexOf(query);if(index<0)index=Math.min(...tokens.map(token=>normalized.indexOf(token)).filter(position=>position>=0));if(!Number.isFinite(index))index=0;const start=Math.max(0,index-58),end=Math.min(text.length,index+query.length+92);return`${start?'…':''}${text.slice(start,end).trim()}${end<text.length?'…':''}`;};
   const destinations=[
     {title:'Carte des producteurs',meta:'Outil · Lait cru et viande au pâturage',href:'/carte',keywords:'lait cru viande paturage pâturage boeuf bœuf herbe carte ferme producteur elevage élevage fromagerie autour de moi geolocalisation adresse'},
     {title:'Scanner un produit',meta:'Outil · Code-barres et lecture nutritionnelle',href:'/scanner',keywords:'scanner scan produit code barre qr code nutrition note ingredients aliment'},
@@ -145,20 +137,18 @@ function setupGlobalSearch(){
   ];
   const score=(item,query,tokens)=>{const title=normalize(item.title),haystack=normalize(`${item.title} ${item.meta} ${item.keywords||''}`);return(title===query?120:title.startsWith(query)?95:title.includes(query)?80:0)+tokens.reduce((total,token)=>total+(title.includes(token)?18:haystack.includes(token)?5:0),0);};
   const renderGroup=(label,items)=>items.length?`<span class="academy-search-group">${label}</span>${items.map(item=>`<a href="${item.href}"><strong>${esc(item.title)}</strong><span>${esc(item.meta)}</span>${item.excerpt?`<small>${esc(item.excerpt)}</small>`:''}</a>`).join('')}`:'';
-  const search=()=>{
+  let timer=0,requestId=0;
+  const search=async()=>{
     const raw=input.value.trim(),query=normalize(raw),tokens=query.split(/\s+/).filter(Boolean);
-    if(query.length<2){results.hidden=true;results.replaceChildren();return;}
+    if(query.length<2){requestId++;results.hidden=true;results.replaceChildren();return;}
     const quickMatches=destinations.filter(item=>(!item.adminOnly||profile?.role==='admin')&&matches(`${item.title} ${item.meta} ${item.keywords}`,tokens)).map(item=>({...item,href:item.coachingDestination?(shell.querySelector('[data-coaching-link]')?.getAttribute('href')||item.href):item.href,score:score(item,query,tokens)})).sort((a,b)=>b.score-a.score).slice(0,4);
-    const lessonMatches=catalog.flatMap(chapter=>(chapter.modules||[]).map(module=>{
-      const sections=searchSections.filter(section=>section.module_id===module.id),base=`${module.title} ${module.description||''} ${chapter.title} ${chapter.description||''} ${chapter.pillar?.title||''}`,matchingSection=sections.find(section=>matches(`${section.title} ${plainText(section.content)}`,tokens)),fullText=`${base} ${sections.map(section=>`${section.title} ${plainText(section.content)}`).join(' ')}`;
-      if(!matches(fullText,tokens))return null;
-      const source=matchingSection?.content||module.description||'',href=`/module?chapitre=${chapter.order_index+1}&module=${module.order_index+1}${matchingSection?`#lesson-${matchingSection.id}`:''}`;
-      return{title:module.title,meta:`Leçon · ${chapter.pillar?.title||'Académie'} · ${chapter.title}`,href,excerpt:source?excerpt(source,query,tokens):'',score:score({title:module.title,meta:base},query,tokens)};
-    })).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,6);
-    results.innerHTML=quickMatches.length||lessonMatches.length?`${renderGroup('Navigation rapide',quickMatches)}${renderGroup('Dans les leçons',lessonMatches)}`:`<p class="academy-search-empty">Aucun résultat pour « ${esc(raw)} ».</p>`;
+    results.innerHTML=quickMatches.length?renderGroup('Navigation rapide',quickMatches):'<p class="academy-search-empty">Recherche dans les leçons…</p>';results.hidden=false;
+    const current=++requestId,{data,error}=await supabase.rpc('search_academy_content',{p_query:raw,p_limit:6});if(current!==requestId||input.value.trim()!==raw)return;
+    const lessonMatches=(data||[]).map(row=>({title:row.module_title,meta:`Leçon · ${row.pillar_title||'Académie'} · ${row.chapter_title}`,href:`/module?chapitre=${Number(row.chapter_order)+1}&module=${Number(row.module_order)+1}${row.section_id?`#lesson-${row.section_id}`:''}`,excerpt:String(row.excerpt||'').replace(/\s+/g,' ').trim()}));
+    results.innerHTML=quickMatches.length||lessonMatches.length?`${renderGroup('Navigation rapide',quickMatches)}${renderGroup('Dans les leçons',lessonMatches)}`:`<p class="academy-search-empty">${error?'La recherche est momentanément indisponible.':`Aucun résultat pour « ${esc(raw)} ».`}</p>`;
     results.hidden=false;
   };
-  input.addEventListener('input',search);
+  input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(search,220);});
   form.addEventListener('submit',event=>{event.preventDefault();const first=results.querySelector('a');if(first)location.href=first.href;else search();});
   input.addEventListener('keydown',event=>{if(event.key==='Escape'){input.value='';results.hidden=true;input.blur();}});
   document.addEventListener('click',event=>{if(!form.contains(event.target))results.hidden=true;});
