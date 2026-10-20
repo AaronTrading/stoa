@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { loadCatalog } from './member-data.js';
 import { academyOffer,coachingOffer,formatAcademyPrice,formatCommercialPrice } from './commercial-config.js';
 
 document.querySelectorAll('[data-coaching-duration]').forEach(node=>node.textContent=`${coachingOffer.durationMonths} mois`);
@@ -29,25 +30,26 @@ const makeChapter = (pillarId,slug,name,moduleTitles,description=fallbackDescrip
 
 let chapters = [
   makeChapter('nourrir','alimentation','Alimentation primale',['Les Fondamentaux de l’Assiette Primale','Les Piliers de Votre Nutrition','Les Aliments à Éliminer','Structurer vos Repas']),
-  makeChapter('nourrir','courses','Approvisionnement et Cuisine',['Approvisionnement et Préparation','Préparer ses courses','Lire et choisir','Construire son répertoire','Cuisiner avec souplesse']),
+  makeChapter('nourrir','courses','Approvisionnement et Cuisine',['Fermentation et levain','Où faire ses courses ?','Comment bien lire et choisir','Idées de recettes']),
   makeChapter('nourrir','hydratation','Hydratation',['Comprendre l’hydratation','Choisir son eau','Créer ses repères']),
-  makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression','Prendre du muscle','Perdre du poids']),
+  makeChapter('corps','sport','Mouvement',['Choisir sa pratique','Construire sa progression','Prendre du muscle','Perdre du poids','Relâchement myofascial']),
   makeChapter('corps','sommeil','Sommeil',['Comprendre son sommeil','Construire son rituel du soir','Réveil et matin']),
-  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Maladies auto-immunes','Les gestes essentiels','Un environnement sain']),
-  makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Corriger ses problèmes de peau']),
+  makeChapter('corps','sante','Santé & Hygiène',['Cultiver sa littératie en santé','Maladies chroniques','Maladies auto-immunes','Les gestes essentiels','Un environnement sain','Santé sexuelle']),
+  makeChapter('corps','hygiene','Peau & Apparence',['Sentir bon','Se maquiller','Avec quoi se laver et nettoyer sa peau','Corriger ses problèmes de peau','Choisir ses vêtements']),
   makeChapter('proteger','toxines','Expositions',['Comprendre l’exposition','alimentation','environnement','produits ménagers','pollution','cosmétiques','matériaux','Champs électromagnétiques (EMF)']),
   makeChapter('proteger','autonomie','Sécurité',['Sécurité personnelle','Sécurité des proches','Sécurité du foyer et des biens'],'Éviter le danger, protéger les siens et faire de son foyer un refuge.'),
-  makeChapter('proteger','autonomie','Résilience',['Retrouver les gestes humains','Camper pour de vrai','Marcher et s’orienter','Feu, eau et abri','Chasser, pêcher et cueillir','Construire de ses mains'],'Redevenir capable dehors, avec son corps, ses mains et ce que le terrain offre.'),
+  makeChapter('proteger','autonomie','Résilience',['Retrouver les gestes humains','Camper pour de vrai','Marcher et s’orienter','Feu, eau et abri','Chasser, pêcher et cueillir','Construire de ses mains','Protection anti-insectes'],'Redevenir capable dehors, avec son corps, ses mains et ce que le terrain offre.'),
   makeChapter('vivre','spiritualite','Fondations philosophiques',['Douter pour reconstruire','L’homme de la nature avant celui de la société']),
   makeChapter('vivre','autonomie','Liberté & responsabilité',['Ne dépendre de personne','Être bon sans devenir faible']),
   makeChapter('vivre','relations','Autrui, communauté & société',['Des alliés, pas des rivaux','Aimer sans tenir les comptes','Choisir ses liens','Entretenir une relation','Devenir quelqu’un de meilleur']),
   makeChapter('vivre','spiritualite','Désir, bonheur & souffrance',['La mécanique du désir','Construire une vie stable et libre']),
   makeChapter('vivre','longevite','Temps, mort & transmission',['Ne pas attendre la mort','Vivre de manière à ne pas regretter']),
-  makeChapter('se-construire','autonomie','Autonomie',['Décider avec méthode','Apprendre par soi-même']),
+  makeChapter('se-construire','autonomie','Autonomie',['Décider avec méthode','Apprendre par soi-même','Intelligence artificielle']),
   makeChapter('se-construire','productivite','Organisation',['Clarifier ses priorités','Protéger son attention']),
-  makeChapter('se-construire','argent','Ressources',['Lire ses dépenses','Construire un budget utile']),
-  makeChapter('se-construire','spiritualite','Sens',['Nommer ce qui compte','Créer un temps de présence']),
-  makeChapter('se-construire','longevite','Longévité',['Le temps comme allié','Construire pour durer']),
+  makeChapter('se-construire','argent','Ressources',['Documentaires','Produits','Livres']),
+  makeChapter('se-construire','relations','Relations',['Famille','Amitié','Amour']),
+  makeChapter('se-construire','autonomie','Parcours Anti addiction',['Comprendre la boucle','Couper les accès','Traverser le manque','Reconstruire']),
+  makeChapter('se-construire','longevite','Longévité',['Nos ancêtres','Durer dans le temps','Routine']),
 ];
 let allModules = [];
 const rebuildModuleIndex = () => {
@@ -60,14 +62,15 @@ const rebuildModuleIndex = () => {
 rebuildModuleIndex();
 
 const hydrateCatalog = async () => {
-  const { data, error } = await supabase.from('chapters').select('id,title,category,description,order_index,pillar_id,visual_key,is_visible,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible,cover_image_url)').eq('is_visible',true).order('order_index');
-  if (error || !data?.length) return;
+  let data;
+  try { data=(await loadCatalog()).chapters; } catch { return; }
+  if (!data?.length) return;
   const dbPillars=[...new Map(data.filter(item=>item.pillar).map(item=>[item.pillar.id,item.pillar])).values()].sort((a,b)=>a.order_index-b.order_index);
   if(dbPillars.length) pillars=dbPillars.map(item=>({id:item.id,name:item.title,orderIndex:item.order_index}));
   chapters=data.map(dbChapter=>({
     id:dbChapter.id,pillarId:dbChapter.pillar_id,slug:dbChapter.visual_key||'autonomie',icon:icons[dbChapter.visual_key]||'◇',
     name:dbChapter.title||dbChapter.category,description:dbChapter.description||'',
-    modules:(dbChapter.modules||[]).filter(module=>module.is_visible!==false).sort((a,b)=>a.order_index-b.order_index).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1,coverImage:module.cover_image_url||''}))
+    modules:(dbChapter.lessons||[]).map(module=>({id:module.id,title:module.title,description:module.description||'',duration:module.duration_minutes||1,coverImage:module.cover_image_url||''}))
   }));
   rebuildModuleIndex();
   window.dispatchEvent(new CustomEvent('stoa:catalog-ready'));
@@ -237,7 +240,7 @@ if (document.querySelector('#lesson-content')) {
   document.querySelector('#lesson-chapter').innerHTML=`<span class="eyebrow">${lessonPillar?.name||''} · CHAPITRE ${number(chapter.pillarChapterIndex+1)}</span><h2>${chapter.name}</h2>`;
   const nav=document.querySelector('#lesson-nav');
   const renderNav=()=>{nav.innerHTML=chapter.modules.map((item,index)=>`<a href="/module?chapitre=${chapterIndex+1}&module=${index+1}" ${index===moduleIndex?'aria-current="page"':''}><span>${completed.has(`${chapterIndex+1}-${index+1}`)?'✓':number(index+1)}</span>${item.title}</a>`).join('');};renderNav();
-  document.querySelector('#lesson-copy').innerHTML=`<p>Cette leçon pose des repères clairs pour observer votre situation, comprendre les notions essentielles et choisir une action adaptée à votre quotidien.</p><p>Le contenu est servi depuis Supabase sous forme de sections ordonnées.</p>`;
+  document.querySelector('#lesson-copy').innerHTML='<div class="lesson-content-loading" aria-label="Chargement de la leçon"></div>';
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
   const normalizeQuiz=(value)=>{
@@ -309,20 +312,15 @@ if (document.querySelector('#lesson-content')) {
     return `<p>${inlineMarkup(trimmed).replace(/^([^:]{2,90})\s*:\s*/, '<strong>$1 :</strong> ').replaceAll('\n','<br>')}</p>`;
   };
   const loadLessonContent=async()=>{
-    const {data:dbChapter}=await supabase.from('chapters').select('id,title,category').eq('is_visible',true).eq('order_index',chapterIndex).maybeSingle();
-    if(!dbChapter)return;
-    const {data:dbModule}=await supabase.from('modules').select('id,title,description,duration_minutes,cover_image_url').eq('chapter_id',dbChapter.id).eq('is_visible',true).eq('order_index',moduleIndex).maybeSingle();
-    if(!dbModule)return;
-    const {data:sections}=await supabase.from('subchapters').select('id,title,content,order_index').eq('module_id',dbModule.id).order('order_index');
+    if(!module?.id)return;
+    const {data:sections}=await supabase.from('subchapters').select('id,title,content,order_index,images:subchapter_images(image_url,alt_text,caption,position_index,order_index)').eq('module_id',module.id).order('order_index');
     if(!sections?.length)return;
-    const {data:imageRows}=await supabase.from('subchapter_images').select('subchapter_id,image_url,alt_text,caption,position_index,order_index').in('subchapter_id',sections.map(section=>section.id)).order('order_index');
-    const images=imageRows||[];
-    document.title=`${dbModule.title} — STOA`; document.querySelector('#lesson-title').textContent=dbModule.title;
-    artwork.src=dbModule.cover_image_url||imagePath(chapter); artwork.alt=`Illustration de la leçon ${dbModule.title}`;
+    document.title=`${module.title} — STOA`; document.querySelector('#lesson-title').textContent=module.title;
+    artwork.src=module.coverImage||imagePath(chapter); artwork.alt=`Illustration de la leçon ${module.title}`;
     document.querySelector('#lesson-copy').innerHTML=sections.map((section,sectionIndex)=>{
       const paragraphs=section.content.split(/\n\s*\n/).filter(Boolean);
       const storedAsHtml=storedMarkupPattern.test(section.content);
-      const sectionImages=storedAsHtml?[]:images.filter(image=>image.subchapter_id===section.id);
+      const sectionImages=storedAsHtml?[]:[...(section.images||[])].sort((a,b)=>(a.order_index||0)-(b.order_index||0));
       const imageMarkup=(image)=>`<figure class="lesson-inline-image"><img src="${escapeContent(image.image_url)}" alt="${escapeContent(image.alt_text||'')}" loading="lazy">${image.caption?`<figcaption>${escapeContent(image.caption)}</figcaption>`:''}</figure>`;
       const leading=sectionImages.filter(image=>image.position_index===0).map(imageMarkup).join('');
       const body=storedAsHtml?sanitizeStoredHtml(section.content):paragraphs.map((paragraph,index)=>{
@@ -333,7 +331,7 @@ if (document.querySelector('#lesson-content')) {
       const heading=section.title==='Cours'?'':`<h2 data-subchapter-title>${escapeContent(section.title)}</h2>`;
       return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
-    window.__STOA_LESSON_DATA__={moduleId:dbModule.id,coverImageUrl:dbModule.cover_image_url||'',sections:sections.map(section=>({id:section.id,title:section.title}))};
+    window.__STOA_LESSON_DATA__={moduleId:module.id,coverImageUrl:module.coverImage||'',sections:sections.map(section=>({id:section.id,title:section.title}))};
     renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };

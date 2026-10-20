@@ -7,7 +7,7 @@ export const lessonUrl = (chapter, lesson, resume = false) => `/module?chapitre=
 export const loadCatalog = async ({ refresh = false } = {}) => {
   if (!catalogRequest || refresh) {
     catalogRequest = supabase.from('chapters')
-      .select('id,title,description,order_index,pillar_id,visual_key,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible)')
+      .select('id,title,description,order_index,pillar_id,visual_key,pillar:pillars(id,title,order_index),modules(id,title,description,duration_minutes,order_index,is_visible,cover_image_url)')
       .eq('is_visible', true).order('order_index')
       .then(({ data, error }) => {
         if (error) throw error;

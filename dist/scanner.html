@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="academy-access-pending">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -12,16 +12,13 @@
   <link rel="stylesheet" href="styles.css">
   <script src="env.js"></script>
   <script type="module" src="auth.js"></script>
-  <script type="module">if(new URLSearchParams(location.search).has('membre')){import('./community-notifications.js');import('./academy-shell.js');}</script>
+  <script>if(new URLSearchParams(location.search).has('membre'))location.replace('/scanner')</script>
+  <script type="module" src="community-notifications.js"></script>
+  <script type="module" src="academy-shell.js"></script>
   <script type="module" src="scanner.js"></script>
 </head>
 <body class="tool-page scanner-page">
   <a class="skip" href="#main">Aller au contenu</a>
-  <header class="site-header">
-    <a class="logo" href="/" aria-label="STOA, accueil"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a>
-    <nav class="pill-nav" aria-label="Navigation principale"><a href="/">Accueil</a><a class="active" href="/scanner" aria-current="page">Scanner</a><a href="/boutique">Boutique</a></nav>
-    <a class="login-link" data-auth-link href="/academie">Espace membre <span>↗</span></a>
-  </header>
   <main class="tool-main" id="main">
     <header class="tool-heading">
       <div><span class="eyebrow">OUTIL STOA</span><h1>Lire l’étiquette.<br><span>Comprendre le produit.</span></h1></div>
@@ -49,6 +46,5 @@
     </section>
     <p class="tool-source">Données produit : Open Food Facts. La note STOA est un repère pédagogique calculé automatiquement et ne remplace pas un avis médical.</p>
   </main>
-  <footer><a class="logo" href="/"><img class="site-logo-image" src="/assets/branding/fondtransparent.png" alt="STOA"></a><p>Le savoir comme fondation. La santé comme liberté.</p><span>© <span data-year></span> STOA</span></footer>
 </body>
 </html>

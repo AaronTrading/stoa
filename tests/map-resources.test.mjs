@@ -25,4 +25,8 @@ test('la carte privée réunit le lait cru et les producteurs de viande au pâtu
   assert.match(page, /rel="canonical" href="https:\/\/stoa-coaching\.fr\/carte"/);
   assert.doesNotMatch(page, /<header class="site-header">/);
   assert.doesNotMatch(scanner, /href="\/carte"/);
+  assert.match(scanner, /class="academy-access-pending"/);
+  assert.match(scanner, /src="academy-shell\.js"/);
+  assert.match(scanner, /location\.replace\('\/scanner'\)/);
+  assert.doesNotMatch(scanner, /<header class="site-header">/);
 });

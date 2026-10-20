@@ -12,7 +12,7 @@ const sentenceCase=(value='')=>{const text=String(value).trim().toLocaleLowerCas
 const path=location.pathname.replace(/\.html$/,'')||'/';
 const chapterParam=Math.max(1,Number(new URLSearchParams(location.search).get('chapitre'))||1);
 const moduleParam=Math.max(1,Number(new URLSearchParams(location.search).get('module'))||1);
-const mobilePageLabel=path==='/module'?'Leçon':path==='/parcours'?'Mon parcours':path==='/posts'||path==='/communaute'?'Communauté':path==='/email-center'?'Email Center':path==='/coaching-coach'?'Espace coach':path==='/decouvrir-coaching'?'Coaching':path.startsWith('/coaching')?'Mon Coaching':path==='/profil'?'Profil':path==='/boutique'?'Boutique':path==='/carte'?'Carte':path==='/scanner'?'Scanner':path==='/liens'?'Liens':path==='/academie'?'Académie':'Accueil';
+const mobilePageLabel=path==='/module'?'Leçon':path==='/parcours'?'Mon parcours':path==='/posts'||path==='/communaute'?'Communauté':path==='/email-center'?'Email Center':path==='/coaching-coach'?'Espace coach':path==='/decouvrir-coaching'?'Coaching':path.startsWith('/coaching')?'Mon Coaching':path==='/profil'?'Profil':path==='/boutique'?'Boutique':path==='/carte'?'Carte':path==='/scanner'?'Scanner':path==='/academie'?'Académie':'Accueil';
 const primary=[
   ['/accueil','Accueil','home','home'],['/academie','Académie','academy','academy']
 ];
@@ -20,7 +20,7 @@ const primaryAfterCoaching=[['/parcours','Mon parcours','route','journey'],['/po
 
 const shell=document.createElement('div');
 shell.className='academy-shell-ui';
-shell.innerHTML=`<button class="academy-mobile-menu" type="button" aria-label="Ouvrir le menu Académie" aria-expanded="false">${svg('menu')}<img src="/assets/branding/fondtransparent.png" alt="STOA"><span>${mobilePageLabel}</span></button><div class="academy-sidebar-backdrop"></div><aside class="academy-sidebar" aria-label="Navigation Académie"><div class="academy-sidebar-brand"><a href="/" aria-label="Retourner au site STOA"><img class="academy-logo-full" src="/assets/branding/fondtransparent.png" alt="STOA"><img class="academy-logo-mark" src="/assets/branding/stoa-mark-400.png" alt="" aria-hidden="true"></a><div class="academy-sidebar-controls"><button class="academy-theme-toggle" type="button" aria-label="Activer le thème sombre" aria-pressed="false">${svg('moon')}</button><button class="academy-sidebar-close" type="button" aria-label="Fermer le menu">${svg('close')}</button></div></div><form class="academy-global-search" role="search"><label class="sr-only" for="academy-global-search-input">Rechercher dans STOA</label>${svg('search')}<input id="academy-global-search-input" type="search" autocomplete="off" placeholder="Rechercher dans STOA…"><div class="academy-search-results" hidden></div></form><nav class="academy-primary-nav">${primary.map(([href,label,iconName,key])=>`<a href="${href}" data-nav="${key}">${svg(iconName)}<span>${label}</span></a>`).join('')}<a href="/decouvrir-coaching" data-nav="coaching" data-coaching-link hidden>${svg('coach')}<span>Coaching</span></a>${primaryAfterCoaching.map(([href,label,iconName,key])=>`<a href="${href}" data-nav="${key}">${svg(iconName)}<span>${label}</span></a>`).join('')}<a href="/coaching-coach" data-nav="coach" data-coach-link hidden>${svg('route')}<span>Espace coach</span></a><a href="/email-center" data-nav="email" data-email-center-link hidden>${svg('mail')}<span>Email Center</span></a></nav><section class="academy-tree"><div class="academy-tree-title"><span>PARCOURS</span><button type="button" data-tree-toggle aria-label="Replier les piliers">−</button></div><div data-pillar-tree><div class="academy-tree-loading"></div><div class="academy-tree-loading short"></div></div></section><section class="academy-resources" aria-label="Ressources"><div class="academy-resources-title">RESSOURCES</div><nav><a href="/carte">${svg('map')}<span>Carte</span></a><a href="/scanner?membre=1">${svg('scanner')}<span>Scanner</span></a><a href="/liens">${svg('link')}<span>Liens</span></a></nav></section><a class="academy-shop-link" href="/boutique">${svg('shop')}<span>Boutique</span>${svg('chevron')}</a><a class="academy-profile-compact" href="/profil"><span class="academy-profile-avatar" data-auth-avatar>S</span><span><strong data-shell-profile-name>Votre profil</strong><small data-shell-profile-meta>Profil & paramètres</small></span>${svg('chevron')}</a><button class="academy-collapse" type="button" aria-label="Réduire la barre latérale">${svg('collapse')}<span>Réduire</span></button></aside>`;
+shell.innerHTML=`<button class="academy-mobile-menu" type="button" aria-label="Ouvrir le menu Académie" aria-expanded="false">${svg('menu')}<img src="/assets/branding/fondtransparent.png" alt="STOA"><span>${mobilePageLabel}</span></button><div class="academy-sidebar-backdrop"></div><aside class="academy-sidebar" aria-label="Navigation Académie"><div class="academy-sidebar-brand"><a href="/" aria-label="Retourner au site STOA"><img class="academy-logo-full" src="/assets/branding/fondtransparent.png" alt="STOA"><img class="academy-logo-mark" src="/assets/branding/stoa-mark-400.png" alt="" aria-hidden="true"></a><div class="academy-sidebar-controls"><button class="academy-theme-toggle" type="button" aria-label="Activer le thème sombre" aria-pressed="false">${svg('moon')}</button><button class="academy-sidebar-close" type="button" aria-label="Fermer le menu">${svg('close')}</button></div></div><form class="academy-global-search" role="search"><label class="sr-only" for="academy-global-search-input">Rechercher dans STOA</label>${svg('search')}<input id="academy-global-search-input" type="search" autocomplete="off" placeholder="Rechercher dans STOA…"><div class="academy-search-results" hidden></div></form><nav class="academy-primary-nav">${primary.map(([href,label,iconName,key])=>`<a href="${href}" data-nav="${key}">${svg(iconName)}<span>${label}</span></a>`).join('')}<a href="/decouvrir-coaching" data-nav="coaching" data-coaching-link hidden>${svg('coach')}<span>Coaching</span></a>${primaryAfterCoaching.map(([href,label,iconName,key])=>`<a href="${href}" data-nav="${key}">${svg(iconName)}<span>${label}</span></a>`).join('')}<a href="/coaching-coach" data-nav="coach" data-coach-link hidden>${svg('route')}<span>Espace coach</span></a><a href="/email-center" data-nav="email" data-email-center-link hidden>${svg('mail')}<span>Email Center</span></a></nav><section class="academy-tree"><div class="academy-tree-title"><span>PARCOURS</span><button type="button" data-tree-toggle aria-label="Replier les piliers">−</button></div><div data-pillar-tree><div class="academy-tree-loading"></div><div class="academy-tree-loading short"></div></div></section><section class="academy-resources" aria-label="Ressources"><div class="academy-resources-title">RESSOURCES</div><nav><a href="/carte">${svg('map')}<span>Carte</span></a><a href="/scanner">${svg('scanner')}<span>Scanner</span></a></nav></section><a class="academy-shop-link" href="/boutique">${svg('shop')}<span>Boutique</span>${svg('chevron')}</a><a class="academy-profile-compact" href="/profil"><span class="academy-profile-avatar" data-auth-avatar>S</span><span><strong data-shell-profile-name>Votre profil</strong><small data-shell-profile-meta>Profil & paramètres</small></span>${svg('chevron')}</a><button class="academy-collapse" type="button" aria-label="Réduire la barre latérale">${svg('collapse')}<span>Réduire</span></button></aside>`;
 body.prepend(shell);
 body.classList.add('academy-experience');
 
@@ -47,7 +47,7 @@ const activeKey=path==='/posts'||path==='/communaute'?'community':path==='/email
 shell.querySelector(`[data-nav="${activeKey}"]`)?.classList.add('active');
 if(activeKey==='profile')shell.querySelector('.academy-profile-compact')?.classList.add('active');
 if(path==='/boutique')shell.querySelector('.academy-shop-link')?.classList.add('active');
-if(['/carte','/scanner','/liens'].includes(path))shell.querySelector(`.academy-resources a[href^="${path}"]`)?.classList.add('active');
+if(['/carte','/scanner'].includes(path))shell.querySelector(`.academy-resources a[href^="${path}"]`)?.classList.add('active');
 const updateCommunityBadge=(counts={})=>{const link=shell.querySelector('[data-nav="community"]'),total=Object.values(counts).reduce((sum,value)=>sum+Number(value||0),0);let badge=link.querySelector('.academy-unread-badge');if(total&&!badge){badge=document.createElement('b');badge.className='academy-unread-badge';link.append(badge);}if(badge){badge.textContent=total>99?'99+':String(total);badge.hidden=!total;}};
 updateCommunityBadge(window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__||{});window.addEventListener('stoa:community-notifications',event=>updateCommunityBadge(event.detail));
 
@@ -67,8 +67,7 @@ const renderBreadcrumb=()=>{
   else if(path==='/boutique')bits.push(['/boutique','Boutique']);
   else if(path==='/parcours')bits.push(['/parcours','Mon parcours']);
   else if(path==='/carte')bits.push(['/carte','Ressources'],['/carte','Carte']);
-  else if(path==='/scanner')bits.push(['/scanner?membre=1','Ressources'],['/scanner?membre=1','Scanner']);
-  else if(path==='/liens')bits.push(['/liens','Ressources'],['/liens','Liens']);
+  else if(path==='/scanner')bits.push(['/scanner','Ressources'],['/scanner','Scanner']);
   breadcrumb.innerHTML=bits.map(([href,label],index)=>`${index?'<span>›</span>':''}<a href="${href}" ${index===bits.length-1?'aria-current="page"':''}>${esc(label)}</a>`).join('');
   breadcrumb.hidden=bits.length===1;
 };
@@ -94,17 +93,14 @@ async function hydrate(){
   }
   document.documentElement.classList.remove('academy-access-pending');
   const contentSnapshot=academyAccess?loadMemberSnapshot(sessionUser.id):Promise.resolve({chapters:[],states:[]});
-  const contentSections=academyAccess?supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index'):Promise.resolve({data:[]});
-  const [{data:profileRow},{data:themeRow},snapshot,{data:sectionRows},{data:coachingRows},{data:isStaff}]=await Promise.all([
-    supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role').eq('id',sessionUser.id).maybeSingle(),
-    supabase.from('profiles').select('theme_preference,theme_updated_at').eq('id',sessionUser.id).maybeSingle(),
+  const [{data:profileRow},snapshot,{data:coachingRows},{data:isStaff}]=await Promise.all([
+    supabase.from('profiles').select('first_name,last_name,full_name,username,avatar_url,role,theme_preference,theme_updated_at').eq('id',sessionUser.id).maybeSingle(),
     contentSnapshot,
-    contentSections,
     supabase.rpc('get_my_coaching_access'),supabase.rpc('is_coaching_staff')
   ]);
-  const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(themeRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(themeRow?.theme_preference||localTheme||'light');
-  profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(themeRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',themeRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==themeRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
-  catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;searchSections=sectionRows||[];
+  const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(profileRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(profileRow?.theme_preference||localTheme||'light');
+  profile={...profileRow,theme_preference:preference};localStorage.setItem('stoa-theme',preference);if(profileRow?.theme_updated_at)localStorage.setItem('stoa-theme-updated-at',profileRow.theme_updated_at);setTheme(preference==='dark');if(localTheme&&localThemeDate>remoteThemeDate&&localTheme!==profileRow?.theme_preference)persistTheme(localTheme,sessionUser.id);
+  catalog=snapshot.chapters.map(chapter=>({...chapter,modules:chapter.lessons}));learningStates=snapshot.states;
   if(academyAccess)renderTree();else shell.querySelector('[data-pillar-tree]').innerHTML='<a class="academy-tree-guest" href="/#offres">Rejoindre l’Académie →</a>';
   renderBreadcrumb();publishState();
   const name=[profile?.first_name,profile?.last_name].filter(Boolean).join(' ')||profile?.full_name||sessionUser.email?.split('@')[0]||'Membre';shell.querySelector('[data-shell-profile-name]').textContent=name;
@@ -118,6 +114,7 @@ async function hydrate(){
   const avatar=shell.querySelector('.academy-profile-avatar'),url=profile?.avatar_url||sessionUser.user_metadata?.avatar_url||sessionUser.user_metadata?.picture||'';avatar.textContent=url?'':name[0].toUpperCase();avatar.style.backgroundImage=url?`url("${url.replaceAll('"','%22')}")`:'';avatar.classList.toggle('has-image',Boolean(url));
   if(path==='/module')setupReadingState();
   setupGlobalSearch();
+  supabase.from('subchapters').select('id,module_id,title,content,order_index').order('order_index').then(({data})=>{searchSections=data||[];});
   if(academyAccess){import('./academy-onboarding.js');import('./content-protection.js');}
 }
 
@@ -130,8 +127,7 @@ function setupGlobalSearch(){
   const excerpt=(value,query,tokens)=>{const text=plainText(value),normalized=normalize(text);let index=normalized.indexOf(query);if(index<0)index=Math.min(...tokens.map(token=>normalized.indexOf(token)).filter(position=>position>=0));if(!Number.isFinite(index))index=0;const start=Math.max(0,index-58),end=Math.min(text.length,index+query.length+92);return`${start?'…':''}${text.slice(start,end).trim()}${end<text.length?'…':''}`;};
   const destinations=[
     {title:'Carte des producteurs',meta:'Outil · Lait cru et viande au pâturage',href:'/carte',keywords:'lait cru viande paturage pâturage boeuf bœuf herbe carte ferme producteur elevage élevage fromagerie autour de moi geolocalisation adresse'},
-    {title:'Scanner un produit',meta:'Outil · Code-barres et lecture nutritionnelle',href:'/scanner?membre=1',keywords:'scanner scan produit code barre qr code nutrition note ingredients aliment'},
-    {title:'Liens utiles',meta:'Ressources · Sélection STOA',href:'/liens',keywords:'liens utiles ressources references sites protocoles fournisseurs producteurs'},
+    {title:'Scanner un produit',meta:'Outil · Code-barres et lecture nutritionnelle',href:'/scanner',keywords:'scanner scan produit code barre qr code nutrition note ingredients aliment'},
     {title:'Mode sombre',meta:'Profil · Apparence par défaut',href:'/profil#apparence',keywords:'sombre dark darkmode mode nuit theme apparence couleur affichage interface clair light'},
     {title:'Photo de profil',meta:'Profil · Modifier mon avatar',href:'/profil#photo',keywords:'photo profil avatar image televerser recadrer visage'},
     {title:'Pseudo et identité',meta:'Profil · Prénom, nom et pseudo',href:'/profil#profile-first-name',keywords:'profil pseudo prenom nom identite utilisateur compte modifier informations personnelles'},
