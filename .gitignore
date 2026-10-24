@@ -10,3 +10,5 @@ dist/assets/modules/
 supabase/.temp/
 .vercel/
 todo.md
+release/
+build/icon.ico

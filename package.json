@@ -1,10 +1,57 @@
 {
   "name": "stoa",
+  "version": "1.0.0",
+  "description": "Application de bureau STOA Académie",
+  "author": "STOA",
   "private": true,
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "check": "node scripts/check-js.mjs",
     "test": "node --test tests/*.test.mjs",
-    "verify": "npm run check && npm test"
+    "verify": "npm run check && npm test",
+    "desktop": "electron .",
+    "desktop:icon": "node scripts/build-desktop-icon.mjs",
+    "desktop:dir": "npm run desktop:icon && electron-builder --dir --win",
+    "desktop:build": "npm run desktop:icon && electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "fr.stoa.academie",
+    "productName": "STOA Académie",
+    "artifactName": "STOA-Academie-${version}-${arch}.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/assets/branding/stoa-mark-400.png",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "STOA Académie",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "png-to-ico": "^3.0.1"
   }
 }

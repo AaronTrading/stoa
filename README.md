@@ -56,6 +56,14 @@ La progression, la reprise de lecture et les notes sont synchronisées dans Supa
 
 `npm run verify` contrôle la syntaxe des scripts servis et exécute la suite Node. Le même contrôle tourne dans GitHub Actions à chaque push et pull request.
 
+## Application de bureau
+
+L’application Electron ouvre uniquement l’espace Académie hébergé sur `stoa-coaching.fr`. Elle réutilise exactement les mêmes cours, données Supabase et mises à jour que le site, sans copie locale du contenu. La session est conservée dans un profil Electron persistant et les liens externes s’ouvrent dans le navigateur du système.
+
+- `npm run desktop` : lancer l’application localement.
+- `npm run desktop:dir` : produire une version Windows non empaquetée.
+- `npm run desktop:build` : créer l’installateur Windows dans `release/`.
+
 ## Direction artistique et crédits
 
 Palette CSS : ivoire #f8f7f3, pierre #e9e7df, marbre #efeee8, olive #343b2d, encre #292d25. Typographie système Segoe UI avec repli Arial.
