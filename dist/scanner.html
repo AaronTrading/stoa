@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Scannez le code-barres d’un produit et obtenez un repère nutritionnel STOA.">
+  <meta name="description" content="Scannez un produit et obtenez un verdict alimentaire selon les règles de STOA.">
   <title>Scanner un produit — STOA</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,8 +21,8 @@
   <a class="skip" href="#main">Aller au contenu</a>
   <main class="tool-main" id="main">
     <header class="tool-heading">
-      <div><span class="eyebrow">OUTIL STOA</span><h1>Lire l’étiquette.<br><span>Comprendre le produit.</span></h1></div>
-      <p>Scannez un code-barres alimentaire. La note suit des règles fixes à partir des informations publiques du produit, sans intelligence artificielle.</p>
+      <div><span class="eyebrow">OUTIL STOA</span><h1>Scannez.<br><span>Gardez ou reposez.</span></h1></div>
+      <p>Le verdict suit les règles alimentaires de STOA : aliments bruts, listes courtes, graisses stables. Une huile industrielle, un édulcorant artificiel ou une formulation ultra-transformée suffit à faire chuter la note.</p>
     </header>
     <section class="scanner-shell">
       <div class="scanner-camera-card">
@@ -42,9 +42,9 @@
         <p class="scanner-status" id="scanner-status" role="status">Prêt à scanner.</p>
       </div>
       <article class="product-analysis" id="product-analysis" hidden aria-live="polite"></article>
-      <aside class="scanner-empty" id="scanner-empty"><span>Σ</span><h2>Une lecture simple.</h2><p>Le code identifie le produit. STOA présente ensuite sa qualité nutritionnelle, son degré de transformation et les données disponibles.</p></aside>
+      <aside class="scanner-empty" id="scanner-empty"><span>Σ</span><h2>Un verdict net.</h2><p>Le scanner lit la composition réelle. Il ne reprend pas le Nutri-Score et ne récompense pas un emballage pour ses promesses marketing.</p></aside>
     </section>
-    <p class="tool-source">Données produit : Open Food Facts. La note STOA est un repère pédagogique calculé automatiquement et ne remplace pas un avis médical.</p>
+    <p class="tool-source">Données produit : Open Food Facts. Le verdict dépend de l’exactitude de la composition déclarée dans cette base.</p>
   </main>
 </body>
 </html>
