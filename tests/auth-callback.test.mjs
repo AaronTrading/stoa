@@ -28,6 +28,14 @@ test('la page racine sait aussi récupérer un ancien lien de confirmation', () 
   assert.match(auth, /setSession/);
 });
 
+test('le panneau de connexion est branché avant les appels réseau de session', () => {
+  const bindPosition = auth.indexOf('bindAuthInteractions();');
+  const initializePosition = auth.indexOf('initializeAuth().catch');
+  assert.ok(bindPosition >= 0 && initializePosition > bindPosition);
+  assert.match(auth, /if \(location\.hash === '#connexion'\) openDialog\(\);/);
+  assert.match(auth, /window\.addEventListener\('hashchange'/);
+});
+
 test('le choix Académie survit à l’ouverture du mail dans un nouvel onglet', () => {
   assert.match(landing, /localStorage\.setItem\(pendingCheckoutKey/);
   assert.match(landing, /hasPendingAcademyCheckout/);

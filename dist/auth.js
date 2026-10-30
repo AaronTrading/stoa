@@ -266,21 +266,10 @@ const recoverReturnedSession = async () => {
   return result;
 };
 
-const initializeAuth = async () => {
-  const { data: sessionData } = await recoverReturnedSession();
-  await hydrateAuthUI(sessionData.session);
-  if (!sessionData.session) loadGoogleIdentity().catch(() => {});
-  window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
-  if (document.body.classList.contains('member-page') && !sessionData.session) {
-    location.replace('/#connexion');
-    return;
-  }
-  supabase.auth.onAuthStateChange((authEvent, session) => {
-    if (authEvent === 'PASSWORD_RECOVERY') showRecovery();
-    updateAuthUI(session);
-    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
-  });
-
+// Brancher l'interface avant toute lecture distante. La récupération de la
+// session et du profil peut prendre plusieurs secondes sur mobile ; pendant
+// ce temps le bouton de connexion doit déjà être pleinement utilisable.
+const bindAuthInteractions = () => {
   document.addEventListener('click', (event) => {
     const authLink = event.target.closest('[data-auth-link]');
     const avatar = event.target.closest('[data-auth-avatar]');
@@ -288,6 +277,10 @@ const initializeAuth = async () => {
       event.preventDefault();
       openDialog();
     }
+  });
+
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#connexion' && !currentSession) openDialog();
   });
 
   form.addEventListener('submit', async (event) => {
@@ -388,6 +381,22 @@ const initializeAuth = async () => {
       setMessage('Connexion Discord indisponible. Vérifiez la configuration du fournisseur.', 'error');
     }
   });
+};
+
+const initializeAuth = async () => {
+  const { data: sessionData } = await recoverReturnedSession();
+  await hydrateAuthUI(sessionData.session);
+  if (!sessionData.session) loadGoogleIdentity().catch(() => {});
+  window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
+  if (document.body.classList.contains('member-page') && !sessionData.session) {
+    location.replace('/#connexion');
+    return;
+  }
+  supabase.auth.onAuthStateChange((authEvent, session) => {
+    if (authEvent === 'PASSWORD_RECOVERY') showRecovery();
+    updateAuthUI(session);
+    window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
+  });
 
   const pageParameters = new URLSearchParams(location.search);
   if (pageParameters.get('auth') === 'confirmed' && currentSession) {
@@ -411,4 +420,12 @@ dialog.addEventListener('click', (event) => {
   }
 });
 
-initializeAuth();
+bindAuthInteractions();
+if (location.hash === '#connexion') openDialog();
+initializeAuth().catch(() => {
+  window.dispatchEvent(new CustomEvent('stoa:auth-ready', { detail: { session: null } }));
+  if (location.hash === '#connexion') {
+    openDialog();
+    setMessage('La vérification de la session a échoué. Vous pouvez tout de même vous connecter.', 'error');
+  }
+});
