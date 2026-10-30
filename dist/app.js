@@ -145,12 +145,17 @@ const dialog = document.querySelector('#plan-dialog');
 const academyCheckoutButton=document.querySelector('[data-plan="Académie"]');
 const academyCheckoutStatus=document.querySelector('#academy-checkout-status');
 let academyCheckoutBusy=false;
+const pendingCheckoutKey='stoa-pending-checkout',pendingCheckoutTtl=2*60*60*1000;
+const setPendingAcademyCheckout=()=>localStorage.setItem(pendingCheckoutKey,JSON.stringify({offer:'academy',createdAt:Date.now()}));
+const clearPendingAcademyCheckout=()=>localStorage.removeItem(pendingCheckoutKey);
+const hasPendingAcademyCheckout=()=>{try{const value=JSON.parse(localStorage.getItem(pendingCheckoutKey)||'null');if(value?.offer==='academy'&&Date.now()-Number(value.createdAt||0)<pendingCheckoutTtl)return true;}catch{}clearPendingAcademyCheckout();return false;};
+if(sessionStorage.getItem(pendingCheckoutKey)==='academy'){setPendingAcademyCheckout();sessionStorage.removeItem(pendingCheckoutKey);}
 const setAcademyCheckoutStatus=(message,tone='info')=>{if(academyCheckoutStatus){academyCheckoutStatus.textContent=message;academyCheckoutStatus.dataset.tone=tone;}};
 const startAcademyCheckout=async()=>{
   if(academyCheckoutBusy)return;
   const {data:{session}}=await supabase.auth.getSession();
-  if(!session){sessionStorage.setItem('stoa-pending-checkout','academy');document.querySelector('[data-auth-link]')?.click();return;}
-  sessionStorage.removeItem('stoa-pending-checkout');
+  if(!session){setPendingAcademyCheckout();document.querySelector('[data-auth-link]')?.click();return;}
+  clearPendingAcademyCheckout();
   const {data:hasAccess}=await supabase.rpc('has_active_academy_access',{p_user_id:session.user.id});
   if(hasAccess){location.assign('/accueil');return;}
   academyCheckoutBusy=true;academyCheckoutButton.disabled=true;academyCheckoutButton.setAttribute('aria-busy','true');setAcademyCheckoutStatus('Ouverture du paiement sécurisé…');
@@ -160,7 +165,7 @@ const startAcademyCheckout=async()=>{
   location.assign(data.url);
 };
 academyCheckoutButton?.addEventListener('click',startAcademyCheckout);
-window.addEventListener('stoa:auth-ready',event=>{if(event.detail?.session&&sessionStorage.getItem('stoa-pending-checkout')==='academy')startAcademyCheckout();});
+window.addEventListener('stoa:auth-ready',event=>{if(event.detail?.session&&hasPendingAcademyCheckout())startAcademyCheckout();});
 document.querySelector('.dialog-close')?.addEventListener('click',()=>dialog.close());
 dialog?.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();}});
 

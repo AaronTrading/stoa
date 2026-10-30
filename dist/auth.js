@@ -56,6 +56,7 @@ let authMode = 'login';
 const googleClientId = globalThis.__STOA_ENV__?.GOOGLE_CLIENT_ID || '';
 let googleNonce = '';
 let googleIdentityReady = false;
+const PENDING_CHECKOUT_KEY = 'stoa-pending-checkout';
 
 const authenticatedDestination = (session = currentSession, profile = currentProfile) => {
   const hasAcademyAccess = Boolean(session?.user && currentAcademyAccess);
@@ -246,10 +247,27 @@ const openDialog = () => {
   if (!dialog.open) dialog.showModal();
 };
 
-const redirectTo = new URL('/', siteUrl).href;
+const authRedirectTo = () => {
+  const callback = new URL('/auth-callback', siteUrl);
+  if (localStorage.getItem(PENDING_CHECKOUT_KEY)) callback.searchParams.set('next', 'academy');
+  return callback.href;
+};
+
+const recoverReturnedSession = async () => {
+  let result = await supabase.auth.getSession();
+  if (result.data.session) return result;
+  const query = new URLSearchParams(location.search);
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const code = query.get('code');
+  const accessToken = hash.get('access_token');
+  const refreshToken = hash.get('refresh_token');
+  if (code) return supabase.auth.exchangeCodeForSession(code);
+  if (accessToken && refreshToken) return supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+  return result;
+};
 
 const initializeAuth = async () => {
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: sessionData } = await recoverReturnedSession();
   await hydrateAuthUI(sessionData.session);
   if (!sessionData.session) loadGoogleIdentity().catch(() => {});
   window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
@@ -291,7 +309,7 @@ const initializeAuth = async () => {
       }
       setBusy(true);
       const fullName = `${firstName} ${lastName}`;
-      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName }, emailRedirectTo: redirectTo } });
+      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName }, emailRedirectTo: authRedirectTo() } });
       setBusy(false);
       if (error) { setMessage(error.message, 'error'); return; }
       if (authData.session) { updateAuthUI(authData.session); dialog.close(); showToast('Votre compte STOA est créé.', 'success'); }
@@ -319,7 +337,7 @@ const initializeAuth = async () => {
     setBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo, queryParams: { prompt: 'select_account' } },
+      options: { redirectTo: authRedirectTo(), queryParams: { prompt: 'select_account' } },
     });
     if (error) {
       setBusy(false);
@@ -335,7 +353,7 @@ const initializeAuth = async () => {
     }
 
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: authRedirectTo() } });
     setBusy(false);
     setMessage(error ? error.message : 'Lien envoyé. Consultez votre boîte mail.', error ? 'error' : 'success');
   });
@@ -364,14 +382,24 @@ const initializeAuth = async () => {
 
   dialog.querySelector('[data-auth-action="discord"]').addEventListener('click', async () => {
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo } });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: authRedirectTo() } });
     if (error) {
       setBusy(false);
       setMessage('Connexion Discord indisponible. Vérifiez la configuration du fournisseur.', 'error');
     }
   });
 
-  if (new URLSearchParams(location.search).get('recovery') === '1' || location.hash.includes('type=recovery')) showRecovery();
+  const pageParameters = new URLSearchParams(location.search);
+  if (pageParameters.get('auth') === 'confirmed' && currentSession) {
+    pageParameters.delete('auth');
+    const cleanUrl = `${location.pathname}${pageParameters.size ? `?${pageParameters}` : ''}${location.hash}`;
+    history.replaceState(null, '', cleanUrl);
+    showToast('Votre adresse est confirmée et votre session est ouverte.', 'success');
+  }
+  if (pageParameters.get('auth_error')) {
+    openDialog();
+    setMessage(pageParameters.get('auth_error'), 'error');
+  } else if (pageParameters.get('recovery') === '1' || location.hash.includes('type=recovery')) showRecovery();
   else if (location.hash === '#connexion' && !currentSession) openDialog();
 };
 

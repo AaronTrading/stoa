@@ -356,6 +356,7 @@ html.stoa-dark .lesson-subchapter-content a[href$=".pdf"]{border-color:rgba(255,
 .logo{display:flex;align-items:center;flex:0 0 auto;min-width:0}
 .site-logo-image{display:block;width:clamp(96px,10vw,132px);height:48px;object-fit:contain;object-position:left center}
 footer .site-logo-image{width:112px;height:42px}
+.auth-callback-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:#1d241c;color:#f6f3e9}.auth-callback-card{display:grid;justify-items:center;width:min(520px,100%);padding:clamp(28px,6vw,58px);border:1px solid #ffffff24;border-radius:24px;background:linear-gradient(145deg,#2e382b,#20281f);box-shadow:0 34px 90px #0006;text-align:center}.auth-callback-card>img{width:150px;height:auto;margin-bottom:34px}.auth-callback-card h1{margin:14px 0 12px;font:600 clamp(2.3rem,7vw,4rem)/.95 'Cormorant Garamond',Georgia,serif}.auth-callback-card p{max-width:400px;color:#d4d8ce;line-height:1.7}.auth-callback-card .subscription-loader{margin:0 0 24px}.auth-callback-card .button{margin-top:18px;background:#f3f0e7;color:#273025}
 .auth-logo-image{display:block;width:118px;height:48px;margin-bottom:22px;object-fit:contain;object-position:left center}
 @media(max-width:760px){.site-logo-image{width:96px;height:38px}footer .site-logo-image{width:96px;height:38px}.auth-logo-image{width:104px;height:42px}}
 @media(max-width:390px){.site-logo-image{width:84px;height:34px}}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Connexion à STOA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/env.js"></script>
+  <script type="module" src="/auth-callback.js"></script>
+</head>
+<body class="auth-callback-page">
+  <main class="auth-callback-card" aria-live="polite">
+    <img src="/assets/branding/fondtransparent.png" alt="STOA">
+    <span class="subscription-loader" aria-hidden="true"></span>
+    <span class="eyebrow">CONNEXION SÉCURISÉE</span>
+    <h1>Validation de votre compte.</h1>
+    <p id="auth-callback-status">Nous confirmons votre adresse et ouvrons votre session.</p>
+    <a class="button dark" id="auth-callback-retry" href="/#connexion" hidden>Revenir à la connexion <span>→</span></a>
+  </main>
+</body>
+</html>
