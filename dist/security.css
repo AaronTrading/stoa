@@ -1,0 +1,66 @@
+.stoa-security-active .stoa-protected-lesson,
+.stoa-security-active .stoa-protected-lesson *:not(input):not(textarea):not(select):not([contenteditable="true"]){
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+.stoa-protected-lesson{
+  position:relative;
+  transition:filter .16s ease,opacity .16s ease;
+}
+
+.stoa-protected-lesson img{
+  -webkit-user-drag:none;
+  pointer-events:none;
+}
+
+.stoa-protected-lesson video{
+  -webkit-touch-callout:none;
+}
+
+.stoa-protected-lesson.stoa-security-obscured{
+  filter:blur(32px);
+  opacity:.025;
+  pointer-events:none;
+}
+
+.stoa-protected-lesson::after{
+  content:attr(data-protection-mark);
+  position:fixed;
+  z-index:0;
+  right:20px;
+  bottom:14px;
+  color:currentColor;
+  font-size:9px;
+  letter-spacing:.12em;
+  opacity:.12;
+  pointer-events:none;
+}
+
+.stoa-security-toast{
+  position:fixed;
+  z-index:1600;
+  left:50%;
+  bottom:max(22px,env(safe-area-inset-bottom));
+  width:max-content;
+  max-width:min(430px,calc(100vw - 30px));
+  padding:12px 16px;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:14px;
+  background:rgba(42,50,39,.94);
+  box-shadow:0 18px 55px rgba(22,28,20,.3);
+  backdrop-filter:blur(18px);
+  color:#fff;
+  font-size:12px;
+  text-align:center;
+  transform:translateX(-50%);
+}
+
+@media print{
+  .stoa-protected-lesson,
+  #lesson-content,
+  .lesson-layout,
+  body.member-page{display:none!important;visibility:hidden!important}
+  html::before{content:'L’impression des leçons STOA est désactivée.';display:block;padding:2cm;font:16px/1.5 sans-serif}
+}

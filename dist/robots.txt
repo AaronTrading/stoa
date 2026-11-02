@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /accueil
+Disallow: /academie
+Disallow: /module
+Disallow: /parcours
+Disallow: /profil
+Disallow: /communaute
+Disallow: /posts
+Disallow: /boutique
+Disallow: /carte
+Disallow: /scanner
+Disallow: /liens
+Disallow: /coaching
+Disallow: /coaching-coach
+Disallow: /coaching-onboarding
+Disallow: /decouvrir-coaching
+Disallow: /email-center
+Disallow: /auth-callback
+
+Sitemap: https://stoa-coaching.fr/sitemap.xml

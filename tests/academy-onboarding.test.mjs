@@ -8,7 +8,7 @@ const shell=read('dist/academy-shell.js');
 const community=read('dist/communaute-v2.js');
 const lesson=read('dist/app.js');
 const success=read('dist/subscription-success.js');
-const protection=read('dist/content-protection.js');
+const protection=read('dist/security.js');
 const migration=read('supabase/migrations/202610040046_profile_location_visibility.sql');
 const usernameRules=read('supabase/migrations/202610080058_onboarding_username_rules.sql');
 const auth=read('dist/auth.js');
@@ -73,9 +73,9 @@ test('paid Academy and Coaching access launch their respective onboarding',()=>{
 });
 
 test('paid lesson content has browser deterrents while server RLS stays authoritative',()=>{
-  assert.match(shell,/import\('\.\/content-protection\.js'\)/);
+  assert.match(shell,/import\('\.\/security\.js'\)/);
   assert.match(protection,/contextmenu/);
   assert.match(protection,/PrintScreen/);
   assert.match(protection,/noindex,nofollow,noarchive/);
-  assert.match(protection,/profile\?\.role==='admin'/);
+  assert.match(protection,/profile\?\.role\s*===\s*'admin'/);
 });
