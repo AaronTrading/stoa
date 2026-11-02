@@ -1,8 +1,5 @@
 import { supabase } from './supabase.js';
 
-// Durée maximale sans interaction avant déconnexion automatique.
-export const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
-
 const MEMBER_ROUTES = new Set([
   '/accueil', '/academie', '/module', '/parcours', '/profil', '/communaute',
   '/posts', '/boutique', '/carte', '/scanner', '/liens', '/coaching',
@@ -36,22 +33,6 @@ const enforceSingleSession = async (session) => {
   if (sessionStorage.getItem(marker)) return;
   const { error } = await supabase.auth.signOut({ scope: 'others' });
   if (!error) sessionStorage.setItem(marker, '1');
-};
-
-const startInactivityLogout = () => {
-  let timer;
-  const logout = async () => {
-    await supabase.auth.signOut();
-    location.replace('/#connexion');
-  };
-  const refresh = () => {
-    clearTimeout(timer);
-    timer = window.setTimeout(logout, INACTIVITY_TIMEOUT_MS);
-  };
-  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
-    window.addEventListener(eventName, refresh, { passive: true, capture: true });
-  });
-  refresh();
 };
 
 const protectLesson = (lesson, user, profile) => {
@@ -176,7 +157,6 @@ const initializeSecurity = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
   enforceSingleSession(session).catch(() => {});
-  startInactivityLogout();
   if (path !== '/module') return;
 
   const lesson = document.querySelector('#lesson-content');

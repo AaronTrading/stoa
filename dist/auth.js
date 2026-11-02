@@ -21,7 +21,6 @@ dialog.innerHTML = `
       <div class="auth-signup-fields" hidden>
         <div><label for="auth-first-name">Prénom</label><input id="auth-first-name" name="firstName" type="text" autocomplete="given-name" placeholder="Votre prénom"></div>
         <div><label for="auth-last-name">Nom</label><input id="auth-last-name" name="lastName" type="text" autocomplete="family-name" placeholder="Votre nom"></div>
-        <label class="auth-terms" for="auth-terms"><input id="auth-terms" name="terms" type="checkbox" value="accepted"><span>J’accepte les <a href="/conditions" target="_blank" rel="noopener">conditions d’utilisation</a>, notamment l’interdiction de copier ou partager les contenus de l’Académie.</span></label>
       </div>
       <label for="auth-email">Adresse email</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
@@ -301,13 +300,9 @@ const bindAuthInteractions = () => {
         setMessage('Ajoutez votre prénom et votre nom.', 'error');
         return;
       }
-      if (data.get('terms') !== 'accepted') {
-        setMessage('Vous devez accepter les conditions d’utilisation pour créer votre compte.', 'error');
-        return;
-      }
       setBusy(true);
       const fullName = `${firstName} ${lastName}`;
-      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName, terms_accepted_at: new Date().toISOString(), terms_version: '2026-11-02' }, emailRedirectTo: authRedirectTo() } });
+      const { data: authData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, first_name: firstName, last_name: lastName }, emailRedirectTo: authRedirectTo() } });
       setBusy(false);
       if (error) { setMessage(error.message, 'error'); return; }
       if (authData.session) { updateAuthUI(authData.session); dialog.close(); showToast('Votre compte STOA est créé.', 'success'); }

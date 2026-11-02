@@ -6,8 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const security = read('dist/security.js');
 const styles = read('dist/security.css');
 const lesson = read('dist/module.html');
-const auth = read('dist/auth.js');
-const conditions = read('dist/conditions.html');
+const cgv = read('dist/cgv.html');
 const headers = read('vercel.json');
 const robots = read('dist/robots.txt');
 
@@ -33,17 +32,13 @@ test('les images et vidéos ne proposent ni téléchargement ni image dans image
   assert.match(security, /disablePictureInPicture = true/);
 });
 
-test('les sessions membres sont uniques et expirent après inactivité', () => {
-  assert.match(security, /INACTIVITY_TIMEOUT_MS/);
+test('les sessions membres sont uniques sans timeout local forcé', () => {
   assert.match(security, /signOut\(\{ scope: 'others' \}\)/);
-  assert.match(security, /window\.setTimeout\(logout, INACTIVITY_TIMEOUT_MS\)/);
+  assert.doesNotMatch(security, /INACTIVITY_TIMEOUT_MS|startInactivityLogout/);
 });
 
-test('les conditions interdisent la copie et doivent être acceptées à inscription', () => {
-  assert.match(auth, /name="terms"/);
-  assert.match(auth, /data\.get\('terms'\) !== 'accepted'/);
-  assert.match(auth, /terms_accepted_at/);
-  assert.match(conditions, /copie, capture, impression, téléchargement/);
+test('les CGV existantes encadrent la copie et le partage des contenus', () => {
+  assert.match(cgv, /copie, capture, impression, téléchargement/);
 });
 
 test('les en-têtes interdisent les cadres et le cache des leçons', () => {
