@@ -51,7 +51,7 @@ const message = dialog.querySelector('.auth-message');
 let currentSession = null;
 let currentProfile = null;
 let currentProfileUserId = null;
-let currentAcademyAccess = false;
+let currentAcademyAccess = null;
 let authMode = 'login';
 const googleClientId = globalThis.__STOA_ENV__?.GOOGLE_CLIENT_ID || '';
 let googleNonce = '';
@@ -59,8 +59,7 @@ let googleIdentityReady = false;
 const PENDING_CHECKOUT_KEY = 'stoa-pending-checkout';
 
 const authenticatedDestination = (session = currentSession, profile = currentProfile) => {
-  const hasAcademyAccess = Boolean(session?.user && currentAcademyAccess);
-  return hasAcademyAccess ? '/accueil' : '/#offres';
+  return session?.user && currentAcademyAccess === true ? '/accueil' : '/';
 };
 
 const setAuthMode = (mode) => {
@@ -93,16 +92,22 @@ const setBusy = (busy) => {
 };
 
 const updateAuthUI = (session, profile = currentProfile) => {
+  if (session?.user && currentProfileUserId && currentProfileUserId !== session.user.id) {
+    currentProfile = null;
+    currentProfileUserId = null;
+    currentAcademyAccess = null;
+  }
   currentSession = session;
   const user = session?.user;
   if (!user) {
     currentProfile = null;
     currentProfileUserId = null;
-    currentAcademyAccess = false;
+    currentAcademyAccess = null;
   }
   const activeProfile = user && currentProfileUserId === user.id ? profile : null;
-  const hasAcademyAccess = Boolean(user && currentAcademyAccess);
-  const memberDestination = hasAcademyAccess ? '/accueil' : '/#offres';
+  const hasAcademyAccess = Boolean(user && currentAcademyAccess === true);
+  const accessResolved = currentAcademyAccess !== null;
+  const memberDestination = hasAcademyAccess ? '/accueil' : accessResolved ? '#compte' : '#';
   const fullName = activeProfile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const avatarUrl = activeProfile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
   const firstName = activeProfile?.first_name || user?.user_metadata?.first_name || fullName.trim().split(/\s+/)[0];
@@ -113,7 +118,7 @@ const updateAuthUI = (session, profile = currentProfile) => {
     const arrow = document.createElement('span');
     arrow.textContent = '↗';
     link.replaceChildren(document.createTextNode(`${label} `), arrow);
-    link.setAttribute('aria-label', user ? (hasAcademyAccess ? 'Ouvrir mon académie' : 'Découvrir les offres STOA') : 'Se connecter à STOA');
+    link.setAttribute('aria-label', user ? (hasAcademyAccess ? 'Ouvrir mon académie' : accessResolved ? 'Voir les options de mon compte' : 'Vérification de mon accès') : 'Se connecter à STOA');
   });
 
   document.querySelectorAll('[data-member-academy-link]').forEach((link) => {
@@ -138,6 +143,15 @@ const updateAuthUI = (session, profile = currentProfile) => {
     element.textContent = firstName || 'membre';
   });
 
+  document.querySelectorAll('[data-footer-account]').forEach((account) => {
+    account.hidden = !user;
+    account.querySelector('[data-footer-account-name]')?.replaceChildren(document.createTextNode(`Bonjour ${firstName || 'membre'}`));
+    const academyLink = account.querySelector('[data-footer-academy-link]');
+    const offerLink = account.querySelector('[data-footer-offers-link]');
+    if (academyLink) academyLink.hidden = !hasAcademyAccess;
+    if (offerLink) offerLink.hidden = !accessResolved || hasAcademyAccess;
+  });
+
 };
 
 const hydrateAuthUI = async (session) => {
@@ -145,7 +159,7 @@ const hydrateAuthUI = async (session) => {
   const user = session?.user;
   if (!user) return;
 
-  let [{ data }, { data: academyAccess }] = await Promise.all([
+  let [{ data }, accessResult] = await Promise.all([
     supabase.from('profiles').select('full_name, first_name, avatar_url, department, role').eq('id', user.id).maybeSingle(),
     supabase.rpc('has_active_academy_access'),
   ]);
@@ -154,11 +168,17 @@ const hydrateAuthUI = async (session) => {
     await supabase.rpc('ensure_my_profile');
     data=(await supabase.from('profiles').select('full_name, first_name, avatar_url, department, role').eq('id', user.id).maybeSingle()).data;
   }
-  if (!data || currentSession?.user?.id !== user.id) return;
-  currentProfile = data;
+  if (currentSession?.user?.id !== user.id) return { accessResolved: false };
+  if (accessResult.error) {
+    currentAcademyAccess = null;
+    updateAuthUI(session, data || null);
+    return { accessResolved: false, error: accessResult.error };
+  }
+  currentProfile = data || null;
   currentProfileUserId = user.id;
-  currentAcademyAccess = Boolean(academyAccess);
-  updateAuthUI(session, data);
+  currentAcademyAccess = Boolean(accessResult.data);
+  updateAuthUI(session, data || null);
+  return { accessResolved: true, hasAcademyAccess: currentAcademyAccess };
 };
 
 const showRecovery = () => {
@@ -189,10 +209,11 @@ const handleGoogleCredential = async (response) => {
     setMessage('La connexion rapide avec Google a échoué. Réessayez depuis le bouton Google.', 'error');
     return;
   }
-  await hydrateAuthUI(data.session);
+  const accessState = await hydrateAuthUI(data.session);
   if (dialog.open) dialog.close();
   showToast('Connexion Google réussie. Bienvenue dans STOA.', 'success');
-  location.assign(authenticatedDestination());
+  if (!accessState?.accessResolved) showToast('Connexion réussie. Votre accès Académie sera revérifié dans un instant.', 'info');
+  else location.assign(authenticatedDestination());
 };
 
 const loadGoogleIdentity = async () => {
@@ -276,8 +297,25 @@ const bindAuthInteractions = () => {
     if ((authLink && !currentSession) || (avatar && !currentSession)) {
       event.preventDefault();
       openDialog();
+    } else if (authLink && currentSession && currentAcademyAccess === null) {
+      event.preventDefault();
+      showToast('Vérification de votre accès Académie en cours…');
     }
   });
+
+  document.querySelectorAll('[data-auth-signout]').forEach((button) => button.addEventListener('click', async () => {
+    button.disabled = true;
+    globalThis.google?.accounts?.id?.disableAutoSelect?.();
+    sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
+    const { error } = await supabase.auth.signOut();
+    button.disabled = false;
+    if (error) {
+      showToast('La déconnexion a échoué. Réessayez.', 'error');
+      return;
+    }
+    localStorage.removeItem(PENDING_CHECKOUT_KEY);
+    location.replace('/');
+  }));
 
   window.addEventListener('hashchange', () => {
     if (location.hash === '#connexion' && !currentSession) openDialog();
@@ -318,10 +356,11 @@ const bindAuthInteractions = () => {
       return;
     }
 
-    await hydrateAuthUI(authData.session);
+    const accessState = await hydrateAuthUI(authData.session);
     dialog.close();
     showToast('Connexion réussie. Bienvenue dans STOA.', 'success');
-    location.assign(authenticatedDestination());
+    if (!accessState?.accessResolved) showToast('Connexion réussie, mais la vérification de votre accès est momentanément indisponible.', 'error');
+    else location.assign(authenticatedDestination());
   });
 
   dialog.querySelectorAll('[data-auth-mode]').forEach((button) => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
@@ -385,7 +424,8 @@ const bindAuthInteractions = () => {
 
 const initializeAuth = async () => {
   const { data: sessionData } = await recoverReturnedSession();
-  await hydrateAuthUI(sessionData.session);
+  const initialAccessState = await hydrateAuthUI(sessionData.session);
+  if (sessionData.session && !initialAccessState?.accessResolved) showToast('Votre session est ouverte. La vérification de l’accès Académie sera retentée à la prochaine navigation.', 'error');
   if (!sessionData.session) loadGoogleIdentity().catch(() => {});
   window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session:sessionData.session}}));
   if (document.body.classList.contains('member-page') && !sessionData.session) {
@@ -399,6 +439,18 @@ const initializeAuth = async () => {
   });
 
   const pageParameters = new URLSearchParams(location.search);
+  if (pageParameters.get('access') === 'required' && currentSession) {
+    pageParameters.delete('access');
+    const cleanUrl = `${location.pathname}${pageParameters.size ? `?${pageParameters}` : ''}${location.hash}`;
+    history.replaceState(null, '', cleanUrl);
+    showToast('Votre compte est bien connecté, mais aucune offre Académie ou Coaching active n’est associée à ce compte.', 'info');
+  }
+  if (pageParameters.get('access') === 'error' && currentSession) {
+    pageParameters.delete('access');
+    const cleanUrl = `${location.pathname}${pageParameters.size ? `?${pageParameters}` : ''}${location.hash}`;
+    history.replaceState(null, '', cleanUrl);
+    showToast('Votre session est ouverte, mais STOA n’a pas pu vérifier votre accès. Aucun paiement n’est nécessaire : réessayez dans un instant.', 'error');
+  }
   if (pageParameters.get('auth') === 'confirmed' && currentSession) {
     pageParameters.delete('auth');
     const cleanUrl = `${location.pathname}${pageParameters.size ? `?${pageParameters}` : ''}${location.hash}`;

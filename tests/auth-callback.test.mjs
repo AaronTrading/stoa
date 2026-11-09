@@ -40,5 +40,9 @@ test('le choix Académie survit à l’ouverture du mail dans un nouvel onglet',
   assert.match(landing, /localStorage\.setItem\(pendingCheckoutKey/);
   assert.match(landing, /hasPendingAcademyCheckout/);
   assert.match(callback, /requestedOffer === 'academy'/);
-  assert.match(callback, /location\.replace\('\/\?auth=confirmed#offres'\)/);
+  assert.match(callback, /location\.replace\('\/\?auth=confirmed'\)/);
+});
+
+test('le callback traite le nouveau lien avant une éventuelle ancienne session', () => {
+  assert.ok(callback.indexOf('if (parameters.code)') < callback.indexOf("supabase.auth.getSession()"));
 });

@@ -11,6 +11,7 @@ const manualAccessMigration = read('supabase/migrations/202610040045_manual_acad
 const emailAccessMigration = read('supabase/migrations/202610080055_manual_academy_access_by_email.sql');
 const billingProfileSyncMigration = read('supabase/migrations/202610080056_allow_server_billing_profile_sync.sql');
 const membershipProjectionMigration = read('supabase/migrations/202610080057_fix_server_membership_projection.sql');
+const accessStateMigration = read('supabase/migrations/202611090079_auth_access_state.sql');
 const checkout = read('supabase/functions/create-checkout/index.ts');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const shell = read('dist/academy-shell.js');
@@ -36,6 +37,10 @@ test('Academy access is centralized on active entitlements', () => {
   for (const table of ['pillars', 'chapters', 'modules', 'subchapters', 'subchapter_images']) {
     assert.match(migration, new RegExp(`academy members read ${table.replaceAll('_', ' ')}[\\s\\S]*has_active_academy_access`));
   }
+  assert.match(accessStateMigration, /from public\.academy_entitlements/);
+  assert.match(accessStateMigration, /from public\.subscriptions/);
+  assert.match(accessStateMigration, /from public\.coaching_clients/);
+  assert.match(accessStateMigration, /'has_academy_access',v_access/);
 });
 
 test('Stripe synchronization is signed and idempotent', () => {
@@ -60,7 +65,8 @@ test('frontend never grants access from the success redirect', () => {
   assert.match(success, /has_active_academy_access/);
   assert.match(success, /has_coaching_access/);
   assert.match(success, /for\(let attempt=0;attempt<15;attempt\+\+\)/);
-  assert.match(shell, /location\.replace\('\/#offres'\)/);
+  assert.match(shell, /location\.replace\('\/\?access=required#offres'\)/);
+  assert.match(shell, /location\.replace\('\/\?access=error'\)/);
   assert.match(shell, /get_academy_shell_context/);
 });
 

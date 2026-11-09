@@ -33,10 +33,8 @@ const resolveSession = async () => {
   const parameters = authParameters();
   if (parameters.error) throw new Error(parameters.error);
 
-  let { data: { session }, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (session) return session;
-
+  let session = null;
+  let error = null;
   if (parameters.code) {
     ({ data: { session }, error } = await supabase.auth.exchangeCodeForSession(parameters.code));
   } else if (parameters.accessToken && parameters.refreshToken) {
@@ -49,6 +47,8 @@ const resolveSession = async () => {
       token_hash: parameters.tokenHash,
       type: parameters.type,
     }));
+  } else {
+    ({ data: { session }, error } = await supabase.auth.getSession());
   }
   if (error) throw error;
   if (!session) session = (await supabase.auth.getSession()).data.session;
@@ -60,7 +60,8 @@ const finish = async () => {
   try {
     const session = await resolveSession();
     await supabase.rpc('ensure_my_profile');
-    const { data: hasAccess } = await supabase.rpc('has_active_academy_access', { p_user_id: session.user.id });
+    const { data: hasAccess, error: accessError } = await supabase.rpc('has_active_academy_access');
+    if (accessError) throw new Error('Votre compte est confirmé, mais la vérification de votre accès est momentanément indisponible.');
     history.replaceState(null, '', '/auth-callback');
     if (hasAccess) {
       localStorage.removeItem(PENDING_CHECKOUT_KEY);
@@ -71,8 +72,8 @@ const finish = async () => {
       localStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify({ offer: 'academy', createdAt: Date.now() }));
     }
     const pending = readPendingCheckout();
-    status.textContent = pending ? 'Compte confirmé. Ouverture de votre paiement sécurisé…' : 'Compte confirmé. Redirection vers les offres…';
-    location.replace('/?auth=confirmed#offres');
+    status.textContent = pending ? 'Compte confirmé. Ouverture de votre paiement sécurisé…' : 'Compte confirmé. Retour vers STOA…';
+    location.replace('/?auth=confirmed');
   } catch (error) {
     console.error('auth-callback', error);
     history.replaceState(null, '', '/auth-callback');

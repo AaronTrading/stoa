@@ -84,13 +84,19 @@ const renderTree=()=>{
 const publishState=()=>{window.__STOA_LEARNING_STATES__=learningStates;window.dispatchEvent(new CustomEvent('stoa:learning-state',{detail:learningStates}));};
 
 async function hydrate(){
-  sessionUser=(await supabase.auth.getSession()).data.session?.user;
+  const sessionResult=await supabase.auth.getSession();
+  sessionUser=sessionResult.data.session?.user;
   if(!sessionUser){location.replace('/#connexion');return;}
-  const [{data:context,error:accessError},snapshot]=await Promise.all([supabase.rpc('get_academy_shell_context'),loadMemberSnapshot(sessionUser.id)]);
+  const {data:context,error:accessError}=await supabase.rpc('get_academy_shell_context');
   if(accessError||!context){
-    location.replace('/#offres');
+    location.replace('/?access=error');
     return;
   }
+  if(!context.has_academy_access){
+    location.replace('/?access=required#offres');
+    return;
+  }
+  const snapshot=await loadMemberSnapshot(sessionUser.id);
   document.documentElement.classList.remove('academy-access-pending');
   const profileRow=context.profile||{},isStaff=Boolean(context.is_staff);
   const localTheme=localStorage.getItem('stoa-theme'),localThemeDate=Date.parse(localStorage.getItem('stoa-theme-updated-at')||0),remoteThemeDate=Date.parse(profileRow?.theme_updated_at||0),preference=localTheme&&localThemeDate>remoteThemeDate?localTheme:(profileRow?.theme_preference||localTheme||'light');
