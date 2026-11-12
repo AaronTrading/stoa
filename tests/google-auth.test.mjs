@@ -20,6 +20,9 @@ test('Google One Tap exchanges a nonce-bound ID token with Supabase', () => {
   assert.match(authSource, /use_fedcm_for_prompt:\s*true/);
   assert.match(authSource, /nonce:\s*googleNonce/);
   assert.match(authSource, /crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(authSource, /button_auto_select:\s*true/);
+  assert.match(authSource, /document\.body\.classList\.contains\('member-page'\)/);
+  assert.doesNotMatch(authSource, /location\.pathname\s*===\s*'\/'/);
 });
 
 test('the public Google client ID is available to the static frontend', () => {

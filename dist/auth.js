@@ -56,7 +56,9 @@ let authMode = 'login';
 const googleClientId = globalThis.__STOA_ENV__?.GOOGLE_CLIENT_ID || '';
 let googleNonce = '';
 let googleIdentityReady = false;
+let googleOneTapPrompted = false;
 const PENDING_CHECKOUT_KEY = 'stoa-pending-checkout';
+const GOOGLE_ONE_TAP_DISMISSED_KEY = 'stoa-google-one-tap-dismissed-v2';
 
 const authenticatedDestination = (session = currentSession, profile = currentProfile) => {
   return session?.user && currentAcademyAccess === true ? '/accueil' : '/';
@@ -216,6 +218,24 @@ const handleGoogleCredential = async (response) => {
   else location.assign(authenticatedDestination());
 };
 
+const canPromptGoogleOneTap = () => {
+  if (currentSession || document.body.classList.contains('member-page')) return false;
+  return !sessionStorage.getItem(GOOGLE_ONE_TAP_DISMISSED_KEY);
+};
+
+const promptGoogleOneTap = () => {
+  if (!googleIdentityReady || googleOneTapPrompted || !canPromptGoogleOneTap()) return;
+  googleOneTapPrompted = true;
+  globalThis.google.accounts.id.prompt((notification) => {
+    if (notification.isDismissedMoment?.()) {
+      sessionStorage.setItem(GOOGLE_ONE_TAP_DISMISSED_KEY, '1');
+    }
+    if (notification.isDismissedMoment?.() || notification.isSkippedMoment?.()) {
+      googleOneTapPrompted = false;
+    }
+  });
+};
+
 const loadGoogleIdentity = async () => {
   if (!googleClientId || currentSession || googleIdentityReady) return;
   if (!globalThis.google?.accounts?.id) {
@@ -246,13 +266,10 @@ const loadGoogleIdentity = async () => {
     cancel_on_tap_outside: true,
     itp_support: true,
     use_fedcm_for_prompt: true,
+    button_auto_select: true,
   });
   googleIdentityReady = true;
-  if (location.pathname === '/' && !sessionStorage.getItem('stoa-google-one-tap-dismissed')) {
-    globalThis.google.accounts.id.prompt((notification) => {
-      if (notification.isDismissedMoment?.()) sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
-    });
-  }
+  promptGoogleOneTap();
 };
 
 const openDialog = () => {
@@ -306,7 +323,7 @@ const bindAuthInteractions = () => {
   document.querySelectorAll('[data-auth-signout]').forEach((button) => button.addEventListener('click', async () => {
     button.disabled = true;
     globalThis.google?.accounts?.id?.disableAutoSelect?.();
-    sessionStorage.setItem('stoa-google-one-tap-dismissed', '1');
+    sessionStorage.setItem(GOOGLE_ONE_TAP_DISMISSED_KEY, '1');
     const { error } = await supabase.auth.signOut();
     button.disabled = false;
     if (error) {
@@ -435,6 +452,7 @@ const initializeAuth = async () => {
   supabase.auth.onAuthStateChange((authEvent, session) => {
     if (authEvent === 'PASSWORD_RECOVERY') showRecovery();
     updateAuthUI(session);
+    if (!session && googleIdentityReady) promptGoogleOneTap();
     window.setTimeout(async()=>{await hydrateAuthUI(session);window.dispatchEvent(new CustomEvent('stoa:auth-ready',{detail:{session}}));}, 0);
   });
 
