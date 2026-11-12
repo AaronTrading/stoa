@@ -109,7 +109,7 @@ function renderAchievements(){
   document.querySelector('#training-achievement-list').innerHTML=items.map(([title,copy,unlocked])=>`<div class="${unlocked?'unlocked':'locked'}"><i>${unlocked?'✓':'○'}</i><span><strong>${title}</strong><small>${copy}</small></span></div>`).join('');
 }
 
-function startSession(){index=0;currentOrder=[];sessionResults=[];retryCounts=new Map();overview.hidden=true;mapSection.hidden=true;lowerGrid.hidden=true;sessionPanel.hidden=false;renderQuestion(true);scrollTo({top:0,behavior:'smooth'});}
+function startSession(){index=0;currentOrder=[];sessionResults=[];retryCounts=new Map();document.body.classList.add('training-session-active');overview.hidden=true;mapSection.hidden=true;lowerGrid.hidden=true;sessionPanel.hidden=false;renderQuestion(true);scrollTo({top:0,behavior:'instant'});}
 function optionMarkup(question){
   if(question.type==='ordering')return `<div class="training-order"><div class="training-order-selected" id="training-order-selected">${currentOrder.length?currentOrder.map((value,i)=>`<button type="button" data-order-value="${esc(value)}"><b>${i+1}</b>${esc(value)}<span>×</span></button>`).join(''):'<p>Sélectionnez les étapes dans leur ordre.</p>'}</div><div class="training-order-pool">${question.options.filter(value=>!currentOrder.includes(value)).map(value=>`<button type="button" data-order-value="${esc(value)}">${esc(value)} <span>+</span></button>`).join('')}</div></div>`;
   if(question.type==='open')return '<label class="training-open-answer"><span>Votre réponse</span><textarea id="training-open-value" rows="5" placeholder="Expliquez l’idée simplement, sans chercher la formulation exacte."></textarea></label>';
@@ -143,7 +143,7 @@ async function recordAndContinue(result,button){
 function finishSession(){
   const strengthened=sessionResults.filter(result=>result!=='incorrect').length,reviewsSoon=sessionResults.length-strengthened;document.querySelector('#training-session-bar').style.width='100%';
   questionCard.innerHTML=`<div class="training-finish-mark">✓</div><span class="eyebrow">SESSION TERMINÉE</span><h2>Les notions commencent à s’ancrer.</h2><p>Vous avez consolidé <strong>${strengthened}</strong> notion${strengthened>1?'s':''}.${reviewsSoon?` ${reviewsSoon} reviendra${reviewsSoon>1?'ont':''} rapidement.`:''}</p><div class="training-finish-actions"><button class="button dark" type="button" id="training-finish-overview">Voir ma progression <span>→</span></button><a href="/academie">Retour aux leçons</a></div>`;
-  document.querySelector('#training-finish-overview').addEventListener('click',async()=>{sessionPanel.hidden=true;overview.hidden=false;overview.innerHTML='<div class="training-loading"><i></i><i></i><i></i></div>';await loadTraining();scrollTo({top:0,behavior:'smooth'})});
+  document.querySelector('#training-finish-overview').addEventListener('click',async()=>{document.body.classList.remove('training-session-active');sessionPanel.hidden=true;overview.hidden=false;overview.innerHTML='<div class="training-loading"><i></i><i></i><i></i></div>';await loadTraining();scrollTo({top:0,behavior:'smooth'})});
 }
 async function claimRestDay(){
   const button=document.querySelector('#training-rest-day');button.disabled=true;button.textContent='Enregistrement…';const {error}=await supabase.rpc('claim_training_rest_day',{p_date:parisDate(-1)});if(error){button.disabled=false;button.textContent='Jour indisponible';return}await loadTraining();
@@ -154,7 +154,7 @@ questionCard.addEventListener('click',event=>{
   if(event.target.closest('#training-validate')){showCorrection();return;}
   const resultButton=event.target.closest('[data-training-result]');if(resultButton)recordAndContinue(resultButton.dataset.trainingResult,resultButton);
 });
-document.querySelector('#training-session-close').addEventListener('click',()=>{sessionPanel.hidden=true;overview.hidden=false;mapSection.hidden=false;lowerGrid.hidden=false;scrollTo({top:0,behavior:'smooth'})});
+document.querySelector('#training-session-close').addEventListener('click',()=>{document.body.classList.remove('training-session-active');sessionPanel.hidden=true;overview.hidden=false;mapSection.hidden=false;lowerGrid.hidden=false;scrollTo({top:0,behavior:'smooth'})});
 
 async function loadTraining(){
   const session=(await supabase.auth.getSession()).data.session;if(!session)return;user=session.user;
