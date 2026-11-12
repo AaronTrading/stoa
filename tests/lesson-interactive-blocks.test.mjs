@@ -13,6 +13,7 @@ test('les blocs interactifs sont disponibles sans réintroduire le quiz', () => 
   assert.match(page, /id="lesson-copy-block-add"/);
   assert.match(page, /id="lesson-image-selector-add"/);
   assert.doesNotMatch(page, /lesson-quiz-enabled|Quiz dans cette leçon/);
+  assert.doesNotMatch(page, /LECTURE & PRATIQUE|class="lesson-meta"/);
 });
 
 test('le sélecteur d’images est verrouillé, inséré au curseur et déplaçable', () => {
