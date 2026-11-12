@@ -12,7 +12,7 @@ const robots = read('dist/robots.txt');
 
 test('les leçons chargent la protection partagée et sont exclues des moteurs', () => {
   assert.match(lesson, /href="security\.css"/);
-  assert.match(lesson, /src="security\.js"/);
+  assert.match(lesson, /src="security\.min\.js"/);
   assert.match(lesson, /noindex,nofollow,noarchive,nosnippet,noimageindex/);
   assert.match(robots, /Disallow: \/module/);
 });

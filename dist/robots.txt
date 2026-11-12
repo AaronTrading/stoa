@@ -16,6 +16,7 @@ Disallow: /coaching-coach
 Disallow: /coaching-onboarding
 Disallow: /decouvrir-coaching
 Disallow: /email-center
+Disallow: /entrainement
 Disallow: /auth-callback
 
 Sitemap: https://stoa-coaching.fr/sitemap.xml

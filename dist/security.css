@@ -1,28 +1,72 @@
-.stoa-security-active .stoa-protected-lesson,
-.stoa-security-active .stoa-protected-lesson *:not(input):not(textarea):not(select):not([contenteditable="true"]){
-  -webkit-touch-callout:none;
-  -webkit-user-select:none;
-  user-select:none;
+html.stoa-security-pending #lesson-content{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+html.stoa-security-active,
+html.stoa-security-active body,
+html.stoa-security-active body *:not(input):not(textarea):not(select):not([contenteditable="true"]):not([data-allow-select]),
+html.stoa-security-pending #lesson-content,
+html.stoa-security-pending #lesson-content *:not(input):not(textarea):not(select):not([contenteditable="true"]):not([data-allow-select]){
+  -webkit-touch-callout:none!important;
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-user-drag:none!important;
+}
+
+html.stoa-security-active ::selection,
+html.stoa-security-pending #lesson-content ::selection{
+  color:inherit!important;
+  background:transparent!important;
+  text-shadow:none!important;
+}
+
+html.stoa-security-active input,
+html.stoa-security-active textarea,
+html.stoa-security-active select,
+html.stoa-security-active [contenteditable="true"],
+html.stoa-security-active [data-allow-select]{
+  -webkit-touch-callout:default!important;
+  -webkit-user-select:text!important;
+  user-select:text!important;
 }
 
 .stoa-protected-lesson{
   position:relative;
-  transition:filter .16s ease,opacity .16s ease;
+  transition:filter .12s ease,opacity .12s ease;
 }
 
 .stoa-protected-lesson img{
-  -webkit-user-drag:none;
+  -webkit-user-drag:none!important;
+  user-drag:none!important;
   pointer-events:none;
 }
 
 .stoa-protected-lesson video{
-  -webkit-touch-callout:none;
+  -webkit-touch-callout:none!important;
 }
 
 .stoa-protected-lesson.stoa-security-obscured{
-  filter:blur(32px);
-  opacity:.025;
-  pointer-events:none;
+  filter:blur(42px)!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+html.stoa-security-screen-hidden body::before{
+  content:'Contenu réservé aux membres STOA';
+  position:fixed;
+  z-index:2147483647;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:#20261f;
+  color:#e9e7e1;
+  font:600 12px/1.5 Jost,"Segoe UI",sans-serif;
+  letter-spacing:.15em;
+  text-align:center;
+  text-transform:uppercase;
 }
 
 .stoa-protected-lesson::after{
@@ -38,9 +82,26 @@
   pointer-events:none;
 }
 
+.stoa-security-neutral{
+  min-height:50vh;
+  display:grid;
+  place-items:center;
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+
+.stoa-lesson-canvas{
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto;
+}
+
 .stoa-security-toast{
   position:fixed;
-  z-index:1600;
+  z-index:2147483647;
   left:50%;
   bottom:max(22px,env(safe-area-inset-bottom));
   width:max-content;
@@ -48,7 +109,7 @@
   padding:12px 16px;
   border:1px solid rgba(255,255,255,.42);
   border-radius:14px;
-  background:rgba(42,50,39,.94);
+  background:rgba(42,50,39,.96);
   box-shadow:0 18px 55px rgba(22,28,20,.3);
   backdrop-filter:blur(18px);
   color:#fff;
@@ -58,9 +119,14 @@
 }
 
 @media print{
-  .stoa-protected-lesson,
-  #lesson-content,
-  .lesson-layout,
-  body.member-page{display:none!important;visibility:hidden!important}
-  html::before{content:'L’impression des leçons STOA est désactivée.';display:block;padding:2cm;font:16px/1.5 sans-serif}
+  html,body{background:#fff!important}
+  body>*{display:none!important;visibility:hidden!important}
+  body::before{
+    content:'L’impression des leçons STOA est désactivée.'!important;
+    display:block!important;
+    visibility:visible!important;
+    padding:2cm!important;
+    color:#111!important;
+    font:16px/1.5 sans-serif!important;
+  }
 }
