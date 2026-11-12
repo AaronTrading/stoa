@@ -1,0 +1,16 @@
+{
+  "name": "STOA Académie",
+  "short_name": "STOA",
+  "description": "L’Académie STOA sur votre mobile et votre ordinateur.",
+  "id": "/accueil",
+  "start_url": "/accueil",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#22271f",
+  "theme_color": "#343b2d",
+  "lang": "fr",
+  "icons": [
+    { "src": "/assets/branding/stoa-mark-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/branding/stoa-mark-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

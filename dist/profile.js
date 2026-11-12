@@ -17,6 +17,7 @@ const avatarImage = document.querySelector('#profile-avatar-image');
 const avatarInitial = document.querySelector('#profile-avatar-initial');
 const removeButton = document.querySelector('#profile-avatar-remove');
 const message = document.querySelector('#profile-message');
+const autosaveNote = document.querySelector('#profile-autosave-note');
 const saveButton = form.querySelector('button[type="submit"]');
 const cropDialog = document.querySelector('#avatar-crop-dialog');
 const cropCanvas = document.querySelector('#avatar-crop-canvas');
@@ -31,6 +32,9 @@ const themeInputs = [...document.querySelectorAll('input[name="themePreference"]
 const subscriptionTitle = document.querySelector('#profile-subscription-title');
 const subscriptionDetail = document.querySelector('#profile-subscription-detail');
 const subscriptionAction = document.querySelector('#profile-subscription-action');
+const installButton = document.querySelector('#profile-install-app');
+const installDialog = document.querySelector('#install-dialog');
+const installInstructions = document.querySelector('#install-instructions');
 
 let user;
 let profile;
@@ -50,6 +54,8 @@ let usernameSaveInFlight = false;
 let usernameSaveAgain = false;
 let currentSubscription = null;
 let hasAcademyAccess = false;
+let messageHideTimer;
+let deferredInstallPrompt;
 const usernamePattern = /^[\p{L}\p{N}._;-]{3,30}$/u;
 const normalizeUsername = (value) => String(value || '').replace(/^@+/, '').trim().toLocaleLowerCase('fr-FR');
 
@@ -64,9 +70,51 @@ const enforceLowercaseUsername = (input) => {
 };
 
 const setMessage = (text, tone = 'info') => {
+  clearTimeout(messageHideTimer);
   message.textContent = text;
   message.dataset.tone = tone;
+  autosaveNote.hidden = !text;
+  autosaveNote.dataset.tone = tone;
+  if (tone === 'success') messageHideTimer = window.setTimeout(() => { autosaveNote.hidden = true; }, 2400);
 };
+
+const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const updateInstallButton = () => {
+  if (!installButton) return;
+  const installed = isInstalledApp();
+  installButton.textContent = installed ? 'Application installée' : 'Télécharger l’application';
+  installButton.disabled = installed;
+};
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updateInstallButton();
+});
+window.addEventListener('appinstalled', () => { deferredInstallPrompt = undefined; updateInstallButton(); });
+navigator.serviceWorker?.register('/sw.js').catch(() => {});
+
+installButton?.addEventListener('click', async () => {
+  if (isInstalledApp()) return;
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = undefined;
+    updateInstallButton();
+    return;
+  }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  installInstructions.textContent = ios
+    ? 'Dans Safari, touchez Partager puis « Sur l’écran d’accueil ».'
+    : 'Ouvrez le menu de votre navigateur puis choisissez « Installer STOA » ou « Ajouter à l’écran d’accueil ».';
+  installDialog.showModal();
+});
+document.querySelector('#install-dialog-close')?.addEventListener('click', () => installDialog.close());
+document.querySelector('#install-dialog-confirm')?.addEventListener('click', () => installDialog.close());
+installDialog?.addEventListener('click', (event) => {
+  if (event.target === installDialog) installDialog.close();
+});
+updateInstallButton();
 
 const setBusy = (busy) => {
   if (saveButton) saveButton.disabled = busy;

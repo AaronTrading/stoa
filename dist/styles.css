@@ -1120,6 +1120,36 @@ html.academy-access-pending body{visibility:hidden}
 .stoa-onboarding-card{overscroll-behavior:contain}
 .stoa-onboarding-card .username-entry input{width:100%!important;min-width:0!important;outline:0!important;box-shadow:none!important}
 .stoa-onboarding-card .username-entry:focus-within{border-color:#727967;box-shadow:0 0 0 3px #343b2d18}
+
+/* Profil : alignements, statut transitoire et installation PWA */
+.profile-page .profile-layout{grid-template-columns:minmax(0,1fr) minmax(340px,360px);align-items:stretch}
+.profile-page .profile-card{height:100%}
+.profile-page .username-entry{display:flex;gap:7px;align-items:center;padding:0 14px}
+.profile-page .username-entry>span{flex:0 0 auto;padding:0;border:0;line-height:1}
+.profile-page .username-entry>input{min-height:48px;padding:12px 0!important;border:0!important;outline:0!important}
+.profile-page .profile-meta>div{grid-template-columns:105px minmax(0,1fr);align-items:center;min-height:58px;padding:10px 0}
+.profile-page .profile-meta span{margin:0}
+.profile-page .profile-meta strong{display:flex;min-height:24px;align-items:center}
+.profile-compact-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end;margin-top:8px}
+.profile-compact-row .profile-privacy-choice{height:100%;min-height:72px;margin:0}
+.profile-email-field{display:grid;gap:9px;min-width:0}.profile-email-field>label{margin:0}.profile-email-field>input{min-width:0}
+.profile-page .profile-side-stack{height:100%}
+.profile-page .profile-side-stack .profile-journey-link{margin-top:auto}
+.profile-autosave-note[hidden]{display:none!important}
+.profile-page .profile-autosave-note{margin:18px 0 0;border-color:transparent;background:transparent;padding:8px 2px}
+.profile-page .profile-autosave-note[data-tone=error]{color:#a15b50}
+.profile-page .profile-autosave-note[data-tone=error]>span{background:#a15b50}
+.profile-install-card{display:grid;grid-template-columns:38px minmax(0,1fr);gap:11px;margin:20px 0;padding:13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.42)}
+.profile-install-card>img{grid-row:1/3;width:38px;height:38px;border-radius:10px;object-fit:cover}
+.profile-install-card>div{display:grid;align-content:center;line-height:1.25}.profile-install-card strong{font-size:12px}.profile-install-card span{color:var(--muted);font-size:9px}
+.profile-install-card>button{grid-column:1/-1;min-height:39px;border-radius:9px;background:var(--olive);color:var(--ivory);font:650 11px var(--font)}
+.profile-install-card>button:disabled{cursor:default;opacity:.65}
+.install-dialog{width:min(460px,calc(100% - 28px));padding:34px;border-radius:22px;text-align:center}
+.install-dialog>img{width:72px;height:72px;margin:0 auto 18px;border-radius:19px;object-fit:cover}.install-dialog>.eyebrow{justify-content:center}.install-dialog h2{margin:16px 0 12px;font-size:34px}.install-dialog p{margin:0 0 24px}.install-dialog .button{width:100%}
+html.stoa-dark .profile-install-card{border-color:var(--dark-border);background:rgba(255,255,255,.04)}
+html.stoa-dark .install-dialog{border-color:var(--dark-border);background:#2d352a;color:var(--ink)}
+@media(max-width:800px){.profile-page .profile-layout{grid-template-columns:1fr}.profile-page .profile-side-stack{height:auto}.profile-page .profile-side-stack .profile-journey-link{margin-top:0}}
+@media(max-width:640px){.profile-compact-row{grid-template-columns:1fr}.profile-page .profile-meta>div{grid-template-columns:110px minmax(0,1fr)}.profile-page .profile-autosave-note{margin-top:12px}.install-dialog{padding:30px 20px}}
 .stoa-onboarding-card .onboarding-field[hidden]{display:none!important}
 .stoa-tour-card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 
