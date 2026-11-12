@@ -249,13 +249,6 @@ if (document.querySelector('#lesson-content')) {
   document.querySelector('#lesson-copy').innerHTML='<div class="lesson-content-loading" aria-label="Chargement de la leçon"></div>';
   const escapeContent=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const inlineMarkup=(value)=>escapeContent(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
-  const normalizeQuiz=(value)=>{
-    try{
-      const parsed=typeof value==='string'?JSON.parse(value):value;
-      if(!parsed||!Array.isArray(parsed.questions))return null;
-      return {questions:parsed.questions.map(question=>({question:String(question.question||''),answers:Array.isArray(question.answers)?question.answers.map(String):[],correct:Number(question.correct)})).filter(question=>question.question&&question.answers.length>=2&&Number.isInteger(question.correct)&&question.correct>=0&&question.correct<question.answers.length)};
-    }catch{return null;}
-  };
   const storedMarkupPattern=/<\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b|&lt;\/?(?:p|div|h[2-4]|ul|ol|li|blockquote|figure|table|section|strong|b|em|i|u|a|span|br)\b/i;
   const decodeStoredMarkup=(value='')=>{
     let html=String(value);
@@ -276,9 +269,12 @@ if (document.querySelector('#lesson-content')) {
       if(!allowed.has(element.tagName)){element.replaceWith(...element.childNodes);return;}
       const imageSource=element.tagName==='IMG'?(element.getAttribute('src')||''):'';
       const linkTarget=element.tagName==='A'?(element.getAttribute('href')||''):'';
-      const quiz=element.tagName==='SECTION'?normalizeQuiz(element.getAttribute('data-quiz')):null;
+      const copyBlock=element.tagName==='SECTION'&&(element.hasAttribute('data-copy-block')||element.classList.contains('lesson-copy-block'));
+      const imageSelector=element.tagName==='SECTION'&&(element.hasAttribute('data-image-selector')||element.classList.contains('lesson-image-selector'));
+      const imageOption=element.tagName==='FIGURE'&&(element.hasAttribute('data-image-option')||element.classList.contains('lesson-image-selector-option'));
+      const imageLabel=imageOption?String(element.getAttribute('data-label')||'Option').trim().slice(0,60):'';
       const font=element.tagName==='SPAN'?(element.getAttribute('data-font')||''):'';
-      if(element.tagName==='SECTION'&&!quiz){element.replaceWith(...element.childNodes);return;}
+      if(element.tagName==='SECTION'&&!copyBlock&&!imageSelector){element.remove();return;}
       if(element.tagName==='SPAN'&&!['sans','serif'].includes(font)){element.replaceWith(...element.childNodes);return;}
       [...element.attributes].forEach(attribute=>element.removeAttribute(attribute.name));
       if(element.tagName==='IMG'){
@@ -289,8 +285,10 @@ if (document.querySelector('#lesson-content')) {
         if(/^(https?:\/\/|mailto:|\/|#)/i.test(linkTarget)) element.setAttribute('href',linkTarget); else {element.replaceWith(...element.childNodes);return;}
         if(/^https?:\/\//i.test(linkTarget)){element.setAttribute('target','_blank');element.setAttribute('rel','noopener noreferrer');}
       }
-      if(element.tagName==='FIGURE') element.className='lesson-inline-image';
-      if(element.tagName==='SECTION'){element.className='lesson-quiz';element.dataset.quiz=JSON.stringify(quiz);element.replaceChildren();}
+      if(element.tagName==='FIGURE'&&imageOption){element.className='lesson-image-selector-option';element.dataset.imageOption='';element.dataset.label=imageLabel||'Option';}
+      else if(element.tagName==='FIGURE') element.className='lesson-inline-image';
+      if(element.tagName==='SECTION'&&copyBlock){element.className='lesson-copy-block';element.dataset.copyBlock='';}
+      else if(element.tagName==='SECTION'&&imageSelector){element.className='lesson-image-selector';element.dataset.imageSelector='';}
       if(element.tagName==='SPAN') element.dataset.font=font;
     });
     [...template.content.childNodes].forEach(node=>{
@@ -305,10 +303,6 @@ if (document.querySelector('#lesson-content')) {
     });
     return template.innerHTML;
   };
-  const renderLessonQuizzes=()=>document.querySelectorAll('.lesson-quiz[data-quiz]').forEach(element=>{
-    const quiz=normalizeQuiz(element.dataset.quiz); if(!quiz?.questions.length){element.remove();return;}
-    element.innerHTML=`<span class="eyebrow">MINI QUIZ</span><h3>Vérifiez ce que vous retenez.</h3><div class="lesson-quiz-questions">${quiz.questions.map((question,questionIndex)=>`<fieldset data-quiz-question="${questionIndex}"><legend><span>${number(questionIndex+1)}</span>${escapeContent(question.question)}</legend><div>${question.answers.map((answer,answerIndex)=>`<button type="button" data-quiz-answer="${answerIndex}" aria-pressed="false"><i></i>${escapeContent(answer)}</button>`).join('')}</div></fieldset>`).join('')}</div><div class="lesson-quiz-footer"><button type="button" class="button dark" data-quiz-check>Vérifier mes réponses</button><p role="status"></p></div>`;
-  });
   const renderContentBlock=(value)=>{
     const trimmed=value.trim();
     if(/^##\s+/.test(trimmed)) return `<h3>${inlineMarkup(trimmed.replace(/^##\s+/,''))}</h3>`;
@@ -338,19 +332,9 @@ if (document.querySelector('#lesson-content')) {
       return `<section class="lesson-subchapter" id="lesson-${section.id}" data-subchapter-id="${section.id}">${heading}<div class="lesson-subchapter-content">${leading}${body}${remaining}</div></section>`;
     }).join('');
     window.__STOA_LESSON_DATA__={moduleId:module.id,coverImageUrl:module.coverImage||'',sections:sections.map(section=>({id:section.id,title:section.title}))};
-    renderLessonQuizzes();
     window.dispatchEvent(new CustomEvent('stoa:lesson-ready'));
   };
   loadLessonContent();
-  document.querySelector('#lesson-copy').addEventListener('click',(event)=>{
-    const answer=event.target.closest('[data-quiz-answer]');
-    if(answer){const fieldset=answer.closest('[data-quiz-question]');fieldset.querySelectorAll('[data-quiz-answer]').forEach(button=>{button.classList.remove('selected','correct','incorrect');button.setAttribute('aria-pressed','false');});answer.classList.add('selected');answer.setAttribute('aria-pressed','true');fieldset.closest('.lesson-quiz').querySelector('.lesson-quiz-footer p').textContent='';return;}
-    const check=event.target.closest('[data-quiz-check]'); if(!check)return;
-    const quizElement=check.closest('.lesson-quiz'),quiz=normalizeQuiz(quizElement.dataset.quiz),fields=[...quizElement.querySelectorAll('[data-quiz-question]')];
-    if(fields.some(field=>!field.querySelector('.selected'))){quizElement.querySelector('.lesson-quiz-footer p').textContent='Répondez à toutes les questions avant de vérifier.';return;}
-    let score=0; fields.forEach((field,index)=>{const selected=field.querySelector('.selected'),answerIndex=Number(selected.dataset.quizAnswer),correct=quiz.questions[index].correct;if(answerIndex===correct){score++;selected.classList.add('correct');}else{selected.classList.add('incorrect');field.querySelector(`[data-quiz-answer="${correct}"]`)?.classList.add('correct');}});
-    quizElement.querySelector('.lesson-quiz-footer p').textContent=`${score} bonne${score>1?'s':''} réponse${score>1?'s':''} sur ${fields.length}.`;
-  });
   const completeButton=document.querySelector('#complete-module');
   const updateCompletion=()=>{const done=completed.has(id);completeButton.innerHTML=done?'Terminé — annuler <span>↶</span>':'Marquer comme terminé <span>✓</span>';completeButton.setAttribute('aria-pressed',String(done));};updateCompletion();
   completeButton.addEventListener('click',()=>{const wasCompleted=completed.has(id);wasCompleted?completed.delete(id):completed.add(id);const saved=save(progressStorageKey,[...completed]);persistModuleProgress(id,completed.has(id));updateCompletion();renderNav();document.querySelector('#completion-status').textContent=saved?(completed.has(id)?'Leçon terminée. Votre progression est enregistrée.':'Cette leçon est de nouveau à découvrir.'):'Progression modifiée pour cette session.';if(!wasCompleted&&completed.has(id))window.dispatchEvent(new CustomEvent('stoa:lesson-completed',{detail:{moduleId:module.id||id}}));});

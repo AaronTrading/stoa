@@ -9,8 +9,10 @@ const imageButton = document.querySelector('label[for="lesson-image-input"]');
 const artwork = document.querySelector('#lesson-artwork');
 const coverInput = document.querySelector('#lesson-cover-input');
 const coverButton = document.querySelector('#lesson-artwork-change');
-const quizToggle = document.querySelector('#lesson-quiz-enabled');
 const fontSelect = document.querySelector('#lesson-font-select');
+const copyBlockButton = document.querySelector('#lesson-copy-block-add');
+const imageSelectorButton = document.querySelector('#lesson-image-selector-add');
+const imageSelectorInput = document.querySelector('#lesson-image-selector-input');
 let lessonData;
 let editing = false;
 let original = {};
@@ -31,17 +33,11 @@ const decodePastedMarkup = (value = '') => {
   }
   return html;
 };
-const normalizeQuiz = (value) => {
-  try {
-    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
-    if (!parsed || !Array.isArray(parsed.questions)) return { questions: [] };
-    return { questions: parsed.questions.map((question) => ({ question: String(question.question || ''), answers: Array.isArray(question.answers) ? question.answers.map(String) : ['', ''], correct: Number.isInteger(Number(question.correct)) ? Number(question.correct) : 0 })) };
-  } catch { return { questions: [] }; }
-};
-
 const cleanHtml = (html) => {
   const template = document.createElement('template');
   template.innerHTML = html;
+  template.content.querySelectorAll('.lesson-copy-button').forEach((button) => button.remove());
+  template.content.querySelectorAll('.lesson-image-selector-tabs').forEach((tabs) => tabs.remove());
   template.content.querySelectorAll('font[face]').forEach((font) => {
     const face = (font.getAttribute('face') || '').toLowerCase();
     const kind = face.includes('cormorant') ? 'serif' : face.includes('segoe') ? 'sans' : '';
@@ -56,9 +52,12 @@ const cleanHtml = (html) => {
     if (!allowed.has(element.tagName)) { element.replaceWith(...element.childNodes); return; }
     const source = element.tagName === 'IMG' ? element.getAttribute('src') || '' : '';
     const href = element.tagName === 'A' ? element.getAttribute('href') || '' : '';
-    const quiz = element.tagName === 'SECTION' ? normalizeQuiz(element.getAttribute('data-quiz')) : null;
+    const copyBlock = element.tagName === 'SECTION' && (element.hasAttribute('data-copy-block') || element.classList.contains('lesson-copy-block'));
+    const imageSelector = element.tagName === 'SECTION' && (element.hasAttribute('data-image-selector') || element.classList.contains('lesson-image-selector'));
+    const imageOption = element.tagName === 'FIGURE' && (element.hasAttribute('data-image-option') || element.classList.contains('lesson-image-selector-option'));
+    const imageLabel = imageOption ? String(element.getAttribute('data-label') || 'Option').trim().slice(0, 60) : '';
     const font = element.tagName === 'SPAN' ? element.getAttribute('data-font') || '' : '';
-    if (element.tagName === 'SECTION' && !quiz.questions.length) { element.remove(); return; }
+    if (element.tagName === 'SECTION' && !copyBlock && !imageSelector) { element.remove(); return; }
     if (element.tagName === 'SPAN' && !['sans','serif'].includes(font)) { element.replaceWith(...element.childNodes); return; }
     [...element.attributes].forEach((attribute) => element.removeAttribute(attribute.name));
     if (element.tagName === 'IMG') {
@@ -72,30 +71,70 @@ const cleanHtml = (html) => {
         if (/^https?:\/\//i.test(href)) { element.setAttribute('target', '_blank'); element.setAttribute('rel', 'noopener noreferrer'); }
       } else element.replaceWith(...element.childNodes);
     }
-    if (element.tagName === 'FIGURE') element.className = 'lesson-inline-image';
-    if (element.tagName === 'SECTION') { element.className = 'lesson-quiz'; element.dataset.quiz = JSON.stringify(quiz); element.replaceChildren(); }
+    if (element.tagName === 'FIGURE' && imageOption) { element.className = 'lesson-image-selector-option'; element.dataset.imageOption = ''; element.dataset.label = imageLabel || 'Option'; }
+    else if (element.tagName === 'FIGURE') element.className = 'lesson-inline-image';
+    if (element.tagName === 'SECTION' && copyBlock) { element.className = 'lesson-copy-block'; element.dataset.copyBlock = ''; }
+    else if (element.tagName === 'SECTION' && imageSelector) { element.className = 'lesson-image-selector'; element.dataset.imageSelector = ''; }
     if (element.tagName === 'SPAN') element.dataset.font = font;
   });
   return template.innerHTML.trim();
 };
 
-const readQuizEditor = (element) => ({ questions: [...element.querySelectorAll('.quiz-editor-question')].map((question) => ({
-  question: question.querySelector('[data-quiz-question-text]').value.trim(),
-  answers: [...question.querySelectorAll('[data-quiz-answer-text]')].map((input) => input.value.trim()),
-  correct: Math.max(0, [...question.querySelectorAll('[data-quiz-correct]')].findIndex((radio) => radio.checked)),
-})) });
-
-const renderQuizEditor = (element, quiz) => {
-  const identity = crypto.randomUUID();
-  element.contentEditable = 'false';
-  element.dataset.quiz = JSON.stringify(quiz);
-  element.innerHTML = `<div class="quiz-editor-heading"><div><span class="eyebrow">MINI QUIZ</span><h3>Questions du sous-module</h3></div><button type="button" data-quiz-delete aria-label="Supprimer le quiz">×</button></div><div class="quiz-editor-questions">${quiz.questions.map((question, questionIndex) => `<article class="quiz-editor-question"><div class="quiz-editor-question-heading"><strong>Question ${questionIndex + 1}</strong><button type="button" data-quiz-remove-question aria-label="Supprimer cette question">×</button></div><input data-quiz-question-text value="${escapeHtml(question.question)}" placeholder="Écrivez votre question"><div class="quiz-editor-answers">${question.answers.map((answer, answerIndex) => `<label><input type="radio" name="quiz-${identity}-${questionIndex}" data-quiz-correct ${answerIndex === question.correct ? 'checked' : ''} aria-label="Bonne réponse"><input data-quiz-answer-text value="${escapeHtml(answer)}" placeholder="Réponse ${answerIndex + 1}"><button type="button" data-quiz-remove-answer aria-label="Supprimer cette réponse">×</button></label>`).join('')}</div><button type="button" class="quiz-editor-add" data-quiz-add-answer>＋ Ajouter une réponse</button></article>`).join('')}</div><button type="button" class="quiz-editor-add" data-quiz-add-question>＋ Ajouter une question</button>`;
+const hydrateCopyBlocks = () => {
+  document.querySelectorAll('.lesson-copy-block[data-copy-block]').forEach((block) => {
+    block.querySelector(':scope > .lesson-copy-button')?.remove();
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'lesson-copy-button'; button.textContent = 'Copier';
+    button.contentEditable = 'false'; button.setAttribute('aria-label', 'Copier le contenu de ce bloc');
+    block.prepend(button);
+  });
 };
 
-const renderQuizForReader = (element) => {
-  const quiz = normalizeQuiz(element.dataset.quiz);
-  element.contentEditable = 'false';
-  element.innerHTML = `<span class="eyebrow">MINI QUIZ</span><h3>Vérifiez ce que vous retenez.</h3><div class="lesson-quiz-questions">${quiz.questions.map((question, questionIndex) => `<fieldset data-quiz-question="${questionIndex}"><legend><span>${String(questionIndex + 1).padStart(2, '0')}</span>${escapeHtml(question.question)}</legend><div>${question.answers.map((answer, answerIndex) => `<button type="button" data-quiz-answer="${answerIndex}" aria-pressed="false"><i></i>${escapeHtml(answer)}</button>`).join('')}</div></fieldset>`).join('')}</div><div class="lesson-quiz-footer"><button type="button" class="button dark" data-quiz-check>Vérifier mes réponses</button><p role="status"></p></div>`;
+const showImageSelectorOption = (selector, index) => {
+  const options = [...selector.querySelectorAll(':scope > .lesson-image-selector-option[data-image-option]')];
+  const tabs = [...selector.querySelectorAll(':scope > .lesson-image-selector-tabs button')];
+  const activeIndex = Math.max(0, Math.min(Number(index) || 0, options.length - 1));
+  options.forEach((option, optionIndex) => { option.hidden = optionIndex !== activeIndex; });
+  tabs.forEach((tab, tabIndex) => { tab.classList.toggle('active', tabIndex === activeIndex); tab.setAttribute('aria-selected', String(tabIndex === activeIndex)); });
+};
+
+const hydrateImageSelectors = () => {
+  document.querySelectorAll('.lesson-image-selector[data-image-selector]').forEach((selector) => {
+    selector.querySelector(':scope > .lesson-image-selector-tabs')?.remove();
+    const options = [...selector.querySelectorAll(':scope > .lesson-image-selector-option[data-image-option]')];
+    if (!options.length) return;
+    const tabs = document.createElement('div'); tabs.className = 'lesson-image-selector-tabs'; tabs.setAttribute('role', 'tablist');
+    options.forEach((option, index) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = option.dataset.label || `Option ${index + 1}`;
+      button.dataset.imageSelectorIndex = String(index); button.setAttribute('role', 'tab'); button.contentEditable = 'false';
+      tabs.append(button);
+    });
+    selector.prepend(tabs); showImageSelectorOption(selector, 0);
+  });
+};
+
+const serializeEditorContent = (element) => {
+  const clone = element.cloneNode(true);
+  clone.querySelectorAll('.lesson-copy-button').forEach((button) => button.remove());
+  clone.querySelectorAll('.lesson-image-selector-tabs').forEach((tabs) => tabs.remove());
+  clone.querySelectorAll('.lesson-image-selector-option').forEach((option) => option.removeAttribute('hidden'));
+  return cleanHtml(clone.innerHTML);
+};
+
+const copyBlockText = async (block, button) => {
+  const clone = block.cloneNode(true);
+  clone.querySelectorAll('.lesson-copy-button').forEach((item) => item.remove());
+  const text = clone.innerText.trim();
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text; textarea.style.position = 'fixed'; textarea.style.opacity = '0';
+    document.body.append(textarea); textarea.select(); document.execCommand('copy'); textarea.remove();
+  }
+  button.textContent = 'Copié'; button.dataset.copied = 'true';
+  window.setTimeout(() => { button.textContent = 'Copier'; delete button.dataset.copied; }, 1400);
 };
 
 const prepareFigures = () => {
@@ -105,18 +144,12 @@ const prepareFigures = () => {
   });
 };
 
-const syncQuizToggle = () => {
-  if (quizToggle) quizToggle.checked = Boolean(document.querySelector('.lesson-quiz[data-quiz]'));
-};
-
 const enterEditMode = () => {
   if (!lessonData || editing) return;
   editing = true;
   original = { title: document.querySelector('#lesson-title').textContent, copy: document.querySelector('#lesson-copy').innerHTML, coverSrc: artwork.src, coverAlt: artwork.alt };
   lesson.classList.add('lesson-editing'); pencil.hidden = true; bar.hidden = false;
   editableAreas().forEach((element) => { element.contentEditable = 'true'; element.spellcheck = true; });
-  document.querySelectorAll('.lesson-quiz[data-quiz]').forEach((element) => renderQuizEditor(element, normalizeQuiz(element.dataset.quiz)));
-  syncQuizToggle();
   prepareFigures();
   document.querySelector('#lesson-title').focus();
   setStatus('Cliquez dans le texte pour le modifier.');
@@ -152,32 +185,28 @@ const uploadCover = async (file) => {
 const saveLesson = async () => {
   const title = document.querySelector('#lesson-title').textContent.trim();
   if (!title) { setStatus('Le titre ne peut pas être vide.', 'error'); return; }
-  const quizEditors = [...document.querySelectorAll('.lesson-quiz[data-quiz]')];
-  const quizzes = quizEditors.map(readQuizEditor);
-  const invalidQuiz = quizzes.find((quiz) => !quiz.questions.length || quiz.questions.some((question) => !question.question || question.answers.length < 2 || question.answers.some((answer) => !answer) || question.correct < 0 || question.correct >= question.answers.length));
-  if (invalidQuiz) { setStatus('Complétez chaque question, avec au moins deux réponses et une bonne réponse.', 'error'); return; }
   let coverImageUrl = lessonData.coverImageUrl || null;
   if (pendingCoverFile) {
     setStatus('Import de l’image principale…');
     try { coverImageUrl = await uploadCover(pendingCoverFile); }
     catch (error) { setStatus(`Échec : ${error.message}`, 'error'); return; }
   }
-  quizEditors.forEach((element, index) => { element.dataset.quiz = JSON.stringify(quizzes[index]); element.replaceChildren(); });
   setStatus('Enregistrement…');
   const promises = [supabase.from('modules').update({ title, cover_image_url: coverImageUrl }).eq('id', lessonData.moduleId)];
   document.querySelectorAll('[data-subchapter-id]').forEach((section) => {
     const known = lessonData.sections.find((item) => item.id === section.dataset.subchapterId);
     const titleElement = section.querySelector('[data-subchapter-title]');
     const sectionTitle = titleElement?.textContent.trim() || known?.title || 'Cours';
-    const content = cleanHtml(section.querySelector('.lesson-subchapter-content').innerHTML);
+    const content = serializeEditorContent(section.querySelector('.lesson-subchapter-content'));
     promises.push(supabase.from('subchapters').update({ title: sectionTitle, content }).eq('id', section.dataset.subchapterId));
   });
   const results = await Promise.all(promises);
   const error = results.find((result) => result.error)?.error;
   if (error) { setStatus(`Échec : ${error.message}`, 'error'); return; }
   await supabase.from('subchapter_images').delete().in('subchapter_id', lessonData.sections.map((item) => item.id));
-  document.querySelectorAll('.lesson-subchapter-content').forEach((element) => { element.innerHTML = cleanHtml(element.innerHTML); });
-  document.querySelectorAll('.lesson-quiz[data-quiz]').forEach(renderQuizForReader);
+  document.querySelectorAll('.lesson-subchapter-content').forEach((element) => { element.innerHTML = serializeEditorContent(element); });
+  hydrateCopyBlocks();
+  hydrateImageSelectors();
   if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
   coverPreviewUrl = undefined; pendingCoverFile = undefined; lessonData.coverImageUrl = coverImageUrl || '';
   artwork.src = coverImageUrl || artwork.src;
@@ -198,6 +227,8 @@ const deleteLesson = async () => {
 
 const initialize = async () => {
   lessonData = window.__STOA_LESSON_DATA__;
+  hydrateCopyBlocks();
+  hydrateImageSelectors();
   if (!lessonData || pencil.dataset.ready) return;
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
@@ -232,7 +263,7 @@ document.addEventListener('selectionchange', () => {
   if (editor) { savedRange = range.cloneRange(); activeEditor = editor; }
 });
 
-bar?.addEventListener('mousedown', (event) => { if (event.target.closest('button[data-edit-command],button[data-edit-block],#lesson-link-add')) event.preventDefault(); });
+bar?.addEventListener('mousedown', (event) => { if (event.target.closest('button[data-edit-command],button[data-edit-block],#lesson-link-add,#lesson-copy-block-add,#lesson-image-selector-add')) event.preventDefault(); });
 bar?.addEventListener('click', (event) => {
   const commandButton = event.target.closest('[data-edit-command]');
   const blockButton = event.target.closest('[data-edit-block]');
@@ -261,20 +292,53 @@ fontSelect?.addEventListener('change', () => {
   fontSelect.value = '';
 });
 
-quizToggle?.addEventListener('change', () => {
+copyBlockButton?.addEventListener('click', () => {
   if (!editing) return;
-  if (!quizToggle.checked) {
-    document.querySelectorAll('.lesson-quiz[data-quiz]').forEach((quiz) => quiz.remove());
-    setStatus('Cette leçon sera publiée sans quiz.');
-    return;
-  }
-  if (document.querySelector('.lesson-quiz[data-quiz]')) return;
-  activeEditor = [...document.querySelectorAll('.lesson-subchapter-content')].at(-1);
-  if (!activeEditor) { quizToggle.checked = false; setStatus('Aucun contenu disponible pour ajouter le quiz.', 'error'); return; }
-  const quiz = document.createElement('section'); quiz.className = 'lesson-quiz';
-  const data = { questions: [{ question: '', answers: ['', ''], correct: 0 }] };
-  activeEditor.append(quiz); renderQuizEditor(quiz, data); quiz.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setStatus('Quiz activé pour cette leçon. Complétez sa première question.');
+  activeEditor ||= document.querySelector('.lesson-subchapter-content');
+  if (!activeEditor) { setStatus('Aucun contenu disponible.', 'error'); return; }
+  const block = document.createElement('section');
+  block.className = 'lesson-copy-block'; block.dataset.copyBlock = '';
+  const paragraph = document.createElement('p'); paragraph.textContent = 'Écrivez ici le contenu à copier.';
+  block.append(paragraph); activeEditor.append(block); hydrateCopyBlocks();
+  const range = document.createRange(); range.selectNodeContents(paragraph);
+  const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  savedRange = range.cloneRange(); activeEditor.focus(); block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setStatus('Bloc copiable ajouté. Remplacez son contenu puis enregistrez.');
+});
+
+imageSelectorButton?.addEventListener('click', () => {
+  if (!editing) return;
+  activeEditor ||= document.querySelector('.lesson-subchapter-content');
+  if (!activeEditor) { setStatus('Aucun contenu disponible.', 'error'); return; }
+  imageSelectorInput?.click();
+});
+
+imageSelectorInput?.addEventListener('change', async () => {
+  const files = [...(imageSelectorInput.files || [])]; imageSelectorInput.value = '';
+  if (files.length < 2) { setStatus('Choisissez au moins deux images.', 'error'); return; }
+  if (files.length > 8 || files.some((file) => !file.type.startsWith('image/') || file.size > 10 * 1024 * 1024)) { setStatus('Choisissez de 2 à 8 images de moins de 10 Mo.', 'error'); return; }
+  const labels = files.map((file, index) => {
+    const defaultLabel = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || `Option ${index + 1}`;
+    return window.prompt(`Nom de l’option ${index + 1} :`, defaultLabel)?.trim() || defaultLabel;
+  });
+  setStatus('Import des images…');
+  try {
+    const images = await Promise.all(files.map(async (file, index) => {
+      const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').toLowerCase();
+      const path = `modules/${lessonData.moduleId}/selector-${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage.from('module-assets').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
+      if (error) throw error;
+      return { src: supabase.storage.from('module-assets').getPublicUrl(path).data.publicUrl, label: labels[index] };
+    }));
+    const selector = document.createElement('section'); selector.className = 'lesson-image-selector'; selector.dataset.imageSelector = '';
+    images.forEach(({ src, label }) => {
+      const figure = document.createElement('figure'); figure.className = 'lesson-image-selector-option'; figure.dataset.imageOption = ''; figure.dataset.label = label;
+      const image = document.createElement('img'); image.src = src; image.alt = label; image.loading = 'lazy';
+      figure.append(image); selector.append(figure);
+    });
+    activeEditor.append(selector); hydrateImageSelectors(); selector.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setStatus('Sélecteur d’images ajouté. Enregistrez la leçon pour le publier.');
+  } catch (error) { setStatus(`Échec : ${error.message}`, 'error'); }
 });
 
 document.querySelector('#lesson-link-add')?.addEventListener('click', () => {
@@ -295,23 +359,10 @@ document.querySelector('#lesson-link-add')?.addEventListener('click', () => {
 });
 
 lesson?.addEventListener('click', (event) => {
-  if (!editing) return;
-  const quizElement = event.target.closest('.lesson-quiz'); if (!quizElement) return;
-  if (event.target.closest('[data-quiz-delete]')) { quizElement.remove(); syncQuizToggle(); setStatus('Cette leçon sera publiée sans quiz.'); return; }
-  const quiz = readQuizEditor(quizElement);
-  const questionElement = event.target.closest('.quiz-editor-question');
-  const questionIndex = questionElement ? [...quizElement.querySelectorAll('.quiz-editor-question')].indexOf(questionElement) : -1;
-  if (event.target.closest('[data-quiz-add-question]')) quiz.questions.push({ question: '', answers: ['', ''], correct: 0 });
-  else if (event.target.closest('[data-quiz-remove-question]')) { if (quiz.questions.length === 1) { setStatus('Un quiz doit conserver au moins une question.', 'error'); return; } quiz.questions.splice(questionIndex, 1); }
-  else if (event.target.closest('[data-quiz-add-answer]')) quiz.questions[questionIndex].answers.push('');
-  else if (event.target.closest('[data-quiz-remove-answer]')) {
-    if (quiz.questions[questionIndex].answers.length === 2) { setStatus('Une question doit conserver au moins deux réponses.', 'error'); return; }
-    const answerRow = event.target.closest('label'), answerIndex = [...questionElement.querySelectorAll('.quiz-editor-answers label')].indexOf(answerRow);
-    quiz.questions[questionIndex].answers.splice(answerIndex, 1);
-    if (quiz.questions[questionIndex].correct === answerIndex) quiz.questions[questionIndex].correct = 0;
-    else if (quiz.questions[questionIndex].correct > answerIndex) quiz.questions[questionIndex].correct--;
-  } else return;
-  renderQuizEditor(quizElement, quiz);
+  const copyButton = event.target.closest('.lesson-copy-button');
+  if (copyButton) { event.preventDefault(); copyBlockText(copyButton.closest('.lesson-copy-block'), copyButton); return; }
+  const selectorButton = event.target.closest('[data-image-selector-index]');
+  if (selectorButton) { event.preventDefault(); showImageSelectorOption(selectorButton.closest('.lesson-image-selector'), selectorButton.dataset.imageSelectorIndex); return; }
 });
 
 imageButton?.addEventListener('click', () => {
