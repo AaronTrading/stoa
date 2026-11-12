@@ -5,7 +5,7 @@ import './support-widget.js';
 const body=document.body;
 document.documentElement.classList.add('academy-access-pending');
 
-const icon=(name)=>({home:'<path d="M4 11 12 4l8 7v9h-6v-6h-4v6H4Z"/>',route:'<path d="M6 19c4-1 1-7 6-7s2-6 6-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/>',academy:'<path d="M4 5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4Zm16 0h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4Z"/>',community:'<path d="M16 18c2.5 0 4-1.2 4-3s-1.5-3-4-3-4 1.2-4 3 1.5 3 4 3ZM8 12c2.2 0 3.5-1.2 3.5-3S10.2 6 8 6 4.5 7.2 4.5 9 5.8 12 8 12Zm0 2c-3.3 0-6 1.7-6 4v1h9"/>',coach:'<path d="M12 3v18M4.5 8.5h15M6 8.5l-3 5h6l-3-5Zm12 0-3 5h6l-3-5ZM8 21h8"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',shop:'<path d="M5 8h14l-1 12H6Zm3 0V6a4 4 0 0 1 8 0v2"/>',map:'<path d="m3 6 5-2 8 3 5-2v13l-5 2-8-3-5 2Zm5-2v13m8-10v13"/>',scanner:'<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4M8 12h8"/>',link:'<path d="M10 13a5 5 0 0 0 7.1.1l2-2A5 5 0 0 0 12 4l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/>',moon:'<path d="M20 15.5A8 8 0 0 1 8.5 4 8 8 0 1 0 20 15.5Z"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.5-5 3-7 8-7s7.5 2 8 7"/>',chevron:'<path d="m9 6 6 6-6 6"/>',menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',collapse:'<path d="m14 7-5 5 5 5"/>',back:'<path d="m15 18-6-6 6-6"/>'}[name]||'');
+const icon=(name)=>({home:'<path d="M4 11 12 4l8 7v9h-6v-6h-4v6H4Z"/>',route:'<path d="M6 19c4-1 1-7 6-7s2-6 6-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/>',academy:'<path d="M4 5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4Zm16 0h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4Z"/>',community:'<path d="M16 18c2.5 0 4-1.2 4-3s-1.5-3-4-3-4 1.2-4 3 1.5 3 4 3ZM8 12c2.2 0 3.5-1.2 3.5-3S10.2 6 8 6 4.5 7.2 4.5 9 5.8 12 8 12Zm0 2c-3.3 0-6 1.7-6 4v1h9"/>',train:'<path d="M6 5h12v14H6z"/><path d="M9 9h6M9 13h3M15 16l1.4 1.4L19 14.8"/>',coach:'<path d="M12 3v18M4.5 8.5h15M6 8.5l-3 5h6l-3-5Zm12 0-3 5h6l-3-5ZM8 21h8"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',shop:'<path d="M5 8h14l-1 12H6Zm3 0V6a4 4 0 0 1 8 0v2"/>',map:'<path d="m3 6 5-2 8 3 5-2v13l-5 2-8-3-5 2Zm5-2v13m8-10v13"/>',scanner:'<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4M8 12h8"/>',link:'<path d="M10 13a5 5 0 0 0 7.1.1l2-2A5 5 0 0 0 12 4l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/>',moon:'<path d="M20 15.5A8 8 0 0 1 8.5 4 8 8 0 1 0 20 15.5Z"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.5-5 3-7 8-7s7.5 2 8 7"/>',chevron:'<path d="m9 6 6 6-6 6"/>',menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',collapse:'<path d="m14 7-5 5 5 5"/>',back:'<path d="m15 18-6-6 6-6"/>'}[name]||'');
 const svg=(name)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icon(name)}</svg>`;
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const sentenceCase=(value='')=>{const text=String(value).trim().toLocaleLowerCase('fr-FR');return text?text[0].toLocaleUpperCase('fr-FR')+text.slice(1):text;};
@@ -15,7 +15,7 @@ const moduleParam=Math.max(1,Number(new URLSearchParams(location.search).get('mo
 const primary=[
   ['/accueil','Accueil','home','home'],['/academie','Académie','academy','academy']
 ];
-const primaryAfterCoaching=[['/parcours','Mon parcours','route','journey'],['/posts','Communauté','community','community']];
+const primaryAfterCoaching=[['/parcours','Mon parcours','route','journey'],['/posts','Communauté','community','community'],['/entrainement','S’entraîner','train','training']];
 
 const shell=document.createElement('div');
 shell.className='academy-shell-ui';
@@ -42,7 +42,7 @@ const collapsed=localStorage.getItem('stoa-sidebar-collapsed')==='1';body.classL
 shell.querySelector('.academy-collapse').addEventListener('click',()=>{const value=!body.classList.contains('academy-sidebar-collapsed');body.classList.toggle('academy-sidebar-collapsed',value);localStorage.setItem('stoa-sidebar-collapsed',value?'1':'0');});
 shell.querySelector('[data-tree-toggle]').addEventListener('click',event=>{const closed=shell.querySelector('.academy-tree').classList.toggle('tree-closed');event.currentTarget.textContent=closed?'+':'−';});
 
-const activeKey=path==='/posts'||path==='/communaute'?'community':path==='/email-center'?'email':path==='/coaching-coach'?'coach':path==='/decouvrir-coaching'||path.startsWith('/coaching')?'coaching':path==='/parcours'?'journey':path==='/accueil'?'home':path==='/academie'||path==='/module'?'academy':path==='/profil'?'profile':'';
+const activeKey=path==='/posts'||path==='/communaute'?'community':path==='/entrainement'?'training':path==='/email-center'?'email':path==='/coaching-coach'?'coach':path==='/decouvrir-coaching'||path.startsWith('/coaching')?'coaching':path==='/parcours'?'journey':path==='/accueil'?'home':path==='/academie'||path==='/module'?'academy':path==='/profil'?'profile':'';
 shell.querySelector(`[data-nav="${activeKey}"]`)?.classList.add('active');
 if(activeKey==='profile')shell.querySelector('.academy-profile-compact')?.classList.add('active');
 if(path==='/boutique')shell.querySelector('.academy-shop-link')?.classList.add('active');
@@ -65,6 +65,7 @@ const renderBreadcrumb=()=>{
   else if(path==='/profil')bits.push(['/profil','Profil & compte']);
   else if(path==='/boutique')bits.push(['/boutique','Boutique']);
   else if(path==='/parcours')bits.push(['/parcours','Mon parcours']);
+  else if(path==='/entrainement')bits.push(['/entrainement','S’entraîner']);
   else if(path==='/carte')bits.push(['/carte','Ressources'],['/carte','Carte']);
   else if(path==='/scanner')bits.push(['/scanner','Ressources'],['/scanner','Scanner']);
   breadcrumb.innerHTML=bits.map(([href,label],index)=>`${index?'<span>›</span>':''}<a href="${href}" ${index===bits.length-1?'aria-current="page"':''}>${esc(label)}</a>`).join('');
@@ -136,6 +137,7 @@ function setupGlobalSearch(){
     {title:'Coaching',meta:'Personnalisation, objectifs et suivi humain',href:'/decouvrir-coaching',keywords:'coaching coach personnalisation prive objectifs habitudes actions bilan check in rendez vous',coachingDestination:true},
     {title:'Académie',meta:'Piliers, chapitres et leçons',href:'/academie',keywords:'academie cours modules lecons piliers chapitres apprendre formation'},
     {title:'Communauté',meta:'Publications, annonces, questions et ressources',href:'/posts',keywords:'communaute posts publications annonces questions reussites ressources forum social'},
+    {title:'S’entraîner',meta:'Session quotidienne et répétition espacée',href:'/entrainement',keywords:'entrainer entrainement réviser revision questions quiz mémoire repetition espacée maitrise connaissances série quotidien'},
     {title:'Chat général',meta:'Discussion libre entre les membres',href:'/communaute',keywords:'chat general discussion message parler membres salon conversation'},
     {title:'Boutique',meta:'Produits sélectionnés par STOA',href:'/boutique',keywords:'boutique magasin produits huile viande commande acheter prix'},
     {title:'Accueil',meta:'Tableau de bord de votre espace',href:'/accueil',keywords:'accueil tableau bord home bonjour resume prochaine etape'}

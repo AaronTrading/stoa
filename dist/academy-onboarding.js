@@ -2,8 +2,8 @@ import {supabase} from './supabase.js';
 import {attachDepartmentPicker,departmentCode,departmentLabel} from './departments.js';
 
 const path=location.pathname.replace(/\.html$/,'')||'/';
-const allowedPaths=new Set(['/accueil','/academie','/module','/communaute','/posts','/profil','/parcours']);
-const stages=['welcome','username','identity','avatar','location','theme','intro','tour_nav','tour_academy','tour_progress','tour_profile','tour_community','community_action','lesson_launch','support','lesson_action','finish'];
+const allowedPaths=new Set(['/accueil','/academie','/module','/communaute','/posts','/profil','/parcours','/entrainement']);
+const stages=['welcome','username','identity','avatar','location','theme','intro','tour_nav','tour_academy','tour_progress','tour_training','tour_profile','tour_community','community_action','lesson_launch','support','lesson_action','finish'];
 const progressStage=stage=>Math.max(0,stages.indexOf(stage));
 const esc=(value='')=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const normalizeUsername=value=>String(value||'').replace(/^@+/,'').trim().toLocaleLowerCase('fr-FR');
@@ -100,7 +100,8 @@ async function initialize(user){
   async function renderTourStage(){
     if(state.stage==='tour_nav'){if(path!=='/accueil')return route('/accueil');return spotlight(matchMedia('(max-width:1120px)').matches?'.academy-mobile-menu':'.academy-sidebar',{title:'Tout STOA, à portée de main.',copy:'Votre Académie, la communauté, votre profil et les outils restent accessibles depuis cette navigation.',onNext:()=>save({},'tour_academy')});}
     if(state.stage==='tour_academy'){if(path!=='/accueil')return route('/accueil');return spotlight('[data-nav="academy"]',{title:'Votre parcours structuré.',copy:'Les cinq piliers, leurs chapitres et chaque leçon se trouvent ici.',onNext:()=>save({},'tour_progress')});}
-    if(state.stage==='tour_progress'){if(path!=='/accueil')return route('/accueil');document.body.classList.remove('academy-menu-open');return spotlight('.home-summary',{title:'Une progression qui vous suit.',copy:'Chaque leçon terminée et votre dernière lecture sont enregistrées automatiquement.',onNext:()=>save({},'tour_profile')});}
+    if(state.stage==='tour_progress'){if(path!=='/accueil')return route('/accueil');document.body.classList.remove('academy-menu-open');return spotlight('.home-summary',{title:'Une progression qui vous suit.',copy:'Chaque leçon terminée et votre dernière lecture sont enregistrées automatiquement.',onNext:()=>save({},'tour_training')});}
+    if(state.stage==='tour_training'){if(path!=='/accueil')return route('/accueil');return spotlight('[data-nav="training"]',{title:'Retenez ce que vous apprenez.',copy:'S’entraîner prépare chaque jour une courte session à partir des leçons déjà consultées. Vous pourrez la découvrir à votre rythme, sans étape obligatoire ici.',onNext:()=>save({},'tour_profile')});}
     if(state.stage==='tour_profile'){if(path!=='/accueil')return route('/accueil');return spotlight(matchMedia('(max-width:1120px)').matches?'.academy-mobile-menu':'.academy-profile-compact',{title:'Un espace à votre image.',copy:'Votre profil rassemble vos préférences, votre abonnement et votre parcours.',onNext:()=>save({tour_completed:true},'tour_community')});}
     if(state.stage==='tour_community'){if(path!=='/accueil')return route('/accueil');return spotlight('[data-nav="community"]',{title:'Entrez dans la communauté.',copy:'Vous pouvez discuter librement avec les autres membres de STOA.',button:'Ouvrir la communauté',onNext:async()=>{await save({},'community_action');route('/communaute')}});}
     if(state.stage==='community_action'){

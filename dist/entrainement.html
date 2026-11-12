@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr" class="academy-access-pending"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Réviser les leçons STOA avec une session quotidienne personnalisée."><meta name="robots" content="noindex,nofollow,noarchive"><title>S’entraîner — STOA</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="styles.css"><script src="env.js"></script><script type="module" src="auth.js"></script><script type="module" src="community-notifications.js"></script><script type="module" src="academy-shell.js"></script><script type="module" src="entrainement.js"></script></head>
+<body class="member-page training-page"><a class="skip" href="#main">Aller au contenu</a>
+<main class="training-main" id="main">
+  <header class="training-hero">
+    <div><span class="eyebrow">RÉPÉTITION ESPACÉE</span><h1>S’entraîner pour<br><em>retenir vraiment.</em></h1><p>Quelques minutes à partir des leçons que vous avez déjà consultées. Les notions fragiles reviennent plus tôt, les acquis solides beaucoup plus tard.</p></div>
+    <aside class="training-daily-card"><span>OBJECTIF DU JOUR</span><strong><b id="training-today-count">0</b> / 5</strong><div class="training-goal-track"><i id="training-goal-bar"></i></div><small id="training-goal-copy">Cinq minutes suffisent.</small></aside>
+  </header>
+
+  <section class="training-overview" id="training-overview" aria-live="polite">
+    <div class="training-loading"><i></i><i></i><i></i></div>
+  </section>
+
+  <section class="training-session" id="training-session" hidden aria-live="polite">
+    <header><button type="button" class="training-back" id="training-session-close">← Quitter la session</button><div><span id="training-session-position">Question 1 sur 7</span><div class="training-session-track"><i id="training-session-bar"></i></div></div></header>
+    <article class="training-question-card" id="training-question-card"></article>
+  </section>
+
+  <section class="training-map-section" id="training-map-section" hidden>
+    <header><div><span class="eyebrow">VOTRE CARTE</span><h2>Vos connaissances, leçon par leçon.</h2></div><p>La maîtrise évolue avec vos réponses, pas avec la vitesse.</p></header>
+    <div class="training-legend"><span><i class="undiscovered"></i>À découvrir</span><span><i class="fragile"></i>Fragile</span><span><i class="progressing"></i>En progression</span><span><i class="mastered"></i>Maîtrisé</span></div>
+    <div class="training-module-map" id="training-module-map"></div>
+  </section>
+
+  <section class="training-lower-grid" id="training-lower-grid" hidden>
+    <article class="training-week-card"><header><div><span class="eyebrow">CETTE SEMAINE</span><h2>Votre régularité.</h2></div><strong id="training-week-minutes">0 min</strong></header><div class="training-week-bars" id="training-week-bars"></div><footer id="training-week-summary"></footer></article>
+    <article class="training-achievements"><span class="eyebrow">ACCOMPLISSEMENTS</span><h2>Des repères, jamais une course.</h2><div id="training-achievement-list"></div></article>
+  </section>
+</main>
+</body></html>
