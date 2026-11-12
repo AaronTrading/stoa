@@ -12,7 +12,6 @@
     "verify": "npm run check && npm test",
     "security:build": "node scripts/build-security.mjs",
     "audit": "npm run security:build && playwright test -c playwright.security.config.mjs",
-    "stickers:generate": "node stickers/generate.js",
     "desktop": "electron .",
     "desktop:icon": "node scripts/build-desktop-icon.mjs",
     "desktop:dir": "npm run desktop:icon && electron-builder --dir --win",
@@ -56,14 +55,7 @@
     "@playwright/test": "^1.65.0",
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
-    "jsqr": "^1.4.0",
-    "opentype.js": "^2.0.0",
-    "pdfkit": "^0.20.2",
     "png-to-ico": "^3.0.1",
-    "pngjs": "^7.0.0",
-    "qrcode": "^1.5.4",
-    "sharp": "^0.35.5",
-    "svg-to-pdfkit": "^0.1.8",
     "terser": "^5.51.2"
   }
 }
