@@ -54,10 +54,10 @@
     setTimeout(() => toast.remove(), 2200);
   };
 
-  const prevent = (event, message = 'Ce contenu est réservé aux membres STOA.') => {
+  const prevent = (event, message = '') => {
     event.preventDefault();
     event.stopImmediatePropagation();
-    showNotice(message);
+    if (message) showNotice(message);
   };
 
   const setHidden = (reason, hidden) => {

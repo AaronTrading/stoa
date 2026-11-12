@@ -26,6 +26,7 @@ test('le clic droit et la sélection sont annulés', async ({ page }, testInfo) 
     return { contextPrevented: !contextAllowed, selectionPrevented: !selectionAllowed };
   });
   expect(result).toEqual({ contextPrevented: true, selectionPrevented: true });
+  await expect(page.locator('.stoa-security-toast')).toHaveCount(0);
 });
 
 test('une sélection DOM est immédiatement vidée', async ({ page }, testInfo) => {
@@ -90,8 +91,11 @@ test('les images sont non déplaçables et l’impression masque la leçon', asy
 
 test('la perte de focus masque immédiatement le contenu', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'javascript-disabled');
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-  await expect(page.locator('#lesson-content')).toHaveClass(/stoa-security-obscured/);
+  const obscuredImmediately = await page.evaluate(() => {
+    window.dispatchEvent(new Event('blur'));
+    return document.querySelector('#lesson-content')?.classList.contains('stoa-security-obscured');
+  });
+  expect(obscuredImmediately).toBe(true);
 });
 
 test('le mode canvas retire le texte du DOM', async ({ page }, testInfo) => {
