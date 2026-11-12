@@ -18,7 +18,7 @@ let editing = false;
 let original = {};
 let savedRange;
 let activeEditor;
-let draggedFigure;
+let draggedElement;
 let pendingCoverFile;
 let coverPreviewUrl;
 
@@ -100,6 +100,7 @@ const showImageSelectorOption = (selector, index) => {
 
 const hydrateImageSelectors = () => {
   document.querySelectorAll('.lesson-image-selector[data-image-selector]').forEach((selector) => {
+    selector.contentEditable = 'false';
     selector.querySelector(':scope > .lesson-image-selector-tabs')?.remove();
     const options = [...selector.querySelectorAll(':scope > .lesson-image-selector-option[data-image-option]')];
     if (!options.length) return;
@@ -119,6 +120,10 @@ const serializeEditorContent = (element) => {
   clone.querySelectorAll('.lesson-copy-button').forEach((button) => button.remove());
   clone.querySelectorAll('.lesson-image-selector-tabs').forEach((tabs) => tabs.remove());
   clone.querySelectorAll('.lesson-image-selector-option').forEach((option) => option.removeAttribute('hidden'));
+  clone.querySelectorAll('.lesson-editor-after-selector').forEach((paragraph) => {
+    if (!paragraph.textContent.trim()) paragraph.remove();
+    else paragraph.removeAttribute('class');
+  });
   return cleanHtml(clone.innerHTML);
 };
 
@@ -138,9 +143,21 @@ const copyBlockText = async (block, button) => {
 };
 
 const prepareFigures = () => {
-  document.querySelectorAll('.lesson-subchapter-content figure').forEach((figure) => {
+  document.querySelectorAll('.lesson-subchapter-content figure:not(.lesson-image-selector-option)').forEach((figure) => {
     figure.draggable = editing;
     figure.title = editing ? 'Faites glisser l’image pour la déplacer. Cliquez puis Suppr pour l’effacer.' : '';
+  });
+  document.querySelectorAll('.lesson-image-selector[data-image-selector]').forEach((selector) => {
+    selector.contentEditable = 'false'; selector.draggable = editing;
+    selector.title = editing ? 'Faites glisser ce bloc pour le déplacer.' : '';
+  });
+};
+
+const ensureSpaceAfterImageSelectors = () => {
+  document.querySelectorAll('.lesson-image-selector[data-image-selector]').forEach((selector) => {
+    if (selector.nextElementSibling) return;
+    const paragraph = document.createElement('p'); paragraph.className = 'lesson-editor-after-selector';
+    paragraph.append(document.createElement('br')); selector.after(paragraph);
   });
 };
 
@@ -150,7 +167,7 @@ const enterEditMode = () => {
   original = { title: document.querySelector('#lesson-title').textContent, copy: document.querySelector('#lesson-copy').innerHTML, coverSrc: artwork.src, coverAlt: artwork.alt };
   lesson.classList.add('lesson-editing'); pencil.hidden = true; bar.hidden = false;
   editableAreas().forEach((element) => { element.contentEditable = 'true'; element.spellcheck = true; });
-  prepareFigures();
+  hydrateImageSelectors(); prepareFigures(); ensureSpaceAfterImageSelectors();
   document.querySelector('#lesson-title').focus();
   setStatus('Cliquez dans le texte pour le modifier.');
 };
@@ -306,10 +323,20 @@ copyBlockButton?.addEventListener('click', () => {
   setStatus('Bloc copiable ajouté. Remplacez son contenu puis enregistrez.');
 });
 
+const placeInsertionMarker = () => {
+  document.querySelectorAll('.lesson-image-cursor').forEach((marker) => marker.remove());
+  if (!activeEditor) return;
+  const marker = document.createElement('span'); marker.className = 'lesson-image-cursor'; marker.setAttribute('aria-hidden', 'true');
+  if (savedRange && activeEditor.contains(savedRange.commonAncestorContainer)) {
+    const range = savedRange.cloneRange(); range.collapse(false); range.insertNode(marker);
+  } else activeEditor.append(marker);
+};
+
 imageSelectorButton?.addEventListener('click', () => {
   if (!editing) return;
   activeEditor ||= document.querySelector('.lesson-subchapter-content');
   if (!activeEditor) { setStatus('Aucun contenu disponible.', 'error'); return; }
+  placeInsertionMarker();
   imageSelectorInput?.click();
 });
 
@@ -336,7 +363,7 @@ imageSelectorInput?.addEventListener('change', async () => {
       const image = document.createElement('img'); image.src = src; image.alt = label; image.loading = 'lazy';
       figure.append(image); selector.append(figure);
     });
-    activeEditor.append(selector); hydrateImageSelectors(); selector.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    insertImageAtMarker(selector); hydrateImageSelectors(); prepareFigures(); ensureSpaceAfterImageSelectors(); selector.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setStatus('Sélecteur d’images ajouté. Enregistrez la leçon pour le publier.');
   } catch (error) { setStatus(`Échec : ${error.message}`, 'error'); }
 });
@@ -366,11 +393,8 @@ lesson?.addEventListener('click', (event) => {
 });
 
 imageButton?.addEventListener('click', () => {
-  document.querySelectorAll('.lesson-image-cursor').forEach((marker) => marker.remove());
   if (!activeEditor || !savedRange || !activeEditor.contains(savedRange.commonAncestorContainer)) return;
-  const marker = document.createElement('span');
-  marker.className = 'lesson-image-cursor'; marker.setAttribute('aria-hidden', 'true');
-  const range = savedRange.cloneRange(); range.collapse(false); range.insertNode(marker);
+  placeInsertionMarker();
 });
 
 const insertImageAtMarker = (figure) => {
@@ -405,7 +429,7 @@ imageInput?.addEventListener('change', async () => {
 });
 
 lesson?.addEventListener('click', (event) => {
-  if (!editing || !event.target.matches('.lesson-subchapter-content img')) return;
+  if (!editing || !event.target.matches('.lesson-subchapter-content img') || event.target.closest('.lesson-image-selector')) return;
   document.querySelectorAll('.editor-image-selected').forEach((element) => element.classList.remove('editor-image-selected'));
   event.target.closest('figure').classList.add('editor-image-selected');
 });
@@ -428,13 +452,23 @@ lesson?.addEventListener('paste', (event) => {
   if (markup) document.execCommand('insertHTML', false, cleanHtml(markup));
   else document.execCommand('insertText', false, text.replace(/\r/g, ''));
 });
-lesson?.addEventListener('dragstart', (event) => { if (editing) draggedFigure = event.target.closest('.lesson-subchapter-content figure'); });
-lesson?.addEventListener('dragover', (event) => { if (editing && draggedFigure && event.target.closest('.lesson-subchapter-content')) event.preventDefault(); });
+lesson?.addEventListener('dragstart', (event) => {
+  if (!editing) return;
+  draggedElement = event.target.closest('.lesson-image-selector[data-image-selector],.lesson-subchapter-content figure:not(.lesson-image-selector-option)');
+});
+lesson?.addEventListener('dragover', (event) => { if (editing && draggedElement && event.target.closest('.lesson-subchapter-content')) event.preventDefault(); });
 lesson?.addEventListener('drop', (event) => {
   const targetEditor = event.target.closest('.lesson-subchapter-content');
-  if (!editing || !draggedFigure || !targetEditor) return;
+  if (!editing || !draggedElement || !targetEditor || draggedElement.contains(event.target)) return;
   event.preventDefault();
-  const range = document.caretRangeFromPoint?.(event.clientX, event.clientY);
-  if (range && targetEditor.contains(range.startContainer)) range.insertNode(draggedFigure); else targetEditor.append(draggedFigure);
-  draggedFigure = undefined; setStatus('Image déplacée.');
+  const targetBlock = event.target.closest('p,h2,h3,h4,blockquote,ul,ol,figure,section');
+  if (targetBlock && targetBlock !== draggedElement && targetEditor.contains(targetBlock)) {
+    const bounds = targetBlock.getBoundingClientRect();
+    if (event.clientY > bounds.top + bounds.height / 2) targetBlock.after(draggedElement);
+    else targetBlock.before(draggedElement);
+  } else targetEditor.append(draggedElement);
+  const movedSelector = draggedElement.matches('.lesson-image-selector');
+  draggedElement = undefined; ensureSpaceAfterImageSelectors();
+  setStatus(movedSelector ? 'Sélecteur d’images déplacé.' : 'Image déplacée.');
 });
+lesson?.addEventListener('dragend', () => { draggedElement = undefined; });
