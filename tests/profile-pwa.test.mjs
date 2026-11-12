@@ -25,7 +25,8 @@ test('le profil propose l’installation PWA sur mobile et ordinateur', () => {
 test('les correctifs d’alignement du profil restent explicites', () => {
   assert.match(profilePage, /class="profile-compact-row"/);
   assert.match(profilePage, /profile-autosave-note" id="profile-autosave-note" hidden/);
-  assert.match(styles, /\.profile-page \.username-entry\{display:flex/);
+  assert.match(styles, /\.profile-page \.username-entry\{position:relative;display:block/);
   assert.match(styles, /\.profile-page \.profile-meta>div\{grid-template-columns:105px minmax\(0,1fr\);align-items:center/);
-  assert.match(styles, /\.profile-page \.profile-side-stack\{height:100%\}/);
+  assert.match(styles, /\.profile-page \.profile-layout\{grid-template-columns:[^}]+;align-items:start\}/);
+  assert.match(styles, /\.profile-compact-row\{display:grid;grid-template-columns:1fr/);
 });
