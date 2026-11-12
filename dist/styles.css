@@ -1158,6 +1158,9 @@ html.stoa-dark .profile-install-card{border-color:var(--dark-border);background:
 html.stoa-dark .install-dialog{border-color:var(--dark-border);background:#2d352a;color:var(--ink)}
 @media(max-width:800px){.profile-page .profile-layout{grid-template-columns:1fr}.profile-page .profile-side-stack{height:auto}.profile-page .profile-side-stack .profile-journey-link{margin-top:0}}
 @media(max-width:640px){.profile-compact-row{grid-template-columns:1fr}.profile-page .profile-meta>div{grid-template-columns:110px minmax(0,1fr)}.profile-page .profile-autosave-note{margin-top:12px}.install-dialog{padding:30px 20px}}
+
+/* Déclencheur mobile compact : le logo ouvre directement le menu */
+@media(max-width:900px){.academy-mobile-menu{right:auto!important;width:116px!important;min-width:116px!important;height:48px;justify-content:center;gap:0;padding:5px 11px;border-radius:16px}.academy-mobile-menu img{width:94px;height:36px;flex:0 0 94px;object-position:center}}
 .stoa-onboarding-card .onboarding-field[hidden]{display:none!important}
 .stoa-tour-card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 
