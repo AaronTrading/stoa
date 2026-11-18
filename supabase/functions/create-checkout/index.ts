@@ -6,10 +6,26 @@ Deno.serve(async (request) => {
   try {
     const payload = await request.json().catch(() => ({}));
     const offer = payload?.offer === 'coaching' ? 'coaching' : 'academy';
+    const affiliateReference = String(payload?.affiliate_ref || payload?.promo_code || '').trim().slice(0, 40);
     const priceId = offer === 'coaching' ? coachingPriceId : academyPriceId;
     if (!priceId) throw new Error('STRIPE_PRICE_ID_MISSING');
-    if (offer === 'academy' && !academyFirstMonthCouponId) throw new Error('STRIPE_COUPON_ID_MISSING');
     const user = await requireUser(request);
+    let affiliate: { user_id: string; slug: string; promo_code: string; stripe_promotion_code_id: string | null } | null = null;
+    if (affiliateReference) {
+      const normalizedSlug = affiliateReference.toLowerCase();
+      const normalizedCode = affiliateReference.toUpperCase();
+      const { data: bySlug, error: slugError } = await service.from('affiliate_programs').select('user_id,slug,promo_code,stripe_promotion_code_id').eq('status', 'active').eq('slug', normalizedSlug).maybeSingle();
+      if (slugError) throw slugError;
+      if (bySlug) affiliate = bySlug;
+      else {
+        const { data: byCode, error: codeError } = await service.from('affiliate_programs').select('user_id,slug,promo_code,stripe_promotion_code_id').eq('status', 'active').eq('promo_code', normalizedCode).maybeSingle();
+        if (codeError) throw codeError;
+        affiliate = byCode;
+      }
+      if (!affiliate) return json(request, { error: 'Ce code affilié est introuvable ou inactif.' }, 400);
+      if (affiliate.user_id === user.id) return json(request, { error: 'Votre propre code affilié ne peut pas être utilisé.' }, 400);
+    }
+    if (offer === 'academy' && !academyFirstMonthCouponId && !affiliate?.stripe_promotion_code_id) throw new Error('STRIPE_COUPON_ID_MISSING');
     if (offer === 'academy' && await hasAcademyAccess(user.id)) return json(request, { error: 'Votre accès à l’Académie est déjà actif.' }, 409);
     if (offer === 'coaching' && await hasCoachingAccess(user.id)) return json(request, { error: 'Votre accès au Coaching est déjà actif.' }, 409);
     if (offer === 'coaching') {
@@ -27,8 +43,13 @@ Deno.serve(async (request) => {
     if (duplicate) return json(request, { error: 'Une souscription à cette offre existe déjà. Ouvrez votre espace ou le portail de facturation.' }, 409);
     const product = offer === 'coaching' ? 'stoa_coaching' : 'stoa_academie';
     const openSessions = await stripe.checkout.sessions.list({ customer, status: 'open', limit: 100 });
-    const reusable = openSessions.data.find(session => session.mode === 'subscription' && session.metadata?.product === product && session.url);
+    const expectedAffiliate = affiliate?.slug || '';
+    const reusable = openSessions.data.find(session => session.mode === 'subscription' && session.metadata?.product === product && (session.metadata?.affiliate_slug || '') === expectedAffiliate && session.url);
     if (reusable?.url) return json(request, { url: reusable.url, reused: true });
+
+    if (affiliate) {
+      await service.from('checkout_session_locks').update({ state: 'idle', stripe_session_id: null, session_url: null, expires_at: null, updated_at: new Date().toISOString() }).eq('user_id', user.id).eq('offer', offer).eq('state', 'ready');
+    }
 
     const { data: claimRows, error: claimError } = await service.rpc('claim_checkout_session', { p_user_id: user.id, p_offer: offer });
     if (claimError) throw claimError;
@@ -46,15 +67,23 @@ Deno.serve(async (request) => {
         billing_address_collection: 'required',
         customer_update: { address: 'auto', name: 'auto' },
         consent_collection: { terms_of_service: 'required' },
-        ...(offer === 'academy' ? { discounts: [{ coupon: academyFirstMonthCouponId }] } : {}),
+        ...(affiliate?.stripe_promotion_code_id
+          ? { discounts: [{ promotion_code: affiliate.stripe_promotion_code_id }] }
+          : offer === 'academy' ? { discounts: [{ coupon: academyFirstMonthCouponId }] } : {}),
         ...(offer === 'coaching' ? {
           managed_payments: { enabled: false },
           shipping_address_collection: { allowed_countries: ['AT','BE','BG','HR','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'] },
         } : {}),
         success_url: `${siteUrl}/abonnement-succes?offre=${offer}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: offer === 'coaching' ? `${siteUrl}/decouvrir-coaching?annule=1` : `${siteUrl}/subscribe?annule=1`,
-        metadata: { user_id: user.id, supabase_user_id: user.id, product },
-        subscription_data: { metadata: { user_id: user.id, supabase_user_id: user.id, product } },
+        metadata: {
+          user_id: user.id, supabase_user_id: user.id, product,
+          affiliate_user_id: affiliate?.user_id || '', affiliate_slug: affiliate?.slug || '', affiliate_promo_code: affiliate?.promo_code || '',
+        },
+        subscription_data: { metadata: {
+          user_id: user.id, supabase_user_id: user.id, product,
+          affiliate_user_id: affiliate?.user_id || '', affiliate_slug: affiliate?.slug || '', affiliate_promo_code: affiliate?.promo_code || '',
+        } },
       }, { idempotencyKey: `stoa-checkout-${claim.attempt_id}` });
       if (!session.url) throw new Error('CHECKOUT_URL_MISSING');
       const { data: completed, error: completeError } = await service.rpc('complete_checkout_session', {

@@ -72,7 +72,7 @@ test('frontend never grants access from the success redirect', () => {
 
 test('the public offer launches Academy Checkout without an intermediate sales page', () => {
   const landing = read('dist/app.js');
-  assert.match(landing, /functions\.invoke\('create-checkout',\{body:\{offer:'academy'\}\}\)/);
+  assert.match(landing, /functions\.invoke\('create-checkout',\{body:\{offer:'academy',affiliate_ref:/);
   assert.match(landing, /stoa-pending-checkout/);
   assert.doesNotMatch(landing, /location\.assign\('\/subscribe'\)/);
 });

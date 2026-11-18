@@ -37,5 +37,5 @@ test('la page est réservée aux membres et respecte le droit Coaching',()=>{
 test('les événements commerciaux utilisent l’analytics existant sans dépendance ajoutée',()=>{
   for(const event of ['coaching_page_view','coaching_cta_click','coaching_pricing_view','coaching_checkout_started','coaching_purchase_completed'])assert.match(sales,new RegExp(event));
   assert.match(sales,/window\.dataLayer/);
-  assert.match(sales,/functions\.invoke\('create-checkout',\{body:\{offer:'coaching'\}\}\)/);
+  assert.match(sales,/functions\.invoke\('create-checkout',\{body:\{offer:'coaching',affiliate_ref:/);
 });

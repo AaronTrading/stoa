@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { loadCatalog } from './member-data.js';
 import { academyOffer,coachingOffer,formatAcademyPrice,formatCommercialPrice } from './commercial-config.js';
+import { getAffiliateAttribution,initializeAffiliateAttribution,resolveAffiliateReference } from './affiliate-referral.js';
 
 document.querySelectorAll('[data-coaching-duration]').forEach(node=>node.textContent=`${coachingOffer.durationMonths} mois`);
 document.querySelectorAll('[data-coaching-price]').forEach(node=>node.textContent=formatCommercialPrice(coachingOffer.price));
@@ -144,6 +145,8 @@ if (landingChapters) {
 const dialog = document.querySelector('#plan-dialog');
 const academyCheckoutButton=document.querySelector('[data-plan="Académie"]');
 const academyCheckoutStatus=document.querySelector('#academy-checkout-status');
+const affiliatePromoInput=document.querySelector('#affiliate-promo-code');
+const affiliatePromoFeedback=document.querySelector('#affiliate-promo-feedback');
 let academyCheckoutBusy=false;
 const pendingCheckoutKey='stoa-pending-checkout',pendingCheckoutTtl=2*60*60*1000;
 const setPendingAcademyCheckout=()=>localStorage.setItem(pendingCheckoutKey,JSON.stringify({offer:'academy',createdAt:Date.now()}));
@@ -151,6 +154,9 @@ const clearPendingAcademyCheckout=()=>localStorage.removeItem(pendingCheckoutKey
 const hasPendingAcademyCheckout=()=>{try{const value=JSON.parse(localStorage.getItem(pendingCheckoutKey)||'null');if(value?.offer==='academy'&&Date.now()-Number(value.createdAt||0)<pendingCheckoutTtl)return true;}catch{}clearPendingAcademyCheckout();return false;};
 if(sessionStorage.getItem(pendingCheckoutKey)==='academy'){setPendingAcademyCheckout();sessionStorage.removeItem(pendingCheckoutKey);}
 const setAcademyCheckoutStatus=(message,tone='info')=>{if(academyCheckoutStatus){academyCheckoutStatus.textContent=message;academyCheckoutStatus.dataset.tone=tone;}};
+const renderAffiliateAttribution=value=>{if(!affiliatePromoInput)return;affiliatePromoInput.value=value?.promoCode||'';affiliatePromoFeedback.textContent=value?`${value.discountLabel} · attribution activée.`:'';affiliatePromoFeedback.dataset.tone=value?'success':'';};
+initializeAffiliateAttribution().then(renderAffiliateAttribution);
+affiliatePromoInput?.addEventListener('change',async()=>{affiliatePromoFeedback.textContent='Vérification du code…';const value=await resolveAffiliateReference(affiliatePromoInput.value,{track:true});if(!value){affiliatePromoFeedback.textContent='Ce code affilié est introuvable ou inactif.';affiliatePromoFeedback.dataset.tone='error';return;}renderAffiliateAttribution(value);});
 const startAcademyCheckout=async()=>{
   if(academyCheckoutBusy)return;
   const {data:{session}}=await supabase.auth.getSession();
@@ -159,7 +165,8 @@ const startAcademyCheckout=async()=>{
   const {data:hasAccess}=await supabase.rpc('has_active_academy_access',{p_user_id:session.user.id});
   if(hasAccess){location.assign('/accueil');return;}
   academyCheckoutBusy=true;academyCheckoutButton.disabled=true;academyCheckoutButton.setAttribute('aria-busy','true');setAcademyCheckoutStatus('Ouverture du paiement sécurisé…');
-  const {data,error}=await supabase.functions.invoke('create-checkout',{body:{offer:'academy'}});
+  const affiliate=getAffiliateAttribution();
+  const {data,error}=await supabase.functions.invoke('create-checkout',{body:{offer:'academy',affiliate_ref:affiliate?.slug||null,promo_code:affiliate?.promoCode||null}});
   academyCheckoutBusy=false;academyCheckoutButton.disabled=false;academyCheckoutButton.setAttribute('aria-busy','false');
   if(error||!data?.url){setAcademyCheckoutStatus(data?.error||error?.message||'Le paiement ne peut pas être ouvert pour le moment.','error');return;}
   location.assign(data.url);
