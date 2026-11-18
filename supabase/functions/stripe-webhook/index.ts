@@ -97,10 +97,14 @@ async function recordCommission(event: Stripe.Event, invoice: Stripe.Invoice & R
     const update = await service.from('affiliate_referrals').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', referral.id);
     if (update.error) throw update.error;
   }
-  const { data: program, error: programError } = await service.from('affiliate_programs').select('commission_rate').eq('user_id', affiliateUserId).single();
+  const { data: program, error: programError } = await service.from('affiliate_programs').select('commission_rate,academy_commission_rate,coaching_commission_rate').eq('user_id', affiliateUserId).single();
   if (programError) throw programError;
   const grossAmount = Number(invoice.amount_paid || 0);
-  const commissionRate = Number(program.commission_rate || 0);
+  const commissionRate = Number(
+    (offer === 'coaching' ? program.coaching_commission_rate : program.academy_commission_rate)
+    ?? program.commission_rate
+    ?? 0,
+  );
   const commissionAmount = Math.round(grossAmount * commissionRate / 100);
   const { error } = await service.from('affiliate_commissions').upsert({
     referral_id: referral.id,

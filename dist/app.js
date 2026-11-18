@@ -145,8 +145,8 @@ if (landingChapters) {
 const dialog = document.querySelector('#plan-dialog');
 const academyCheckoutButton=document.querySelector('[data-plan="Académie"]');
 const academyCheckoutStatus=document.querySelector('#academy-checkout-status');
-const affiliatePromoInput=document.querySelector('#affiliate-promo-code');
-const affiliatePromoFeedback=document.querySelector('#affiliate-promo-feedback');
+const affiliatePromoInputs=[...document.querySelectorAll('[data-affiliate-promo-input]')];
+const affiliatePromoFeedbacks=[...document.querySelectorAll('[data-affiliate-promo-feedback]')];
 let academyCheckoutBusy=false;
 const pendingCheckoutKey='stoa-pending-checkout',pendingCheckoutTtl=2*60*60*1000;
 const setPendingAcademyCheckout=()=>localStorage.setItem(pendingCheckoutKey,JSON.stringify({offer:'academy',createdAt:Date.now()}));
@@ -154,9 +154,9 @@ const clearPendingAcademyCheckout=()=>localStorage.removeItem(pendingCheckoutKey
 const hasPendingAcademyCheckout=()=>{try{const value=JSON.parse(localStorage.getItem(pendingCheckoutKey)||'null');if(value?.offer==='academy'&&Date.now()-Number(value.createdAt||0)<pendingCheckoutTtl)return true;}catch{}clearPendingAcademyCheckout();return false;};
 if(sessionStorage.getItem(pendingCheckoutKey)==='academy'){setPendingAcademyCheckout();sessionStorage.removeItem(pendingCheckoutKey);}
 const setAcademyCheckoutStatus=(message,tone='info')=>{if(academyCheckoutStatus){academyCheckoutStatus.textContent=message;academyCheckoutStatus.dataset.tone=tone;}};
-const renderAffiliateAttribution=value=>{if(!affiliatePromoInput)return;affiliatePromoInput.value=value?.promoCode||'';affiliatePromoFeedback.textContent=value?`${value.discountLabel} · attribution activée.`:'';affiliatePromoFeedback.dataset.tone=value?'success':'';};
+const renderAffiliateAttribution=value=>{affiliatePromoInputs.forEach(input=>{input.value=value?.promoCode||'';});affiliatePromoFeedbacks.forEach(feedback=>{feedback.textContent=value?`${value.discountLabel} · valable sur l’Académie et le Coaching.`:'';feedback.dataset.tone=value?'success':'';});};
 initializeAffiliateAttribution().then(renderAffiliateAttribution);
-affiliatePromoInput?.addEventListener('change',async()=>{affiliatePromoFeedback.textContent='Vérification du code…';const value=await resolveAffiliateReference(affiliatePromoInput.value,{track:true});if(!value){affiliatePromoFeedback.textContent='Ce code affilié est introuvable ou inactif.';affiliatePromoFeedback.dataset.tone='error';return;}renderAffiliateAttribution(value);});
+affiliatePromoInputs.forEach(input=>input.addEventListener('change',async()=>{affiliatePromoFeedbacks.forEach(feedback=>{feedback.textContent='Vérification du code…';});const value=await resolveAffiliateReference(input.value,{track:true});if(!value){affiliatePromoFeedbacks.forEach(feedback=>{feedback.textContent='Ce code affilié est introuvable ou inactif.';feedback.dataset.tone='error';});return;}renderAffiliateAttribution(value);}));
 const startAcademyCheckout=async()=>{
   if(academyCheckoutBusy)return;
   const {data:{session}}=await supabase.auth.getSession();

@@ -88,8 +88,15 @@ async function hydrate(){
   const sessionResult=await supabase.auth.getSession();
   sessionUser=sessionResult.data.session?.user;
   if(!sessionUser){location.replace('/#connexion');return;}
-  const {data:context,error:accessError}=await supabase.rpc('get_academy_shell_context');
+  let contextResult=await supabase.rpc('get_academy_shell_context');
+  if(contextResult.error){await new Promise(resolve=>setTimeout(resolve,650));contextResult=await supabase.rpc('get_academy_shell_context');}
+  const {data:context,error:accessError}=contextResult;
   if(accessError||!context){
+    if(path==='/affiliation'){
+      document.documentElement.classList.remove('academy-access-pending');
+      window.dispatchEvent(new CustomEvent('stoa:affiliate-shell-unavailable'));
+      return;
+    }
     location.replace('/?access=error');
     return;
   }

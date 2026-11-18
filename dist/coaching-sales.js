@@ -1,10 +1,14 @@
 import { supabase } from './supabase.js';
 import { coachingOffer,formatCommercialPrice } from './commercial-config.js';
-import { getAffiliateAttribution } from './affiliate-referral.js';
+import { getAffiliateAttribution,initializeAffiliateAttribution,resolveAffiliateReference } from './affiliate-referral.js';
 
 const track=(name,detail={})=>{if(Array.isArray(window.dataLayer))window.dataLayer.push({event:name,...detail});window.dispatchEvent(new CustomEvent('stoa:commercial-event',{detail:{name,...detail}}));};
 const setCommercialCopy=()=>{document.querySelectorAll('[data-coaching-duration]').forEach(node=>node.textContent=`${coachingOffer.durationMonths} mois`);document.querySelectorAll('[data-coaching-price]').forEach(node=>node.textContent=formatCommercialPrice(coachingOffer.price));};
 const showCheckoutStatus=message=>document.querySelectorAll('.coaching-checkout-status').forEach(node=>node.textContent=message);
+const affiliateInput=document.querySelector('[data-coaching-affiliate-code]'),affiliateFeedback=document.querySelector('[data-coaching-affiliate-feedback]');
+const renderAffiliate=value=>{if(affiliateInput)affiliateInput.value=value?.promoCode||'';if(affiliateFeedback){affiliateFeedback.textContent=value?`${value.discountLabel} · appliqué au Coaching.`:'';affiliateFeedback.dataset.tone=value?'success':'';}};
+initializeAffiliateAttribution().then(renderAffiliate);
+affiliateInput?.addEventListener('change',async()=>{affiliateFeedback.textContent='Vérification du code…';const value=await resolveAffiliateReference(affiliateInput.value,{track:true});if(!value){affiliateFeedback.textContent='Ce code affilié est introuvable ou inactif.';affiliateFeedback.dataset.tone='error';return;}renderAffiliate(value);});
 
 window.addEventListener('stoa:coaching-purchase-completed',event=>track('coaching_purchase_completed',event.detail||{}));
 

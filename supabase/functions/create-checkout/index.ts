@@ -10,22 +10,31 @@ Deno.serve(async (request) => {
     const priceId = offer === 'coaching' ? coachingPriceId : academyPriceId;
     if (!priceId) throw new Error('STRIPE_PRICE_ID_MISSING');
     const user = await requireUser(request);
-    let affiliate: { user_id: string; slug: string; promo_code: string; stripe_promotion_code_id: string | null } | null = null;
+    let affiliate: {
+      user_id: string; slug: string; promo_code: string;
+      stripe_promotion_code_id: string | null;
+      stripe_academy_promotion_code_id: string | null;
+      stripe_coaching_promotion_code_id: string | null;
+    } | null = null;
+    const affiliateColumns = 'user_id,slug,promo_code,stripe_promotion_code_id,stripe_academy_promotion_code_id,stripe_coaching_promotion_code_id';
     if (affiliateReference) {
       const normalizedSlug = affiliateReference.toLowerCase();
       const normalizedCode = affiliateReference.toUpperCase();
-      const { data: bySlug, error: slugError } = await service.from('affiliate_programs').select('user_id,slug,promo_code,stripe_promotion_code_id').eq('status', 'active').eq('slug', normalizedSlug).maybeSingle();
+      const { data: bySlug, error: slugError } = await service.from('affiliate_programs').select(affiliateColumns).eq('status', 'active').eq('slug', normalizedSlug).maybeSingle();
       if (slugError) throw slugError;
       if (bySlug) affiliate = bySlug;
       else {
-        const { data: byCode, error: codeError } = await service.from('affiliate_programs').select('user_id,slug,promo_code,stripe_promotion_code_id').eq('status', 'active').eq('promo_code', normalizedCode).maybeSingle();
+        const { data: byCode, error: codeError } = await service.from('affiliate_programs').select(affiliateColumns).eq('status', 'active').eq('promo_code', normalizedCode).maybeSingle();
         if (codeError) throw codeError;
         affiliate = byCode;
       }
       if (!affiliate) return json(request, { error: 'Ce code affilié est introuvable ou inactif.' }, 400);
       if (affiliate.user_id === user.id) return json(request, { error: 'Votre propre code affilié ne peut pas être utilisé.' }, 400);
     }
-    if (offer === 'academy' && !academyFirstMonthCouponId && !affiliate?.stripe_promotion_code_id) throw new Error('STRIPE_COUPON_ID_MISSING');
+    const affiliatePromotionCode = affiliate
+      ? (offer === 'coaching' ? affiliate.stripe_coaching_promotion_code_id : affiliate.stripe_academy_promotion_code_id) || affiliate?.stripe_promotion_code_id
+      : null;
+    if (offer === 'academy' && !academyFirstMonthCouponId && !affiliatePromotionCode) throw new Error('STRIPE_COUPON_ID_MISSING');
     if (offer === 'academy' && await hasAcademyAccess(user.id)) return json(request, { error: 'Votre accès à l’Académie est déjà actif.' }, 409);
     if (offer === 'coaching' && await hasCoachingAccess(user.id)) return json(request, { error: 'Votre accès au Coaching est déjà actif.' }, 409);
     if (offer === 'coaching') {
@@ -67,8 +76,8 @@ Deno.serve(async (request) => {
         billing_address_collection: 'required',
         customer_update: { address: 'auto', name: 'auto' },
         consent_collection: { terms_of_service: 'required' },
-        ...(affiliate?.stripe_promotion_code_id
-          ? { discounts: [{ promotion_code: affiliate.stripe_promotion_code_id }] }
+        ...(affiliatePromotionCode
+          ? { discounts: [{ promotion_code: affiliatePromotionCode }] }
           : offer === 'academy' ? { discounts: [{ coupon: academyFirstMonthCouponId }] } : {}),
         ...(offer === 'coaching' ? {
           managed_payments: { enabled: false },

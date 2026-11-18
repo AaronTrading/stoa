@@ -37,3 +37,25 @@ test('affiliate database migration contains RLS and conditional shell access',()
   assert.match(sql,/get_affiliate_dashboard/);
   assert.match(sql,/'has_affiliate'/);
 });
+
+test('Academy and Coaching have distinct affiliate settings and dedicated links',()=>{
+  const migration=readFileSync(new URL('../supabase/migrations/202611180082_affiliate_academy_coaching.sql',import.meta.url),'utf8');
+  const page=readFileSync(new URL('../dist/affiliation.html',import.meta.url),'utf8');
+  const client=readFileSync(new URL('../dist/affiliation.js',import.meta.url),'utf8');
+  assert.match(migration,/stripe_academy_promotion_code_id/);
+  assert.match(migration,/stripe_coaching_promotion_code_id/);
+  assert.match(migration,/academy_commission_rate/);
+  assert.match(migration,/coaching_commission_rate/);
+  assert.match(page,/affiliate-academy-link/);
+  assert.match(page,/affiliate-coaching-link/);
+  assert.doesNotMatch(client,/setTimeout\(\(\)=>location\.replace\('\/accueil'\)/);
+});
+
+test('the shop contains only the STOA olive oil and points directly to Stripe',()=>{
+  const page=readFileSync(new URL('../dist/boutique.html',import.meta.url),'utf8');
+  const config=readFileSync(new URL('../dist/commercial-config.js',import.meta.url),'utf8');
+  assert.match(page,/Huile d’olive bio extra vierge STOA/);
+  assert.match(page,/data-olive-checkout/);
+  assert.match(config,/https:\/\/buy\.stripe\.com\//);
+  assert.doesNotMatch(page,/product-grid|order-dialog|demande manuelle/i);
+});

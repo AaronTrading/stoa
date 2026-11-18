@@ -16,5 +16,13 @@ export const academyOffer={
   interval:'mois',
 };
 
+export const oliveOffer={
+  name:'Huile d’olive bio extra vierge STOA',
+  format:'1 L',
+  price:29.99,
+  currency:'EUR',
+  paymentLink:'https://buy.stripe.com/7sYcN44Uw34S4Jh5gF2kw00',
+};
+
 export const formatCommercialPrice=value=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:coachingOffer.currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
 export const formatAcademyPrice=value=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:academyOffer.currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
