@@ -5,7 +5,10 @@ const session=(await supabase.auth.getSession()).data.session;
 if(session)initialize(session.user);
 
 async function initialize(user){
-  const {data:own}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle(),isAdmin=own?.role==='admin';
+  const [{data:own},{data:adminAccess}]=await Promise.all([
+    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle(),
+    supabase.rpc('is_admin'),
+  ]),isAdmin=own?.role==='admin'||adminAccess===true;
   const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path d="M6 12H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v-7Zm12 0h1a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2v-7Z"/><path d="M17 19c-1 2-3 2-5 2"/></svg>',send='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-5-7-2Zm7 2 7-9"/></svg>';
   const widget=document.createElement('section');widget.className=`support-widget${isAdmin?' support-widget-admin':''}`;
   widget.innerHTML=`<button class="support-trigger" type="button" aria-label="Ouvrir le support" aria-expanded="false">${icon}<b hidden></b></button><div class="support-panel" hidden><header><div><span class="eyebrow">${isAdmin?'ESPACE STAFF':'AIDE & SUPPORT'}</span><strong>${isAdmin?'Boîte support':'Support STOA'}</strong><small>${isAdmin?'Demandes des membres':'Académie, compte et abonnement'}</small></div><button type="button" data-support-close aria-label="Fermer">×</button></header><button class="support-back" type="button" hidden>← Toutes les conversations</button><div class="support-roster-search" ${isAdmin?'':'hidden'}><input type="search" placeholder="Rechercher une demande…" aria-label="Rechercher une demande"></div><div class="support-content"><p class="support-loading">Ouverture du support…</p></div><form class="support-form" hidden><label class="support-anonymous-choice"><input type="checkbox" data-support-anonymous><span>Poser cette question anonymement</span></label><div class="support-compose-row"><textarea rows="1" maxlength="2000" placeholder="${isAdmin?'Répondre en tant que Support STOA…':'Posez votre question au support…'}" aria-label="Votre message" required></textarea><button type="submit" aria-label="Envoyer">${send}</button></div></form><p class="support-status" role="status"></p></div>`;document.body.append(widget);

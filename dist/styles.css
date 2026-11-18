@@ -1496,3 +1496,78 @@ body.public-home-v2{
 .hero .hero-title{max-width:720px;margin:28px 0 31px;font-family:var(--serif);font-size:clamp(4.8rem,6.7vw,7.35rem);font-weight:500;line-height:.82;letter-spacing:-.065em;text-wrap:balance}
 .hero .hero-title>span{display:inline-block;color:#6f7767;font-style:italic;font-weight:500}
 @media(max-width:760px){.hero .hero-title{font-size:clamp(4rem,17vw,5.8rem);line-height:.84;letter-spacing:-.06em}}
+
+/* Correctifs de régression : Communauté mobile, navigation et accueil membre. */
+.member-welcome{
+  gap:.3em;
+  color:var(--muted);
+  font-size:15px;
+  font-weight:450;
+}
+.member-welcome strong{
+  color:inherit;
+  font:inherit;
+}
+.community-page .community-mode-nav{
+  display:flex;
+  width:max-content;
+  flex:0 0 auto;
+  gap:0;
+  padding:5px;
+  border:1px solid #fff;
+  border-radius:999px;
+  background:rgba(232,231,221,.75);
+  box-shadow:none;
+  backdrop-filter:blur(16px);
+}
+.community-page .community-mode-nav a{
+  padding:9px 18px;
+  border-radius:999px;
+  font-size:12px;
+}
+.community-page .community-mode-nav a.active{
+  background:#fff;
+  box-shadow:0 5px 18px rgba(53,59,45,.07);
+}
+html.stoa-dark .community-page .community-mode-nav{
+  border-color:var(--dark-border);
+  background:rgba(255,255,255,.05);
+}
+html.stoa-dark .community-page .community-mode-nav a.active{
+  background:rgba(255,255,255,.12);
+  color:var(--ink);
+}
+@media(max-width:1120px){
+  .academy-experience.community-page .community-shell{
+    height:calc(var(--community-viewport-height,100dvh) - 64px);
+    min-height:0;
+  }
+}
+@media(max-width:760px){
+  .academy-experience.community-page .community-shell{
+    padding-bottom:max(6px,env(safe-area-inset-bottom));
+  }
+  .academy-experience.community-page .chat-panel{
+    min-height:0;
+  }
+  .academy-experience.community-page .message-history{
+    min-height:0;
+    scroll-padding-bottom:72px;
+  }
+  .academy-experience.community-page .message-composer{
+    position:relative;
+    z-index:5;
+    grid-template-columns:minmax(0,1fr) 49px;
+    padding:10px 10px max(10px,env(safe-area-inset-bottom));
+    background:rgba(246,245,239,.96);
+  }
+  .academy-experience.community-page .message-composer button[type="submit"]{
+    width:49px;
+    min-width:49px;
+    padding:0;
+  }
+  .academy-experience.community-page .message-composer textarea{
+    min-width:0;
+    font-size:16px;
+  }
+}

@@ -31,6 +31,15 @@ test('le support anonyme masque l’identité et sépare les conversations',()=>
   assert.match(support,/get_support_inbox/);
   assert.match(support,/send_support_message/);
   assert.match(support,/stoa-mark-400\.png/);
+  assert.match(support,/supabase\.rpc\('is_admin'\)/);
+});
+
+test('la discussion reste visible avec le clavier mobile et conserve le switch principal',()=>{
+  assert.match(community,/--community-viewport-height/);
+  assert.match(community,/visualViewport\?\.addEventListener\('resize'/);
+  assert.match(styles,/height:calc\(var\(--community-viewport-height,100dvh\) - 64px\)/);
+  assert.match(styles,/\.community-page \.community-mode-nav a\.active/);
+  assert.match(styles,/scroll-padding-bottom:72px/);
 });
 
 test('les parcours communautaires évitent les rechargements bloquants',()=>{

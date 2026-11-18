@@ -409,7 +409,15 @@ els.list.addEventListener('pointerdown', (e) => { if (e.target.closest('.message
 document.addEventListener('click', (e) => { if (!e.target.closest('.message-tools')) closePickers(); if (!e.target.closest('.composer-input-wrap')) els.suggestions.hidden = true; });
 window.addEventListener('stoa:community-notifications', async (event) => { notificationCounts = event.detail || {}; if (active?.id && notificationCounts[active.id]) { await window.STOACommunityNotifications?.markChannelRead(active.id); notificationCounts = window.__STOA_COMMUNITY_NOTIFICATION_COUNTS__ || notificationCounts; } renderChannels(); });
 [els.profileDialog, els.shareDialog, els.externalDialog, els.restrictionDialog].forEach((dialog) => dialog.addEventListener('click', (e) => { if (e.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); }));
-window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(room); if (announcementRoom) supabase.removeChannel(announcementRoom); if (pollRoom) supabase.removeChannel(pollRoom); clearTimeout(announcementTimer); clearTimeout(pollTimer); clearTimeout(typingTimer); });
+const fitCommunityViewport=()=>{
+  const height=window.visualViewport?.height||window.innerHeight;
+  document.documentElement.style.setProperty('--community-viewport-height',`${Math.round(height)}px`);
+};
+fitCommunityViewport();
+window.visualViewport?.addEventListener('resize',fitCommunityViewport);
+window.visualViewport?.addEventListener('scroll',fitCommunityViewport);
+window.addEventListener('orientationchange',fitCommunityViewport);
+window.addEventListener('pagehide', () => { if (room) supabase.removeChannel(room); if (announcementRoom) supabase.removeChannel(announcementRoom); if (pollRoom) supabase.removeChannel(pollRoom); clearTimeout(announcementTimer); clearTimeout(pollTimer); clearTimeout(typingTimer); window.visualViewport?.removeEventListener('resize',fitCommunityViewport); window.visualViewport?.removeEventListener('scroll',fitCommunityViewport); window.removeEventListener('orientationchange',fitCommunityViewport); });
 
 async function subscribeAnnouncements() {
   const channel = allChannels.find((c) => c.kind === 'announcements'); if (!channel) return;
