@@ -45,6 +45,16 @@ test('la discussion reste visible avec le clavier mobile et conserve le switch p
   assert.match(styles,/scroll-padding-bottom:72px/);
 });
 
+test('la boîte support staff utilise un véritable viewport mobile',()=>{
+  assert.match(support,/support-thread-active/);
+  assert.match(support,/document\.documentElement\.classList\.add\('support-modal-open'\)/);
+  assert.match(support,/placeholder="\$\{isAdmin\?'Répondre…'/);
+  assert.match(styles,/Support staff — mobile-first conversation layout/);
+  assert.match(styles,/\.support-panel\.support-viewport-fit\{[\s\S]*?display:flex;[\s\S]*?max-height:none!important/);
+  assert.match(styles,/\.support-compose-row\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) 44px/);
+  assert.match(styles,/margin:6px 10px max\(10px,env\(safe-area-inset-bottom\)\)/);
+});
+
 test('les parcours communautaires évitent les rechargements bloquants',()=>{
   assert.match(community,/applyMessageChange/);
   assert.doesNotMatch(community,/resetComposer\(\); await loadMessages/);
