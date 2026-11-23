@@ -32,6 +32,8 @@ test('le support anonyme masque l’identité et sépare les conversations',()=>
   assert.match(support,/send_support_message/);
   assert.match(support,/stoa-mark-400\.png/);
   assert.match(support,/supabase\.rpc\('is_admin'\)/);
+  assert.match(support,/class="support-conversation support-conversation-open"/);
+  assert.doesNotMatch(support,/<div class="support-conversation"><button/);
   assert.match(styles,/\.support-avatar img\{[\s\S]*?width:100%;[\s\S]*?height:100%;[\s\S]*?object-fit:cover/);
 });
 
